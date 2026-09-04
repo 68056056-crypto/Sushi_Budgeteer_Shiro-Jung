@@ -1,0 +1,26 @@
+# Sushi-Budgeteer — Python dependencies
+# ติดตั้งด้วย: pip install -r requirements.txt
+
+# --- LLM & Agent framework ---
+langchain==0.3.25
+langchain-openai==0.3.16
+langchain-core==0.3.59
+langgraph==0.4.8
+openai==1.82.1
+
+# --- RAG / Vector Store ---
+langchain-community==0.3.24
+faiss-cpu==1.9.0
+
+# --- MCP (Model Context Protocol) ---
+mcp==1.9.4
+
+# --- Data ---
+pandas==2.2.3
+numpy==1.26.4
+
+# --- UI ---
+streamlit==1.45.1
+
+# --- Utilities ---
+python-dotenv==1.1.0
