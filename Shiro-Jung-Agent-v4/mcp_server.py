@@ -62,6 +62,11 @@ def build_set(
     return encode(service.build(**locals()))
 
 @mcp.tool()
+def alternative_set(result_id: str) -> str:
+    """Internal second option: retain all constraints and diversify food only."""
+    return encode(service.alternative(result_id))
+
+@mcp.tool()
 def verify_set(result_id: str) -> str:
     """ตรวจ candidate ที่ server เก็บด้วย result_id; คำนวณยอดใหม่จาก SQLite.
 

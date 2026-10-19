@@ -161,7 +161,8 @@ class BudgeteerState:
             except (TypeError, ValueError):
                 pass
 
-        if extracted.get("allergy_check_answered") is True:
+        if (extracted.get("allergy_check_answered") is True
+                or extracted.get("allergens")):
             self.allergy_check_done = True
 
         if extracted.get("wants_dessert") is not None:

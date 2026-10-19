@@ -275,6 +275,7 @@ def build_optimal_set(
     dessert_selection: Optional[List[str]] = None,
     dessert_quantity: Optional[int] = None,
     drink_quantities: Optional[Dict[str, int]] = None,
+    excluded_item_ids: Optional[List[str]] = None,
 ) -> str:
     """จัดชุดเมนูที่คุ้มค่าที่สุดภายในงบประมาณด้วย 0/1 Knapsack Dynamic Programming.
 
@@ -334,7 +335,7 @@ def build_optimal_set(
         num_people=num_people, drink_selection=drink_selection or [], drink_quantity=drink_quantity,
         drinks_separate_from_budget=drinks_separate_from_budget, include_dessert=include_dessert,
         dessert_selection=dessert_selection or [], dessert_quantity=dessert_quantity,
-        drink_quantities=drink_quantities or {})
+        drink_quantities=drink_quantities or {}, excluded_item_ids=excluded_item_ids or [])
     menu = menu_records()
 
     # Drinks/dessert: a fixed allocation by name, reserved out of the budget
@@ -363,6 +364,7 @@ def build_optimal_set(
     safe_items, blocked, dislike_items = _run_filter(
         food_menu, allergens, dislikes, hard_exclude_keywords, must_include_keywords
     )
+    safe_items = [row for row in safe_items if row["item_id"] not in (excluded_item_ids or [])]
     dislike_ids = {row["item_id"] for row in dislike_items}
 
     scored_items = []

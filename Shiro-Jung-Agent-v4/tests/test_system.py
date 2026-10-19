@@ -158,9 +158,10 @@ class UITest(unittest.TestCase):
         with patch.dict(os.environ,{'OPENAI_API_KEY':'','SUSHI_OPENAI_API_KEY':''}):
             app=AppTest.from_file(str(ROOT/'app.py')).run(timeout=30)
             self.assertFalse(app.exception)
-            self.assertTrue(app.warning)
+            self.assertTrue(app.info)
             self.assertEqual(len(app.error),1)
-            self.assertIn('OPENAI_API_KEY',app.error[0].value)
+            self.assertIn('ผู้ช่วยยังไม่พร้อม',app.error[0].value)
+            self.assertNotIn('OPENAI_API_KEY',app.error[0].value)
             app.selectbox[0].set_value('simulation').run()
             self.assertFalse(app.exception)
 
@@ -212,7 +213,8 @@ class AgentFlowTest(unittest.TestCase):
     def test_model_mcp_loop_and_constraint_binding(self):
         a=BudgeteerAgent(llm=ScriptedModel([('build_set',{'budget':99999,'allergens':[]}),('verify_current',{}),('final',{})]))
         answer=a.chat('งบ300 2คน ชาเขียวร้อน2แก้ว รวมในงบ ไม่รับของหวาน ไม่มีแพ้')
-        self.assertIn('ผ่านการตรวจ',answer)
+        self.assertIn('ชุดเมนูสำหรับคุณ',answer)
+        self.assertTrue(a.last_policy['allow'])
         self.assertLessEqual(a.state.last_result['total_price'],300)
         self.assertEqual(a.last_trace[0]['arguments']['budget'],300)
         self.assertEqual([x['tool'] for x in a.last_trace],['build_set','verify_set'])
@@ -235,7 +237,8 @@ class AgentFlowTest(unittest.TestCase):
     def test_no_verify_means_no_recommendation(self):
         a=BudgeteerAgent(llm=ScriptedModel([('build_set',{}),('final',{})]))
         answer=a.chat('จัดชุด')
-        self.assertNotIn('ผ่านการตรวจ',answer)
+        self.assertNotIn('ชุดเมนูสำหรับคุณ',answer)
+        self.assertEqual(a.last_options,[])
         self.assertNotIn('untrusted',answer)
         self.assertIsNone(a.state.last_result)
     def test_missing_data_gates_build(self):
@@ -247,7 +250,8 @@ class AgentFlowTest(unittest.TestCase):
         extraction={**READY,'allergens':['crustacean']}
         a=BudgeteerAgent(llm=ScriptedModel([('build_set',{}),('final',{})],extraction))
         answer=a.chat('แพ้กุ้ง')
-        self.assertNotIn('ผ่านการตรวจ',answer)
+        self.assertNotIn('ชุดเมนูสำหรับคุณ',answer)
+        self.assertEqual(a.last_options,[])
         self.assertIn('ยังจัดชุด',answer)
     def test_state_is_not_shared(self):
         a=BudgeteerAgent(llm=ScriptedModel([('clarify',{'missing':['num_people']}),('final',{})],{'budget':300}))
@@ -260,7 +264,7 @@ class AgentFlowTest(unittest.TestCase):
         self.assertIn('40.00',a.chat('ราคาแซลมอน'))
     def test_invalid_extraction_fails_closed(self):
         a=BudgeteerAgent(llm=ScriptedModel([],{'budget':float('nan')}))
-        self.assertIn('อ่านข้อมูล',a.chat('จัดชุด'))
+        self.assertIn('อ่านความต้องการไม่สำเร็จ',a.chat('จัดชุด'))
     def test_unknown_allergy_is_preserved(self):
         a=BudgeteerAgent(llm=ScriptedModel([('clarify',{'missing':['budget']}),('final',{})],{'allergens':['unknown spice']}))
         a.chat('แพ้เครื่องเทศ')

@@ -19,9 +19,9 @@ from langchain_openai import ChatOpenAI
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
 from pydantic import BaseModel, Field, ConfigDict
-from .extraction import EXTRACT_PROMPT, _sanitize_extraction
+from .extraction import EXTRACT_PROMPT, _sanitize_extraction, contextual_answer
 from .state import BudgeteerState
-from .policy import DISCLAIMER
+from .presentation import render_menu, ALLERGY_WARNING, MENU_NOTICE
 from .database import cents
 from .telemetry import redact
 
@@ -33,7 +33,7 @@ def _root_cause(exc):
     while hasattr(exc,'exceptions') and getattr(exc,'exceptions'):
         exc=exc.exceptions[0]
     return exc
-GREETING_MESSAGE='สวัสดีครับ ผม Shiro-Jung ช่วยจัดชุดซูชิจากฐานข้อมูล กรุณาบอกงบและจำนวนคนครับ'
+GREETING_MESSAGE='สวัสดีครับ ผม Shiro-Jung ช่วยจัดมื้อซูชิให้พอดีงบ กรุณาบอกงบและจำนวนคนครับ'
 SYSTEM_PROMPT='''คุณคือ Shiro-Jung ผู้ช่วยจัดชุดซูชิ ตอบภาษาไทย
 คุณเป็นผู้เลือกเครื่องมือจาก MCP และอ่านผลเพื่อเลือกการกระทำถัดไป:
 - ถามข้อมูลที่ขาดด้วย clarify; ถามเมนูใช้ search_menu/get_menu_item
@@ -81,6 +81,10 @@ class BudgeteerAgent:
         self.model_source='scripted' if llm is not None else 'live'
         self.model_name=model or os.getenv('OPENAI_MODEL','gpt-4o-mini')
         self.last_policy=None
+        self.last_options=[]
+        self.confirmed_option=None
+        self._replan=False
+        self._has_recommended=False
         self.last_run={}
         self.state=BudgeteerState()
         self.session_id=str(uuid4())
@@ -88,10 +92,14 @@ class BudgeteerAgent:
         self.data_mode=os.getenv('SUSHI_DATA_MODE','strict')
 
     def _extract_intent(self, message):
+        direct=contextual_answer(self.state.last_asked_field,message)
+        if direct is not None:
+            return Extraction.model_validate(direct).model_dump()
         state=asdict(self.state)
         state.pop('conversation'); state.pop('last_result')
         prompt=(EXTRACT_PROMPT+'\nคืน JSON object เท่านั้น อย่าลบ allergen ที่ไม่รู้จัก ให้คงชื่อเดิมไว้'
                 +'\nบริบทปัจจุบัน:'+json.dumps(state,ensure_ascii=False)
+                +f'\n[บริบท: คำถามล่าสุดที่ระบบถามคือเรื่อง {self.state.last_asked_field!r}]'
                 +'\nข้อความผู้ใช้:'+message)
         response=self.llm.invoke([SystemMessage(content=prompt)])
         self._record_usage(response, 'extraction')
@@ -139,15 +147,84 @@ class BudgeteerAgent:
 
     @staticmethod
     def render_result(result):
-        lines=['ชุดเมนูจากฐานข้อมูล (ผ่านการตรวจข้อจำกัดแล้ว):']
-        for row in result['selected']:
-            lines.append(f"- {row['name_th']} ×{row['quantity']} — {row['subtotal_baht']:.2f} บาท")
-        lines += [f"รวม {result['item_count']} รายการ ({result['distinct_dish_count']} เมนูไม่ซ้ำ)",
-                  f"อาหาร {result['food_total_price']:.2f} บาท | จ่ายรวม {result['total_price']:.2f} บาท",
-                  f"ใช้งบ {result['budget_used_pct']:.1f}% — "+('แยกค่าเครื่องดื่ม/ของหวานนอกงบ' if result['drinks_separate_from_budget'] else 'รวมเครื่องดื่ม/ของหวานในงบ'),
-                  f"โหมดข้อมูล: {result['data_mode']}",
-                  'ตรวจข้อจำกัดโดย Python และ OPA; คะแนนความคุ้มค่าตามสูตรของระบบ',DISCLAIMER]
-        return '\n'.join(lines)
+        return render_menu(result)
+
+    def clear_choices(self):
+        self.last_options=[]
+        self.confirmed_option=None
+        self.state.last_result=None
+        self.last_policy=None
+
+    def select_option(self, index):
+        """Confirm a simulated selection, rechecking current catalog and session constraints."""
+        from .database import records
+        from .policy import validate_result
+        if not 0 <= index < len(self.last_options):
+            return 'กรุณาเลือกชุดที่แสดงอยู่ หรือให้จัดชุดใหม่ครับ'
+        selected=self.last_options[index]
+        expected=self.build_arguments()
+        constraints={k:v for k,v in selected['constraints'].items() if k!='excluded_item_ids'}
+        expected['drink_quantities']=expected['drink_quantities'] or {}
+        if constraints != expected:
+            self.clear_choices()
+            return 'ความต้องการเปลี่ยนแล้ว ขอจัดชุดใหม่ก่อนยืนยันครับ'
+        try:
+            checked=validate_result(selected, records(), mode=self.data_mode)
+        except (ValueError, TypeError, KeyError):
+            checked={'passed':False}
+        if not checked['passed']:
+            self.clear_choices()
+            return 'รายการหรือราคาเปลี่ยนแล้ว ขอจัดชุดใหม่ก่อนยืนยันครับ'
+        self.state.last_result=selected
+        self.last_policy=checked['policy_decision']
+        self.confirmed_option=index
+        return (f'เลือกชุดที่ {index+1} แล้วครับ ✅ นี่เป็นสรุปชุดสำหรับนำไปแจ้งร้าน ยังไม่ได้ส่งคำสั่งซื้อ\n\n'
+                +self.render_result(selected)
+                +'\n\nอยากเปลี่ยนเมนูหรือปรับจำนวน บอกต่อได้เลยครับ ผมจะใช้ข้อมูลเดิมให้')
+
+    async def _option_call(self, session, name, arguments):
+        started=time.perf_counter()
+        result=await asyncio.wait_for(session.call_tool(name,arguments),timeout=30)
+        self.last_run.setdefault('option_checks',[]).append({
+            'tool':name,'result_id':arguments.get('result_id'),
+            'elapsed_ms':round((time.perf_counter()-started)*1000,3),
+            'is_error':bool(result.isError)})
+        return result
+
+    async def _finish_options(self, session, candidate):
+        """Recheck both alternatives in the same trusted MCP process before display."""
+        final=await self._option_call(session,'verify_set',{'result_id':candidate})
+        checked=json.loads(final.content[0].text)
+        self.last_policy=checked.get('policy_decision')
+        self.last_run['final_recheck']={'passed':checked.get('passed'),
+            'result_id':candidate,'policy_decision':self.last_policy}
+        if final.isError or not checked.get('passed'):
+            return 'รายการหรือราคาเปลี่ยนแล้ว กรุณาให้จัดชุดใหม่ครับ'
+        first=checked['checked_result']
+        options=[first]
+        alternate=await self._option_call(session,'alternative_set',{'result_id':candidate})
+        payload=json.loads(alternate.content[0].text)
+        if not alternate.isError and payload.get('status')=='candidate':
+            review=await self._option_call(session,'verify_set',{'result_id':payload['result_id']})
+            second=json.loads(review.content[0].text)
+            if not review.isError and second.get('passed'):
+                options.append(second['checked_result'])
+        # Alternative generation can take time: the first option must still be current.
+        final=await self._option_call(session,'verify_set',{'result_id':candidate})
+        checked=json.loads(final.content[0].text)
+        if final.isError or not checked.get('passed'):
+            self.clear_choices()
+            return 'รายการหรือราคาเปลี่ยนแล้ว กรุณาให้จัดชุดใหม่ครับ'
+        self._has_recommended=True
+        self.last_options=options
+        self.state.last_result=checked['checked_result']
+        self.last_policy=checked['policy_decision']
+        self.state.last_asked_field=None
+        text='\n\n---\n\n'.join(f'### ชุดที่ {i+1}\n\n{self.render_result(option)}'
+                                  for i,option in enumerate(options))
+        if len(options)==1:
+            text+='\n\nตอนนี้จัดชุดที่ต่างกันได้เพียงชุดเดียวภายใต้เงื่อนไขนี้ครับ'
+        return text+'\n\nเลือกชุดด้านล่าง หรือบอกเมนูที่อยากเปลี่ยนได้เลยครับ ผมจำงบ การแพ้ และความชอบเดิมไว้ให้'
 
     async def _run(self, user_message, unclear=False):
         # langchain_openai caches one async HTTP client per process, but every turn runs in a
@@ -175,7 +252,14 @@ class BudgeteerAgent:
         async with stdio_client(params) as (r,w):
             async with ClientSession(r,w) as session:
                 await session.initialize()
-                available=(await session.list_tools()).tools
+                available=[t for t in (await session.list_tools()).tools if t.name!='alternative_set']
+                if self._replan and not self.missing_fields() and not unclear:
+                    built=await session.call_tool('build_set',self.build_arguments())
+                    payload=json.loads(built.content[0].text)
+                    self.last_trace.append({'tool':'build_set','status':payload.get('status'),'route':'followup'})
+                    if built.isError or payload.get('status')!='candidate':
+                        return self._friendly_issues(payload.get('issues',[]))
+                    return await self._finish_options(session,payload['result_id'])
                 names={t.name for t in available}
                 schemas=[{'type':'function','function':{'name':t.name,'description':t.description or '',
                           'parameters':t.inputSchema}} for t in available]
@@ -188,15 +272,7 @@ class BudgeteerAgent:
                     if not response.tool_calls:
                         # Never release unverified model-generated menu/price prose.
                         if verified:
-                            final=await session.call_tool('verify_set',{'result_id':candidate})
-                            checked=json.loads(final.content[0].text)
-                            self.last_policy=checked.get('policy_decision')
-                            self.last_run['final_recheck']={'passed':checked.get('passed'),
-                                'result_id':candidate,'policy_decision':self.last_policy}
-                            if not final.isError and checked.get('passed'):
-                                self.state.last_result=checked['checked_result']
-                                return self.render_result(checked['checked_result'])
-                            return 'ฐานข้อมูลเปลี่ยนหรือผลตรวจไม่ผ่าน กรุณาให้จัดชุดใหม่ครับ\n'+DISCLAIMER
+                            return await self._finish_options(session,candidate)
                         if last_display: return last_display
                         if issues: return self._friendly_issues(issues)
                         missing=self.missing_fields()
@@ -212,8 +288,7 @@ class BudgeteerAgent:
                             self.last_trace.append({'step':step,'tool':'verify_set','passed':checked.get('passed'),
                                                     'policy_decision':self.last_policy,'fallback':'after_stall'})
                             if checked.get('passed'):
-                                self.state.last_result=checked['checked_result']
-                                return self.render_result(checked['checked_result'])
+                                return await self._finish_options(session,built['result_id'])
                             return self._friendly_issues(checked.get('issues', []))
                         if nudged and missing:
                             # Model stalled twice: ask the next missing field directly instead of
@@ -227,7 +302,7 @@ class BudgeteerAgent:
                         messages.append(HumanMessage(content='ยังไม่มีผลจากเครื่องมือ กรุณาเลือก search_menu หรือ clarify; หากจะเสนอชุดต้อง build_set แล้ว verify_set'))
                         continue
                     if len(response.tool_calls)>8:
-                        return 'ขอใช้เครื่องมือมากเกินขอบเขตในรอบเดียว กรุณาลองใหม่ครับ'
+                        return 'ยังจัดชุดให้ไม่สำเร็จครับ กรุณาลองใหม่อีกครั้ง'
                     for call in response.tool_calls:
                         name=call['name'];args=dict(call.get('args') or {})
                         started=time.perf_counter()
@@ -267,10 +342,12 @@ class BudgeteerAgent:
                             elif name=='clarify':
                                 last_display='\n'.join(payload['questions'])
                             elif name=='search_menu':
-                                last_display='ผลค้นจากฐานข้อมูล:\n'+'\n'.join(f"- {x['item_id']} {x['name_th']} — {x['price_baht']:.2f} บาท" for x in payload['items'])+'\n'+DISCLAIMER
+                                last_display='🍣 เมนูที่เลือกดูได้:\n'+'\n'.join(f"- {x['item_id']} {x['name_th']} — {x['price_baht']:.2f} บาท" for x in payload['items'])+'\n\n'+MENU_NOTICE
+                                if not payload['items']:
+                                    last_display='ยังไม่พบเมนูนี้ครับ ลองระบุชื่อเมนูอีกครั้ง หรือบอกว่าให้ปรับชุดเดิมได้เลยครับ'
                             elif name=='get_menu_item':
                                 x=payload.get('item')
-                                last_display=(f"{x['name_th']} — {x['price_baht']:.2f} บาท\nallergen tags: {x['allergens_verified']}\nสถานะ allergen: {x['allergen_status']}\n"+DISCLAIMER) if x else 'ไม่พบเมนูนี้ในฐานข้อมูล'
+                                last_display=(f"{x['name_th']} — {x['price_baht']:.2f} บาท\n"+MENU_NOTICE) if x else 'ยังไม่พบเมนูนี้ครับ ลองระบุชื่อเมนูอีกครั้งได้เลย'
                             self.last_trace.append({'step':step,'tool':name,'arguments':args,
                                   'status':payload.get('status'),'passed':payload.get('passed'),
                                   'result_id':payload.get('result_id'),'issues':payload.get('issues',[]),
@@ -282,23 +359,13 @@ class BudgeteerAgent:
                             self.last_trace.append({'step':step,'tool':name,'error':str(exc),
                                 'elapsed_ms':round((time.perf_counter()-started)*1000,3)})
                         messages.append(ToolMessage(content=json.dumps(payload,ensure_ascii=False),tool_call_id=call['id']))
-                    # A verified result is rendered deterministically. Another model call
-                    # cannot improve it; recheck the live catalog before returning instead.
                     if verified:
-                        final = await session.call_tool('verify_set', {'result_id': candidate})
-                        checked = json.loads(final.content[0].text)
-                        self.last_policy = checked.get('policy_decision')
-                        self.last_run['final_recheck'] = {'passed': checked.get('passed'),
-                            'result_id': candidate, 'policy_decision': self.last_policy}
-                        if not final.isError and checked.get('passed'):
-                            self.state.last_result = checked['checked_result']
-                            return self.render_result(checked['checked_result'])
-                        return 'ฐานข้อมูลเปลี่ยนหรือผลตรวจไม่ผ่าน กรุณาให้จัดชุดใหม่ครับ\n' + DISCLAIMER
+                        return await self._finish_options(session,candidate)
                     if last_display and any(c['name'] == 'clarify' for c in response.tool_calls):
                         return last_display
                     if issues and any(c['name'] in {'build_set', 'verify_set'} for c in response.tool_calls):
                         return self._friendly_issues(issues)
-        return 'หยุดเมื่อครบจำนวนรอบเครื่องมือ ยังไม่มีชุดที่อนุญาตให้ตอบ กรุณาระบุข้อมูลใหม่ครับ\n'+DISCLAIMER
+        return 'ยังจัดชุดให้ไม่สำเร็จครับ ลองบอกเมนูที่ต้องการอีกครั้งได้เลย ผมยังจำข้อมูลเดิมไว้'
 
     @staticmethod
     def _unknown_drinks(extracted):
@@ -319,34 +386,32 @@ class BudgeteerAgent:
                   'milk':'นม','gluten':'กลูเตน/แป้งสาลี','soy':'ถั่วเหลือง','sesame':'งา','pork':'หมู'}
 
     def _friendly_issues(self, issues):
-        """Explain a blocked set in plain Thai; never dump internal OPA/validator codes."""
-        issues=list(dict.fromkeys(issues or []))
-        opa_codes=[str(i)[4:].strip() for i in issues if str(i).startswith('OPA:')]
-        issues=[i for i in issues if not str(i).startswith('OPA:')]
-        opa_th={'over_budget':'เกินงบ','over_food_budget':'ค่าอาหารเกินงบ','allergen_conflict':'ขัดกับการแพ้อาหาร',
-                'hard_exclusion':'มีรายการที่ห้าม','empty_food_set':'ไม่มีอาหารหลัก','too_few_items':'จำนวนรายการน้อยกว่าที่ขอ',
-                'too_many_items':'จำนวนรายการเกินที่ขอ','catalog_changed':'ข้อมูลเมนูเปลี่ยนระหว่างตรวจ',
-                'unknown_evidence':'ยังไม่มีหลักฐาน allergen'}
-        if any(c.startswith('opa_unavailable') for c in opa_codes):
-            issues.append('ระบบตรวจนโยบาย OPA ใช้งานไม่ได้ จึงไม่ปล่อยคำแนะนำ (opa_unavailable)')
-        elif not issues:
-            issues=[opa_th[c] for c in opa_codes if c in opa_th]
-        strict_block=self.data_mode=='strict' and self.state.allergens and any(
-            ('allergen' in i) or ('ไม่มีอาหารหลัก' in i) for i in issues)
-        if strict_block:
-            from .database import records
-            confirmed=sum(r.get('allergen_status')=='confirmed' for r in records())
-            names=', '.join(self._ALLERGEN_TH.get(a,a) for a in self.state.allergens)
-            return ('ยังจัดชุดให้ไม่ได้ครับ เพราะแจ้งว่าแพ้ '+names+' และโหมด strict จะเลือกเฉพาะเมนูที่มี'
-                    'หลักฐานส่วนผสม/สารก่อภูมิแพ้ยืนยันจากร้านเท่านั้น '
-                    +(f'ตอนนี้มีเมนูที่ยืนยันแล้ว {confirmed} รายการ ซึ่งไม่พอจัดชุดได้' if confirmed else 'ตอนนี้ยังไม่มีเมนูใดที่ยืนยันข้อมูลนี้')
-                    +'\nทางเลือก: (1) เลือกโหมด simulation ในแถบซ้าย เพื่อทดลองด้วยข้อมูล allergen จำลอง (ไม่ใช่การรับรองความปลอดภัย)'
-                    ' หรือ (2) ถ้าไม่ได้แพ้จริง แจ้งว่า "ไม่ได้แพ้ แค่ไม่ชอบ" แล้วระบบจะลดคะแนนแทนการตัดออก\n'+DISCLAIMER)
-        shown='; '.join(issues[:3]) if issues else 'จัดชุดไม่ได้'
-        return 'ยังจัดชุดที่ผ่านเงื่อนไขไม่ได้: '+shown+'\nโปรดตรวจตัวเลือก/งบกับระบบใหม่ ข้อจำกัดการแพ้จะไม่ถูกผ่อนเอง\n'+DISCLAIMER
+        issues=[str(i) for i in (issues or [])]
+        if self.data_mode=='strict' and self.state.allergens and any(
+                'allergen' in i or 'ไม่มีอาหารหลัก' in i or 'unknown_evidence' in i for i in issues):
+            return ('ยังจัดชุดให้ไม่ได้ครับ เพราะไม่มีข้อมูลส่วนผสมที่ยืนยันเพียงพอสำหรับอาการแพ้ของคุณ '
+                    'กรุณาให้พนักงานร้านช่วยเลือกเมนูและตรวจส่วนผสมก่อนครับ\n\n'+ALLERGY_WARNING)
+        if any('opa_unavailable' in i for i in issues):
+            return 'ระบบตรวจรายการไม่พร้อมชั่วคราว กรุณาลองใหม่ครับ'
+        if any('เครื่องดื่ม' in i or 'ของหวาน' in i for i in issues):
+            message='เครื่องดื่มหรือของหวานที่เลือกอาจขัดกับข้อจำกัด กรุณาเลือกใหม่ครับ'
+        elif any('งบ' in i for i in issues):
+            message='ยังจัดชุดในงบนี้ไม่ได้ครับ ลองเพิ่มงบหรือลดจำนวนรายการได้เลย'
+        else:
+            message='ยังจัดชุดตามเงื่อนไขนี้ไม่ได้ครับ ลองเปลี่ยนเมนูหรือจำนวน โดยผมจะเก็บข้อจำกัดการแพ้เดิมไว้'
+        return message+('\n\n'+ALLERGY_WARNING if self.state.allergens else '')
 
     def _chat(self,user_message):
-        self.last_trace=[];self.state.last_result=None;self.last_policy=None
+        choice=re.fullmatch(r'(?:เลือก\s*)?(?:ชุด(?:ที่)?\s*)?([12])',user_message.strip())
+        if self.last_options and choice:
+            answer=self.select_option(int(choice.group(1))-1)
+            self.state.add_message('user',user_message)
+            self.state.add_message('assistant',answer)
+            return answer
+        had_result=self._has_recommended or bool(self.last_options or self.state.last_result)
+        self.last_trace=[]
+        self.clear_choices()
+        self._replan=False
         if len(user_message)>4000: return 'กรุณาย่อข้อความให้ไม่เกิน 4000 ตัวอักษรครับ'
         try:
             extracted=self._extract_intent(user_message)
@@ -372,24 +437,32 @@ class BudgeteerAgent:
                 # because a split that includes an off-menu drink cannot be priced.
                 extracted={**extracted,'drink_selection':[],'drink_quantities':{},'drink_quantity':None}
             self.state.update_from_extraction(extracted)
+            # Preference updates after a recommendation mean replan, not an empty search.
+            explicit_search=any(word in user_message for word in ('มีเมนู','ราคาเท่า','ค้นหา','ดูเมนู'))
+            self._replan=had_result and not explicit_search and (
+                extracted.get('intent')=='optimize' or any(extracted.get(k) for k in (
+                    'preferred_keywords','dislikes','allergens','hard_exclude_keywords',
+                    'must_include_keywords','budget','budget_delta','num_people'))
+                or any(word in user_message for word in ('จัดใหม่','ชุดใหม่','เปลี่ยนเมนู','อีกชุด','อยากกิน','อยากทาน')))
             if unknown:
                 self.state.last_asked_field='drinks'
-                answer=(f"ไม่มี {', '.join(unknown)} ในเมนูเครื่องดื่มของฐานข้อมูลครับ "
+                answer=(f"ไม่มี {', '.join(unknown)} ในรายการเครื่องดื่มครับ "
                         f"เลือกได้จาก: {', '.join(available)} — กรุณาระบุเครื่องดื่มและจำนวนแต่ละอย่างใหม่ครับ")
                 self.state.add_message('user',user_message);self.state.add_message('assistant',answer)
                 return answer
         except Exception as exc:
             cause=_root_cause(exc)
             LOG.exception('intent extraction failed: %s',type(cause).__name__)
-            return f'อ่านข้อมูลหรือเรียกโมเดลไม่สำเร็จ ({type(cause).__name__}) ยังไม่ได้จัดชุด กรุณาระบุงบ จำนวนคน และข้อจำกัดให้ชัดเจน หรือตรวจการตั้งค่า API ครับ'
+            return 'อ่านความต้องการไม่สำเร็จชั่วคราว ลองส่งข้อความอีกครั้งได้เลยครับ ผมยังเก็บข้อมูลเดิมไว้'
         self.state.add_message('user',user_message)
         try:
             answer=asyncio.run(self._run(user_message,extracted.get('budget_change_unclear',False)))
         except Exception as exc:
             cause=_root_cause(exc)
             LOG.exception('agent turn failed: %s',type(cause).__name__)
+            self.clear_choices()
             self.last_trace.append({'step':'turn','error':f'{type(cause).__name__}: {str(cause)[:300]}'})
-            answer=f'เชื่อมต่อโมเดลหรือ MCP ไม่สำเร็จ ({type(cause).__name__}) ยังไม่มีคำแนะนำที่ผ่านตรวจสอบ กรุณาตรวจการตั้งค่าแล้วลองใหม่ครับ'
+            answer='ผู้ช่วยไม่พร้อมชั่วคราว กรุณาลองอีกครั้งครับ ข้อมูลความต้องการเดิมยังอยู่'
         self.state.add_message('assistant',answer)
         self.state.conversation=self.state.conversation[-24:]
         return answer
@@ -401,8 +474,10 @@ class BudgeteerAgent:
             'model':self.model_name,'model_calls':0,'usage_responses':0,
             'usage':{'input_tokens':0,'output_tokens':0,'total_tokens':0}}
         answer=self._chat(user_message)
+        if self.state.allergens and ALLERGY_WARNING not in answer:
+            answer+='\n\n'+ALLERGY_WARNING
         self.last_run['elapsed_ms']=round((time.perf_counter()-started)*1000,3)
-        self.last_run['tool_calls']=len(self.last_trace)
+        self.last_run['tool_calls']=len(self.last_trace)+len(self.last_run.get('option_checks',[]))
         self.last_run['token_usage_complete']=self.last_run['usage_responses']==self.last_run['model_calls'] and self.last_run['model_calls']>0
         self.last_run['outcome']='recommendation' if self.state.last_result else 'no_recommendation'
         self.last_trace=redact(self.last_trace)

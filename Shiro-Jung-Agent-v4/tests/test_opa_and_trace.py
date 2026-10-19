@@ -72,7 +72,9 @@ class OPATest(unittest.TestCase):
         with patch.dict(os.environ,{'SUSHI_OPA_BINARY':str(Path(self.tmp.name)/'missing-opa')}):
             answer=agent.chat('จัดชุด')
         self.assertIsNone(agent.state.last_result)
-        self.assertIn('opa_unavailable',answer)
+        self.assertIn('ไม่พร้อมชั่วคราว',answer)
+        self.assertNotIn('opa_unavailable',answer)
+        self.assertFalse(agent.last_policy['allow'])
     def test_multi_turn_budget_and_hard_constraints(self):
         from test_system import READY
         model=ScriptedModel([('build_set',{}),('verify_current',{}),('final',{})],
@@ -114,10 +116,11 @@ class OPATest(unittest.TestCase):
             page.session_state['agent']=agent
             page.run(timeout=30)
             self.assertFalse(page.exception)
-            self.assertGreater(len(page.dataframe),0)
-            self.assertFalse(any('OPA' in e.label for e in page.expander))
-            page.toggle[0].set_value(True).run()
-            self.assertFalse(page.exception)
-            self.assertTrue(any('OPA' in e.label for e in page.expander))
+            self.assertEqual(len(page.dataframe),0)
+            self.assertEqual(len(page.json),0)
+            self.assertEqual(len(page.toggle),0)
+            self.assertFalse(any('OPA' in e.label or 'ที่มา' in e.label for e in page.expander))
+            self.assertIn('explanation',agent.state.last_result)
+
 
 if __name__=='__main__':unittest.main()

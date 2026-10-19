@@ -28,6 +28,21 @@ class MenuService:
         return {'status':'candidate','result_id':result['result_id'],'result':result,
                 'instruction':'Call verify_set with this result_id before recommending.'}
 
+    def alternative(self, result_id):
+        """Diversify food only; never relax the original dietary constraints."""
+        original=self.results.get(result_id)
+        if original is None or not self.verify(result_id)['passed']:
+            return {'status':'unavailable'}
+        food=[x for x in original['selected'] if x['category'] not in {'เครื่องดื่ม','ของหวาน'}]
+        # A bounded search; fixed drinks/desserts and all preferences stay unchanged.
+        for item in food[:3]:
+            args=copy.deepcopy(original['constraints'])
+            args['excluded_item_ids']=list(dict.fromkeys([*args.get('excluded_item_ids',[]),item['item_id']]))
+            built=self.build(**args)
+            if built['status']=='candidate':
+                return built
+        return {'status':'unavailable'}
+
     def verify(self, result_id):
         result=self.results.get(result_id)
         if result is None:

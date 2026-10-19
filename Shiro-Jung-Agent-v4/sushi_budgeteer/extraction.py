@@ -31,6 +31,10 @@ def _sanitize_extraction(
 
 EXTRACT_PROMPT = """คุณคือระบบสกัดข้อมูลโครงสร้าง (Intent Extractor) จากข้อความภาษาไทย/อังกฤษ
 ของผู้ใช้ระบบจัดเซ็ตเมนูซูชิ
+หากมีข้อมูลมื้อเดิมแล้ว ให้สกัดเฉพาะข้อมูลที่ผู้ใช้เปลี่ยน ไม่เริ่มถามข้อมูลเดิมใหม่
+"อยากกินเซลมอน" หรือ "อยากทานแซลมอน" คือ preferred_keywords=["แซลมอน"], intent="optimize"
+เมื่อผู้ใช้บอกความชอบต่อจากชุดก่อน ให้ปรับชุดเดิม ไม่ใช่ค้นหาเมนู ยกเว้นถามชัดเจนว่า "มีเมนูอะไร" หรือ "ขอดูราคา"
+ห้ามเปลี่ยนหรือลบอาการแพ้ที่จำไว้เพียงเพราะผู้ใช้บอกว่าอยากกินเมนูใหม่
 
 อ่านข้อความของผู้ใช้ แล้วคืนค่าเป็น JSON เท่านั้น (ห้ามมีข้อความอื่นนอกเหนือจาก JSON)
 ด้วยโครงสร้างดังนี้:
@@ -151,3 +155,24 @@ JSON: {"budget": null, "budget_delta": null, "budget_change_unclear": false, "al
 ข้อความ: "[บริบท: คำถามล่าสุดที่ระบบถามคือเรื่อง 'dessert_quantity']\n3 ชิ้น"
 JSON: {"budget": null, "budget_delta": null, "budget_change_unclear": false, "allergens": [], "dislikes": [], "preferred_keywords": [], "hard_exclude_keywords": [], "must_include_keywords": [], "min_items": null, "max_items": null, "num_people": null, "allergy_check_answered": false, "wants_dessert": null, "drink_selection": [], "drink_quantity": null, "drinks_budget_mode": null, "dessert_selection": [], "dessert_quantity": 3, "intent": "clarify_answer"}"""
 
+
+
+def contextual_answer(last_asked_field, message):
+    """Handle exact button/short replies only; richer messages still use extraction."""
+    text=message.strip().lower()
+    no={'ไม่','ไม่มี','ไม่เอา','ไม่รับ','ไม่รับของหวาน','ไม่แพ้','ไม่แพ้อะไร','ไม่มีค่ะ','ไม่มีครับ'}
+    if last_asked_field=='allergy' and text in no:
+        return {'allergy_check_answered':True}
+    if last_asked_field=='dessert':
+        if text in no:
+            return {'wants_dessert':False}
+        if text in {'รับ','เอา','รับของหวาน','เอาของหวาน'}:
+            return {'wants_dessert':True}
+    if last_asked_field=='drinks_budget_mode':
+        if text in {'รวม','รวมในงบ','ในงบเดิม','รวมในงบเดิม'}:
+            return {'drinks_budget_mode':'within'}
+        if text in {'แยก','คิดแยก','นอกงบ','คิดแยกนอกงบ'}:
+            return {'drinks_budget_mode':'separate'}
+    if text.isdecimal() and last_asked_field in {'budget','num_people','drink_quantity','dessert_quantity'}:
+        return {last_asked_field:int(text)}
+    return None

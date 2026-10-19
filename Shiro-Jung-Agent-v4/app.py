@@ -74,16 +74,17 @@ def _load_agent(api_key: str, model: str):
 # ดึง API Key อย่างปลอดภัย (รองรับทั้ง Streamlit Secrets บน Cloud และ .env ในเครื่อง)
 # ----------------------------------------------------------------------
 st.sidebar.title("🍣 Shiro-Jung")
-from sushi_budgeteer.policy import DISCLAIMER
-with st.expander("🍵 ข้อมูลเมนูและข้อควรรู้เรื่องการแพ้อาหาร"):
-    st.warning(DISCLAIMER)
+from sushi_budgeteer.presentation import ALLERGY_WARNING, MENU_NOTICE
+st.info('🛡️ หากแพ้อาหารรุนแรง ให้เลือก Strict และแจ้งพนักงานร้านก่อนสั่งอาหารทุกครั้ง '
+        'หากข้อมูลส่วนผสมไม่ยืนยัน ระบบจะไม่จัดชุดให้')
 st.sidebar.caption("จัดมื้ออร่อยให้พอดีงบ 🍣")
-mode = st.sidebar.selectbox("โหมดข้อมูล", ["strict", "simulation"],
-    help="strict: ถ้ามีการแพ้ จะใช้เฉพาะเมนูที่มีหลักฐาน allergen ยืนยัน; simulation: ทดลองจาก tags จำลองเท่านั้น")
-if mode == "strict":
-    st.sidebar.caption("🛡️ หากแจ้งแพ้อาหาร จะเลือกเฉพาะเมนูที่มีหลักฐานสารก่อภูมิแพ้ยืนยันจากร้าน")
-else:
-    st.sidebar.warning("โหมดทดลองใช้ข้อมูลจำลอง ไม่ใช้รับรองความปลอดภัยสำหรับผู้แพ้อาหาร")
+mode = st.sidebar.selectbox(
+    "รูปแบบการแนะนำ", ["strict", "simulation"],
+    format_func=lambda value: {"strict": "Strict · ตรวจส่วนผสมที่ยืนยันแล้ว",
+                               "simulation": "ทดลองจัดชุด · ข้อมูลจำลอง"}[value],
+    help="Strict เหมาะเมื่อมีอาการแพ้ โดยต้องมีข้อมูลส่วนผสมยืนยันก่อนแนะนำเมนู")
+if mode == "simulation":
+    st.sidebar.warning("ชุดทดลองใช้วางแผนเท่านั้น ไม่รับรองความปลอดภัยสำหรับผู้แพ้อาหาร")
 # Mode is passed per Agent subprocess, not assigned to global os.environ.
 
 
@@ -120,6 +121,8 @@ GREETING_MESSAGE = (
 if api_key:
     # Switching strict/simulation keeps the conversation: only the data mode of the next turn changes.
     if "agent" in st.session_state and st.session_state.get("_agent_key", (None, None, None))[:2] == (api_key, model_name):
+        if st.session_state["agent"].data_mode != mode:
+            st.session_state["agent"].clear_choices()
         st.session_state["agent"].data_mode = mode
         st.session_state["_agent_key"] = (api_key, model_name, mode)
     if "agent" not in st.session_state or st.session_state.get("_agent_key") != (api_key, model_name, mode):
@@ -133,15 +136,27 @@ if api_key:
 
 if "agent" in st.session_state and st.session_state["agent"] is not None:
     st.sidebar.divider()
-    st.sidebar.subheader("สถานะบทสนทนาปัจจุบัน")
-    try:
-        st.sidebar.text(st.session_state["agent"].state.to_summary())
-    except Exception:
-        pass
+    st.sidebar.subheader("มื้อของคุณ 🍱")
+    state = st.session_state["agent"].state
+    if state.budget:
+        st.sidebar.write(f"งบ {state.budget:,.2f} บาท")
+    if state.num_people:
+        st.sidebar.write(f"สำหรับ {state.num_people} คน")
+    if state.allergens:
+        names = st.session_state["agent"]._ALLERGEN_TH
+        st.sidebar.write("แพ้อาหาร: " + ", ".join(names.get(a, a) for a in state.allergens))
+        st.warning(ALLERGY_WARNING)
+    if state.preferred_keywords:
+        st.sidebar.write("ชอบ: " + ", ".join(state.preferred_keywords))
+    if state.dislikes:
+        st.sidebar.write("ไม่ชอบ: " + ", ".join(state.dislikes))
+    st.sidebar.caption("จำข้อมูลให้ตลอดบทสนทนานี้ เปลี่ยนเมนูได้โดยไม่ต้องเริ่มใหม่")
 
     if st.sidebar.button("รีเซ็ตบทสนทนา"):
         try:
             st.session_state["agent"].state.reset()
+            st.session_state["agent"]._has_recommended = False
+            st.session_state["agent"].clear_choices()
             st.session_state["agent"].last_policy = None
             st.session_state["agent"].last_trace = []
             st.session_state["agent"].last_run = {}
@@ -160,7 +175,7 @@ page_header(
 )
 
 if not api_key:
-    st.error("⚠️ ไม่พบ OPENAI_API_KEY — กรุณาใส่ในไฟล์ .env (หากรันในเครื่อง) หรือตั้งค่าใน Settings -> Secrets บน Streamlit Cloud")
+    st.error("ผู้ช่วยยังไม่พร้อมให้บริการ กรุณาติดต่อผู้ดูแลร้านหรือลองอีกครั้งภายหลังครับ")
 elif "agent" not in st.session_state or st.session_state["agent"] is None:
     st.warning("กำลังเตรียมความพร้อมของระบบ กรุณารอสักครู่...")
 else:
@@ -168,7 +183,8 @@ else:
         with st.chat_message(msg["role"]):
             st.markdown(msg["content"])
 
-    prompt = st.chat_input("เช่น: จัดเซ็ตงบ 300 บาท แพ้กุ้ง ชอบแซลมอน")
+    typed_prompt = st.chat_input("เช่น งบ 500 บาท 2 คน หรือ เปลี่ยนเป็นแซลมอน ใช้งบเดิม")
+    prompt = st.session_state.pop("pending_message", None) or typed_prompt
     if prompt:
         st.session_state["chat_history"].append({"role": "user", "content": prompt})
         with st.chat_message("user"):
@@ -188,33 +204,38 @@ else:
 
         st.session_state["chat_history"].append({"role": "assistant", "content": full_text})
         st.rerun()
-# Developer details are hidden by default; turn on in the sidebar for demos.
-show_dev = st.sidebar.toggle("แสดงข้อมูลสำหรับผู้พัฒนา (MCP trace)", value=False)
-if "agent" in st.session_state and show_dev:
-    with st.expander("MCP tool trace ของ turn ล่าสุด (ไม่มี API key)"):
-        st.json(st.session_state["agent"].last_trace)
 
+# Only consumer actions are exposed here. Full traces remain on the backend agent.
 if "agent" in st.session_state:
-    current_agent=st.session_state["agent"]
-    if current_agent.last_policy and show_dev:
-        with st.expander("ผลตรวจนโยบายก่อนตอบ (OPA)"):
-            st.json(current_agent.last_policy)
-    if (current_agent.state.last_result and current_agent.last_policy
-            and current_agent.last_policy.get("allow")):
-        result=current_agent.state.last_result
-        evidence=result.get('explanation',{})
-        with st.expander("เหตุผลที่เลือกเมนูและที่มาของข้อมูล", expanded=True):
-            st.caption("คำนวณจากฐานข้อมูลและสูตรคะแนน ไม่ใช่คำอธิบายที่ LLM แต่งขึ้น")
-            st.write(f"คะแนนอาหารรวม: {evidence.get('food_score_total')} | งบคงเหลือ: {evidence.get('budget_remaining')} บาท")
-            st.dataframe([{'เมนู':x['name'],'จำนวน':x['quantity'],'ราคาต่อหน่วย':x['unit_price'],
-                'ยอด':x['subtotal'],'เหตุผล':x['selection_method'],
-                'สถานะราคา':x['price_status'],'สถานะ allergen':x['allergen_status'],
-                'แหล่งราคา':x['source_url'] or 'ยังไม่มีหลักฐาน','แหล่ง allergen':x['allergen_source_url'] or 'ยังไม่มีหลักฐาน',
-                'วันที่ตรวจ':x['checked_at'] or 'ยังไม่ตรวจ'} for x in evidence.get('items',[])],hide_index=True)
-            if show_dev:
-                with st.expander("รายละเอียดองค์ประกอบคะแนนและ constraints"):
-                    st.json(evidence)
-    if show_dev:
-        st.download_button("ดาวน์โหลด trace ของ turn ล่าสุด (ไม่มี prompt หรือ API key)",
-            data=__import__('json').dumps(current_agent.run_report(),ensure_ascii=False,indent=2),
-            file_name="shiro-turn-trace.json",mime="application/json")
+    current_agent = st.session_state["agent"]
+    if current_agent.last_options:
+        st.caption("เลือกชุดที่ถูกใจ หรือพิมพ์บอกสิ่งที่อยากเปลี่ยนได้เลย")
+        columns = st.columns(len(current_agent.last_options))
+        for index, (column, option) in enumerate(zip(columns, current_agent.last_options)):
+            with column:
+                if st.button(f"🍱 เลือกชุดที่ {index + 1} · {option['total_price']:,.2f} บาท",
+                             key=f"choose_{index}", disabled=current_agent.confirmed_option==index):
+                    answer = current_agent.select_option(index)
+                    current_agent.state.add_message("assistant", answer)
+                    st.session_state.setdefault("chat_history", []).append(
+                        {"role": "assistant", "content": answer})
+                    st.rerun()
+        st.caption("การเลือกชุดเป็นเพียงสรุปสำหรับแจ้งร้าน ยังไม่มีการส่งคำสั่งซื้อหรือชำระเงิน")
+    if current_agent.state.last_asked_field == "dessert":
+        yes, no = st.columns(2)
+        for column, label, answer in [(yes, "🍡 รับของหวาน", "รับของหวาน"),
+                                      (no, "พอแล้ว ไม่รับของหวาน", "ไม่รับของหวาน")]:
+            with column:
+                if st.button(label):
+                    st.session_state["pending_message"] = answer
+                    st.rerun()
+    elif current_agent.state.last_asked_field == "drinks_budget_mode":
+        within, separate = st.columns(2)
+        for column, label, answer in [(within, "รวมเครื่องดื่มในงบ", "รวมในงบ"),
+                                      (separate, "คิดเครื่องดื่มแยก", "คิดแยกนอกงบ")]:
+            with column:
+                if st.button(label):
+                    st.session_state["pending_message"] = answer
+                    st.rerun()
+
+st.caption(MENU_NOTICE)

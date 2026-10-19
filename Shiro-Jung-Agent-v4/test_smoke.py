@@ -133,7 +133,7 @@ def main() -> None:
     check("needs_num_people() true once budget is known", s.needs_num_people())
     s.update_from_extraction({"num_people": 2})
     check("state ready after both budget and num_people are set", s.is_ready_to_optimize())
-    check("needs_allergy_check() true until the agent asks", s.needs_allergy_check())
+    check("known allergy is remembered without asking again", not s.needs_allergy_check())
     check("allergen recorded", "crustacean" in s.allergens)
 
     # Context-aware short-answer interpretation: "ไม่" alone only makes sense
