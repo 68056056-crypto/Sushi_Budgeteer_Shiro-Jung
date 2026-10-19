@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "shiro-jung": {
+      "command": "/ABSOLUTE/PATH/Shiro-Jung-Agent-v4/.venv/bin/python",
+      "args": ["/ABSOLUTE/PATH/Shiro-Jung-Agent-v4/mcp_server.py"],
+      "env": {
+        "SUSHI_DB_PATH": "/ABSOLUTE/PATH/Shiro-Jung-Agent-v4/data/menu.sqlite3",
+        "SUSHI_DATA_MODE": "strict"
+      }
+    }
+  }
+}

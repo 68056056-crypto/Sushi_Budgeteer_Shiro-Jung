@@ -1,0 +1,95 @@
+=== 1. Module imports ===
+[PASS] import optimizer, state, tools
+
+=== 2. Menu dataset loads ===
+[PASS] menu has at least 40 items
+[PASS] every row has price_baht, category, allergens_verified
+
+=== 3. score_item() ===
+[PASS] matching preference increases score
+[PASS] dislike penalty reduces score but floors at 0
+[PASS] raw-fish category gets no diversity bonus
+[PASS] non-raw category scores higher price+diversity than raw fish at same price bucket
+
+=== 4. _dp_knapsack_01() — strict 0/1 (no repeats) correctness ===
+[PASS] 0/1 dp picks A+B over C alone (got ['A', 'B'])
+[PASS] 0/1 dp respects the budget
+[PASS] 0/1 dp total score is optimal (got 11.0)
+
+=== 4b. dp_knapsack() — repeat-capable knapsack picks B twice over A+B ===
+[PASS] repeat-capable dp beats or matches strict 0/1 (got 12.0 vs 11.0)
+[PASS] repeat-capable dp actually repeats B (got ['B', 'B'])
+[PASS] aggregate_by_item_id collapses the 2 B's into one entry with quantity=2
+[PASS] aggregated subtotal_baht = quantity x price
+
+=== 5. dp_knapsack() beats random_baseline() on average ===
+[PASS] DP score (40.5) >= random score (25.5)
+[PASS] DP stays within budget
+
+=== 6. Allergen hard-block filtering (tools._run_filter) ===
+[PASS] some items are blocked for crustacean allergy
+[PASS] no blocked item is missing the crustacean tag
+[PASS] no crustacean-tagged item leaks into safe_items
+
+=== 7. BudgeteerState memory ===
+[PASS] state not ready without budget
+[PASS] still not ready without num_people (budget alone isn't enough)
+[PASS] needs_num_people() true once budget is known
+[PASS] state ready after both budget and num_people are set
+[PASS] needs_allergy_check() true until the agent asks
+[PASS] allergen recorded
+[PASS] allergy_check_done flips true from a context-resolved short answer
+[PASS] needs_drink_selection() true once allergy check is done
+[PASS] needs_drink_quantity() true once a drink NAME is chosen but no quantity yet
+[PASS] drink_quantity recorded
+[PASS] needs_drinks_budget_mode() true once name+quantity are both known
+[PASS] drinks_budget_mode recorded
+[PASS] needs_dessert_confirmation() true once budget mode is settled
+[PASS] needs_dessert_selection() true when dessert confirmed but not yet named
+[PASS] needs_dessert_quantity() true once dessert is named but no quantity yet
+[PASS] dessert_quantity recorded
+[PASS] allergens accumulate rather than overwrite
+[PASS] reset() clears budget
+
+=== 8. build_optimal_set + verify_result tools (no LLM) ===
+[PASS] build_optimal_set stays within budget
+[PASS] build_optimal_set selects at least 1 item
+[PASS] verify_result passes for a valid build
+
+=== 8b. Drinks/dessert as a fixed allocation, not DP-optimized ===
+[PASS] exactly num_people (4) drinks allocated (got 4)
+[PASS] exactly num_people (4) desserts allocated when include_dessert=true (got 4)
+[PASS] drinks_cost/dessert_cost fields reflect the fixed allocation
+[PASS] no dessert appears when include_dessert=false, even though it wasn't excluded via hard_exclude_keywords
+[PASS] explicit drink_quantity=2 overrides the num_people=4 fallback (got 2)
+[PASS] explicit dessert_quantity=1 overrides the num_people=4 fallback (got 1)
+
+=== 8bb. _sanitize_extraction — guards against a bare slot-answer polluting hard constraints ===
+[PASS] must_include_keywords stripped when the trigger phrase isn't in the user's own words
+[PASS] dessert_selection itself is left untouched
+[PASS] must_include_keywords is KEPT when the user's own message actually says 'กินแค่'
+[PASS] no sanitizing applied when last_asked_field isn't a narrow slot (e.g. None)
+
+=== 8c. drinks_separate_from_budget — food gets the FULL budget, drinks billed on top ===
+[PASS] within-budget mode: total_price never exceeds the stated budget
+[PASS] separate mode: food_total_price alone respects the budget (got 300.0)
+[PASS] separate mode: budget_used_pct is based on food only, not the grand total
+[PASS] verify_result doesn't falsely flag the intentional over-budget grand total in separate mode
+
+=== 9. must_include_keywords — 'eat ONLY fish and shrimp' ===
+[PASS] must_include selects at least 1 item
+[PASS] every selected item matches กุ้ง or ปลา (no squid/tamago/soup/dessert leaking in)
+[PASS] count_by_must_include_keyword breakdown sums to item_count (got {'กุ้ง': 12, 'ปลา': 7})
+
+=== 10. hard_exclude_keywords — 'no raw food at all' ===
+[PASS] hard_exclude selects at least 1 item
+[PASS] no selected item matches 'ดิบ' (raw) despite it being budget-efficient
+
+=== 10b. hard_exclude_keywords — natural compound phrase 'ของดิบ' (raw food) ===
+[PASS] 'ของดิบ' (as a user would actually phrase it, not the simplified 'ดิบ') still excludes every raw item — regression test for the reported Salmon Sushi leak
+
+=== 11. verify_result catches a must_include/hard_exclude violation ===
+[PASS] verify_result flags a hard_exclude_keywords violation
+
+========================================
+All smoke checks passed.

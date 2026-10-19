@@ -1,0 +1,290 @@
+[
+  {
+    "scenario": "missing_budget",
+    "model": "scripted fake model, not live OpenAI",
+    "tools": "actual MCP stdio + SQLite + OPA",
+    "run": {
+      "session_id": "2d36b661-9c9a-4325-84cd-9fa559ea389e",
+      "turn_id": "7a6457c3-d645-45e0-87bb-c260bc209fc8",
+      "created_at": "2026-10-18T13:59:28.027688+00:00",
+      "model_source": "scripted",
+      "model": "gpt-4o-mini",
+      "model_calls": 3,
+      "usage_responses": 0,
+      "usage": {
+        "input_tokens": 0,
+        "output_tokens": 0,
+        "total_tokens": 0
+      },
+      "model_events": [
+        {
+          "phase": "extraction",
+          "tools_selected": [],
+          "usage_reported": false
+        },
+        {
+          "phase": "tool_selection",
+          "tools_selected": [
+            "clarify"
+          ],
+          "usage_reported": false
+        },
+        {
+          "phase": "tool_selection",
+          "tools_selected": [],
+          "usage_reported": false
+        }
+      ],
+      "elapsed_ms": 1536.284,
+      "tool_calls": 1,
+      "token_usage_complete": false,
+      "outcome": "no_recommendation",
+      "trace": [
+        {
+          "step": 0,
+          "tool": "clarify",
+          "arguments": {
+            "missing": [
+              "budget"
+            ]
+          },
+          "status": null,
+          "passed": null,
+          "result_id": null,
+          "issues": [],
+          "policy_decision": null,
+          "elapsed_ms": 13.47
+        }
+      ],
+      "policy_decision": null
+    },
+    "answer": "งบประมาณที่ต้องการใช้ทั้งหมดกี่บาทครับ?"
+  },
+  {
+    "scenario": "build_verify",
+    "model": "scripted fake model, not live OpenAI",
+    "tools": "actual MCP stdio + SQLite + OPA",
+    "run": {
+      "session_id": "82549c04-e87d-455c-8c7c-f5e1fe1847c6",
+      "turn_id": "6af72863-0e8c-429d-84d7-c8ff07bf939a",
+      "created_at": "2026-10-18T13:59:29.564509+00:00",
+      "model_source": "scripted",
+      "model": "gpt-4o-mini",
+      "model_calls": 4,
+      "usage_responses": 0,
+      "usage": {
+        "input_tokens": 0,
+        "output_tokens": 0,
+        "total_tokens": 0
+      },
+      "model_events": [
+        {
+          "phase": "extraction",
+          "tools_selected": [],
+          "usage_reported": false
+        },
+        {
+          "phase": "tool_selection",
+          "tools_selected": [
+            "build_set"
+          ],
+          "usage_reported": false
+        },
+        {
+          "phase": "tool_selection",
+          "tools_selected": [
+            "verify_set"
+          ],
+          "usage_reported": false
+        },
+        {
+          "phase": "tool_selection",
+          "tools_selected": [],
+          "usage_reported": false
+        }
+      ],
+      "final_recheck": {
+        "passed": true,
+        "result_id": "025cd475-30a0-408c-8fcc-8480b5ed7692",
+        "policy_decision": {
+          "allow": true,
+          "deny_reasons": [],
+          "policy_version": "shiro-4.0",
+          "engine": "OPA",
+          "elapsed_ms": 17.472
+        }
+      },
+      "elapsed_ms": 1580.364,
+      "tool_calls": 2,
+      "token_usage_complete": false,
+      "outcome": "recommendation",
+      "trace": [
+        {
+          "step": 0,
+          "tool": "build_set",
+          "arguments": {
+            "budget": 300.0,
+            "allergens": [],
+            "dislikes": [],
+            "preferred_keywords": [],
+            "hard_exclude_keywords": [],
+            "must_include_keywords": [],
+            "min_items": 1,
+            "max_items": 20,
+            "num_people": 2,
+            "drink_selection": [
+              "ชาเขียวร้อน"
+            ],
+            "drink_quantity": 2,
+            "drinks_separate_from_budget": false,
+            "include_dessert": false,
+            "dessert_selection": [],
+            "dessert_quantity": null
+          },
+          "status": "candidate",
+          "passed": null,
+          "result_id": "025cd475-30a0-408c-8fcc-8480b5ed7692",
+          "issues": [],
+          "policy_decision": null,
+          "elapsed_ms": 36.584
+        },
+        {
+          "step": 1,
+          "tool": "verify_set",
+          "arguments": {
+            "result_id": "025cd475-30a0-408c-8fcc-8480b5ed7692"
+          },
+          "status": null,
+          "passed": true,
+          "result_id": "025cd475-30a0-408c-8fcc-8480b5ed7692",
+          "issues": [],
+          "policy_decision": {
+            "allow": true,
+            "deny_reasons": [],
+            "policy_version": "shiro-4.0",
+            "engine": "OPA",
+            "elapsed_ms": 16.785
+          },
+          "elapsed_ms": 23.596
+        }
+      ],
+      "policy_decision": {
+        "allow": true,
+        "deny_reasons": [],
+        "policy_version": "shiro-4.0",
+        "engine": "OPA",
+        "elapsed_ms": 17.472
+      }
+    },
+    "answer": "ชุดเมนูจากฐานข้อมูล (ผ่านการตรวจข้อจำกัดแล้ว):\n- ซูชิไข่หวาน ×3 — 120.00 บาท\n- ซูชิกุ้งหวาน ×3 — 120.00 บาท\n- ซูชิกุ้งเทมปุระ ×1 — 60.00 บาท\n- ชาเขียวร้อน ×2 — 0.00 บาท\nรวม 9 รายการ (4 เมนูไม่ซ้ำ)\nอาหาร 300.00 บาท | จ่ายรวม 300.00 บาท\nใช้งบ 100.0% — รวมเครื่องดื่ม/ของหวานในงบ\nโหมดข้อมูล: strict\nตรวจข้อจำกัดโดย Python และ OPA; คะแนนความคุ้มค่าตามสูตรของระบบ\nข้อมูลจำลองเพื่อการศึกษา ราคาและสารก่อภูมิแพ้ยังไม่ได้รับรองจากร้าน ไม่รับประกันการปนเปื้อนจริง ผู้แพ้อาหารต้องตรวจสอบกับพนักงานร้านโดยตรง"
+  },
+  {
+    "scenario": "allergen_unknown_blocked",
+    "model": "scripted fake model, not live OpenAI",
+    "tools": "actual MCP stdio + SQLite + OPA",
+    "run": {
+      "session_id": "c7eafc50-c03c-46c1-ad7c-9806a2b88b2d",
+      "turn_id": "1d0c1b30-45f5-4eda-8b1a-eb17820b99f7",
+      "created_at": "2026-10-18T13:59:31.145311+00:00",
+      "model_source": "scripted",
+      "model": "gpt-4o-mini",
+      "model_calls": 3,
+      "usage_responses": 0,
+      "usage": {
+        "input_tokens": 0,
+        "output_tokens": 0,
+        "total_tokens": 0
+      },
+      "model_events": [
+        {
+          "phase": "extraction",
+          "tools_selected": [],
+          "usage_reported": false
+        },
+        {
+          "phase": "tool_selection",
+          "tools_selected": [
+            "build_set"
+          ],
+          "usage_reported": false
+        },
+        {
+          "phase": "tool_selection",
+          "tools_selected": [],
+          "usage_reported": false
+        }
+      ],
+      "elapsed_ms": 1581.462,
+      "tool_calls": 1,
+      "token_usage_complete": false,
+      "outcome": "no_recommendation",
+      "trace": [
+        {
+          "step": 0,
+          "tool": "build_set",
+          "arguments": {
+            "budget": 300.0,
+            "allergens": [
+              "crustacean"
+            ],
+            "dislikes": [],
+            "preferred_keywords": [],
+            "hard_exclude_keywords": [],
+            "must_include_keywords": [],
+            "min_items": 1,
+            "max_items": 20,
+            "num_people": 2,
+            "drink_selection": [
+              "ชาเขียวร้อน"
+            ],
+            "drink_quantity": 2,
+            "drinks_separate_from_budget": false,
+            "include_dessert": false,
+            "dessert_selection": [],
+            "dessert_quantity": null
+          },
+          "status": "requires_clarification",
+          "passed": null,
+          "result_id": null,
+          "issues": [
+            "เครื่องดื่ม/ของหวานขัดข้อจำกัดหรือยังไม่ทราบ allergen โปรดเลือกใหม่",
+            "จำนวนรายการไม่อยู่ในช่วงที่ขอ",
+            "ไม่มีอาหารหลักที่จัดได้ตามข้อจำกัด",
+            "รายการเครื่องดื่ม/ของหวานไม่ตรงตัวเลือกที่ยืนยัน",
+            "จำนวนเครื่องดื่มไม่ตรงที่ขอ",
+            "OPA: empty_food_set",
+            "OPA: invalid_schema",
+            "OPA: python_validation_failed",
+            "OPA: too_few_items"
+          ],
+          "policy_decision": {
+            "allow": false,
+            "deny_reasons": [
+              "empty_food_set",
+              "invalid_schema",
+              "python_validation_failed",
+              "too_few_items"
+            ],
+            "policy_version": "shiro-4.0",
+            "engine": "OPA",
+            "elapsed_ms": 17.278
+          },
+          "elapsed_ms": 39.409
+        }
+      ],
+      "policy_decision": {
+        "allow": false,
+        "deny_reasons": [
+          "empty_food_set",
+          "invalid_schema",
+          "python_validation_failed",
+          "too_few_items"
+        ],
+        "policy_version": "shiro-4.0",
+        "engine": "OPA",
+        "elapsed_ms": 17.278
+      }
+    },
+    "answer": "ยังจัดชุดที่ผ่านเงื่อนไขไม่ได้: เครื่องดื่ม/ของหวานขัดข้อจำกัดหรือยังไม่ทราบ allergen โปรดเลือกใหม่; จำนวนรายการไม่อยู่ในช่วงที่ขอ; ไม่มีอาหารหลักที่จัดได้ตามข้อจำกัด; รายการเครื่องดื่ม/ของหวานไม่ตรงตัวเลือกที่ยืนยัน; จำนวนเครื่องดื่มไม่ตรงที่ขอ; OPA: empty_food_set; OPA: invalid_schema; OPA: python_validation_failed; OPA: too_few_items\nโปรดตรวจตัวเลือก/งบกับระบบใหม่ ข้อจำกัดการแพ้จะไม่ถูกผ่อนเอง\nข้อมูลจำลองเพื่อการศึกษา ราคาและสารก่อภูมิแพ้ยังไม่ได้รับรองจากร้าน ไม่รับประกันการปนเปื้อนจริง ผู้แพ้อาหารต้องตรวจสอบกับพนักงานร้านโดยตรง"
+  }
+]

@@ -1,0 +1,857 @@
+[
+  {
+    "id": "budget_100",
+    "data_mode": "strict",
+    "arguments": {
+      "budget": 100,
+      "num_people": 2,
+      "drink_selection": [
+        "ชาเขียวร้อน"
+      ],
+      "drink_quantity": 2,
+      "drinks_separate_from_budget": false,
+      "include_dessert": false,
+      "min_items": 1,
+      "max_items": 20
+    },
+    "expected": "recommendation",
+    "messages": [
+      "จัดชุดตามเงื่อนไขต่อไปนี้ งบเป็นบาท จำนวนคนและเครื่องดื่มตามที่ระบุ หากไม่ได้ระบุอย่างอื่น ไม่มีแพ้อาหาร ไม่รับของหวาน: {\"budget\": 100, \"num_people\": 2, \"drink_selection\": [\"ชาเขียวร้อน\"], \"drink_quantity\": 2, \"drinks_separate_from_budget\": false, \"include_dessert\": false, \"min_items\": 1, \"max_items\": 20}"
+    ],
+    "missing_field": null
+  },
+  {
+    "id": "budget_180",
+    "data_mode": "strict",
+    "arguments": {
+      "budget": 180,
+      "num_people": 2,
+      "drink_selection": [
+        "ชาเขียวร้อน"
+      ],
+      "drink_quantity": 2,
+      "drinks_separate_from_budget": false,
+      "include_dessert": false,
+      "min_items": 1,
+      "max_items": 20
+    },
+    "expected": "recommendation",
+    "messages": [
+      "จัดชุดตามเงื่อนไขต่อไปนี้ งบเป็นบาท จำนวนคนและเครื่องดื่มตามที่ระบุ หากไม่ได้ระบุอย่างอื่น ไม่มีแพ้อาหาร ไม่รับของหวาน: {\"budget\": 180, \"num_people\": 2, \"drink_selection\": [\"ชาเขียวร้อน\"], \"drink_quantity\": 2, \"drinks_separate_from_budget\": false, \"include_dessert\": false, \"min_items\": 1, \"max_items\": 20}"
+    ],
+    "missing_field": null
+  },
+  {
+    "id": "budget_300",
+    "data_mode": "strict",
+    "arguments": {
+      "budget": 300,
+      "num_people": 2,
+      "drink_selection": [
+        "ชาเขียวร้อน"
+      ],
+      "drink_quantity": 2,
+      "drinks_separate_from_budget": false,
+      "include_dessert": false,
+      "min_items": 1,
+      "max_items": 20
+    },
+    "expected": "recommendation",
+    "messages": [
+      "จัดชุดตามเงื่อนไขต่อไปนี้ งบเป็นบาท จำนวนคนและเครื่องดื่มตามที่ระบุ หากไม่ได้ระบุอย่างอื่น ไม่มีแพ้อาหาร ไม่รับของหวาน: {\"budget\": 300, \"num_people\": 2, \"drink_selection\": [\"ชาเขียวร้อน\"], \"drink_quantity\": 2, \"drinks_separate_from_budget\": false, \"include_dessert\": false, \"min_items\": 1, \"max_items\": 20}"
+    ],
+    "missing_field": null
+  },
+  {
+    "id": "budget_500",
+    "data_mode": "strict",
+    "arguments": {
+      "budget": 500,
+      "num_people": 2,
+      "drink_selection": [
+        "ชาเขียวร้อน"
+      ],
+      "drink_quantity": 2,
+      "drinks_separate_from_budget": false,
+      "include_dessert": false,
+      "min_items": 1,
+      "max_items": 20
+    },
+    "expected": "recommendation",
+    "messages": [
+      "จัดชุดตามเงื่อนไขต่อไปนี้ งบเป็นบาท จำนวนคนและเครื่องดื่มตามที่ระบุ หากไม่ได้ระบุอย่างอื่น ไม่มีแพ้อาหาร ไม่รับของหวาน: {\"budget\": 500, \"num_people\": 2, \"drink_selection\": [\"ชาเขียวร้อน\"], \"drink_quantity\": 2, \"drinks_separate_from_budget\": false, \"include_dessert\": false, \"min_items\": 1, \"max_items\": 20}"
+    ],
+    "missing_field": null
+  },
+  {
+    "id": "budget_800",
+    "data_mode": "strict",
+    "arguments": {
+      "budget": 800,
+      "num_people": 2,
+      "drink_selection": [
+        "ชาเขียวร้อน"
+      ],
+      "drink_quantity": 2,
+      "drinks_separate_from_budget": false,
+      "include_dessert": false,
+      "min_items": 1,
+      "max_items": 20
+    },
+    "expected": "recommendation",
+    "messages": [
+      "จัดชุดตามเงื่อนไขต่อไปนี้ งบเป็นบาท จำนวนคนและเครื่องดื่มตามที่ระบุ หากไม่ได้ระบุอย่างอื่น ไม่มีแพ้อาหาร ไม่รับของหวาน: {\"budget\": 800, \"num_people\": 2, \"drink_selection\": [\"ชาเขียวร้อน\"], \"drink_quantity\": 2, \"drinks_separate_from_budget\": false, \"include_dessert\": false, \"min_items\": 1, \"max_items\": 20}"
+    ],
+    "missing_field": null
+  },
+  {
+    "id": "prefer_แซลมอน",
+    "data_mode": "strict",
+    "arguments": {
+      "budget": 300,
+      "num_people": 2,
+      "drink_selection": [
+        "ชาเขียวร้อน"
+      ],
+      "drink_quantity": 2,
+      "drinks_separate_from_budget": false,
+      "include_dessert": false,
+      "min_items": 1,
+      "max_items": 20,
+      "preferred_keywords": [
+        "แซลมอน"
+      ]
+    },
+    "expected": "recommendation",
+    "messages": [
+      "จัดชุดตามเงื่อนไขต่อไปนี้ งบเป็นบาท จำนวนคนและเครื่องดื่มตามที่ระบุ หากไม่ได้ระบุอย่างอื่น ไม่มีแพ้อาหาร ไม่รับของหวาน: {\"budget\": 300, \"num_people\": 2, \"drink_selection\": [\"ชาเขียวร้อน\"], \"drink_quantity\": 2, \"drinks_separate_from_budget\": false, \"include_dessert\": false, \"min_items\": 1, \"max_items\": 20, \"preferred_keywords\": [\"แซลมอน\"]}"
+    ],
+    "missing_field": null
+  },
+  {
+    "id": "prefer_กุ้ง",
+    "data_mode": "strict",
+    "arguments": {
+      "budget": 300,
+      "num_people": 2,
+      "drink_selection": [
+        "ชาเขียวร้อน"
+      ],
+      "drink_quantity": 2,
+      "drinks_separate_from_budget": false,
+      "include_dessert": false,
+      "min_items": 1,
+      "max_items": 20,
+      "preferred_keywords": [
+        "กุ้ง"
+      ]
+    },
+    "expected": "recommendation",
+    "messages": [
+      "จัดชุดตามเงื่อนไขต่อไปนี้ งบเป็นบาท จำนวนคนและเครื่องดื่มตามที่ระบุ หากไม่ได้ระบุอย่างอื่น ไม่มีแพ้อาหาร ไม่รับของหวาน: {\"budget\": 300, \"num_people\": 2, \"drink_selection\": [\"ชาเขียวร้อน\"], \"drink_quantity\": 2, \"drinks_separate_from_budget\": false, \"include_dessert\": false, \"min_items\": 1, \"max_items\": 20, \"preferred_keywords\": [\"กุ้ง\"]}"
+    ],
+    "missing_field": null
+  },
+  {
+    "id": "prefer_ไข่",
+    "data_mode": "strict",
+    "arguments": {
+      "budget": 300,
+      "num_people": 2,
+      "drink_selection": [
+        "ชาเขียวร้อน"
+      ],
+      "drink_quantity": 2,
+      "drinks_separate_from_budget": false,
+      "include_dessert": false,
+      "min_items": 1,
+      "max_items": 20,
+      "preferred_keywords": [
+        "ไข่"
+      ]
+    },
+    "expected": "recommendation",
+    "messages": [
+      "จัดชุดตามเงื่อนไขต่อไปนี้ งบเป็นบาท จำนวนคนและเครื่องดื่มตามที่ระบุ หากไม่ได้ระบุอย่างอื่น ไม่มีแพ้อาหาร ไม่รับของหวาน: {\"budget\": 300, \"num_people\": 2, \"drink_selection\": [\"ชาเขียวร้อน\"], \"drink_quantity\": 2, \"drinks_separate_from_budget\": false, \"include_dessert\": false, \"min_items\": 1, \"max_items\": 20, \"preferred_keywords\": [\"ไข่\"]}"
+    ],
+    "missing_field": null
+  },
+  {
+    "id": "prefer_ปลา",
+    "data_mode": "strict",
+    "arguments": {
+      "budget": 300,
+      "num_people": 2,
+      "drink_selection": [
+        "ชาเขียวร้อน"
+      ],
+      "drink_quantity": 2,
+      "drinks_separate_from_budget": false,
+      "include_dessert": false,
+      "min_items": 1,
+      "max_items": 20,
+      "preferred_keywords": [
+        "ปลา"
+      ]
+    },
+    "expected": "recommendation",
+    "messages": [
+      "จัดชุดตามเงื่อนไขต่อไปนี้ งบเป็นบาท จำนวนคนและเครื่องดื่มตามที่ระบุ หากไม่ได้ระบุอย่างอื่น ไม่มีแพ้อาหาร ไม่รับของหวาน: {\"budget\": 300, \"num_people\": 2, \"drink_selection\": [\"ชาเขียวร้อน\"], \"drink_quantity\": 2, \"drinks_separate_from_budget\": false, \"include_dessert\": false, \"min_items\": 1, \"max_items\": 20, \"preferred_keywords\": [\"ปลา\"]}"
+    ],
+    "missing_field": null
+  },
+  {
+    "id": "exclude_ดิบ",
+    "data_mode": "strict",
+    "arguments": {
+      "budget": 300,
+      "num_people": 2,
+      "drink_selection": [
+        "ชาเขียวร้อน"
+      ],
+      "drink_quantity": 2,
+      "drinks_separate_from_budget": false,
+      "include_dessert": false,
+      "min_items": 1,
+      "max_items": 20,
+      "hard_exclude_keywords": [
+        "ดิบ"
+      ]
+    },
+    "expected": "recommendation",
+    "messages": [
+      "จัดชุดตามเงื่อนไขต่อไปนี้ งบเป็นบาท จำนวนคนและเครื่องดื่มตามที่ระบุ หากไม่ได้ระบุอย่างอื่น ไม่มีแพ้อาหาร ไม่รับของหวาน: {\"budget\": 300, \"num_people\": 2, \"drink_selection\": [\"ชาเขียวร้อน\"], \"drink_quantity\": 2, \"drinks_separate_from_budget\": false, \"include_dessert\": false, \"min_items\": 1, \"max_items\": 20, \"hard_exclude_keywords\": [\"ดิบ\"]}"
+    ],
+    "missing_field": null
+  },
+  {
+    "id": "exclude_หมู",
+    "data_mode": "strict",
+    "arguments": {
+      "budget": 300,
+      "num_people": 2,
+      "drink_selection": [
+        "ชาเขียวร้อน"
+      ],
+      "drink_quantity": 2,
+      "drinks_separate_from_budget": false,
+      "include_dessert": false,
+      "min_items": 1,
+      "max_items": 20,
+      "hard_exclude_keywords": [
+        "หมู"
+      ]
+    },
+    "expected": "recommendation",
+    "messages": [
+      "จัดชุดตามเงื่อนไขต่อไปนี้ งบเป็นบาท จำนวนคนและเครื่องดื่มตามที่ระบุ หากไม่ได้ระบุอย่างอื่น ไม่มีแพ้อาหาร ไม่รับของหวาน: {\"budget\": 300, \"num_people\": 2, \"drink_selection\": [\"ชาเขียวร้อน\"], \"drink_quantity\": 2, \"drinks_separate_from_budget\": false, \"include_dessert\": false, \"min_items\": 1, \"max_items\": 20, \"hard_exclude_keywords\": [\"หมู\"]}"
+    ],
+    "missing_field": null
+  },
+  {
+    "id": "exclude_กุ้ง",
+    "data_mode": "strict",
+    "arguments": {
+      "budget": 300,
+      "num_people": 2,
+      "drink_selection": [
+        "ชาเขียวร้อน"
+      ],
+      "drink_quantity": 2,
+      "drinks_separate_from_budget": false,
+      "include_dessert": false,
+      "min_items": 1,
+      "max_items": 20,
+      "hard_exclude_keywords": [
+        "กุ้ง"
+      ]
+    },
+    "expected": "recommendation",
+    "messages": [
+      "จัดชุดตามเงื่อนไขต่อไปนี้ งบเป็นบาท จำนวนคนและเครื่องดื่มตามที่ระบุ หากไม่ได้ระบุอย่างอื่น ไม่มีแพ้อาหาร ไม่รับของหวาน: {\"budget\": 300, \"num_people\": 2, \"drink_selection\": [\"ชาเขียวร้อน\"], \"drink_quantity\": 2, \"drinks_separate_from_budget\": false, \"include_dessert\": false, \"min_items\": 1, \"max_items\": 20, \"hard_exclude_keywords\": [\"กุ้ง\"]}"
+    ],
+    "missing_field": null
+  },
+  {
+    "id": "only_แซลมอน",
+    "data_mode": "strict",
+    "arguments": {
+      "budget": 300,
+      "num_people": 2,
+      "drink_selection": [
+        "ชาเขียวร้อน"
+      ],
+      "drink_quantity": 2,
+      "drinks_separate_from_budget": false,
+      "include_dessert": false,
+      "min_items": 1,
+      "max_items": 20,
+      "must_include_keywords": [
+        "แซลมอน"
+      ]
+    },
+    "expected": "recommendation",
+    "messages": [
+      "จัดชุดตามเงื่อนไขต่อไปนี้ งบเป็นบาท จำนวนคนและเครื่องดื่มตามที่ระบุ หากไม่ได้ระบุอย่างอื่น ไม่มีแพ้อาหาร ไม่รับของหวาน: {\"budget\": 300, \"num_people\": 2, \"drink_selection\": [\"ชาเขียวร้อน\"], \"drink_quantity\": 2, \"drinks_separate_from_budget\": false, \"include_dessert\": false, \"min_items\": 1, \"max_items\": 20, \"must_include_keywords\": [\"แซลมอน\"]}"
+    ],
+    "missing_field": null
+  },
+  {
+    "id": "only_ปลา",
+    "data_mode": "strict",
+    "arguments": {
+      "budget": 300,
+      "num_people": 2,
+      "drink_selection": [
+        "ชาเขียวร้อน"
+      ],
+      "drink_quantity": 2,
+      "drinks_separate_from_budget": false,
+      "include_dessert": false,
+      "min_items": 1,
+      "max_items": 20,
+      "must_include_keywords": [
+        "ปลา"
+      ]
+    },
+    "expected": "recommendation",
+    "messages": [
+      "จัดชุดตามเงื่อนไขต่อไปนี้ งบเป็นบาท จำนวนคนและเครื่องดื่มตามที่ระบุ หากไม่ได้ระบุอย่างอื่น ไม่มีแพ้อาหาร ไม่รับของหวาน: {\"budget\": 300, \"num_people\": 2, \"drink_selection\": [\"ชาเขียวร้อน\"], \"drink_quantity\": 2, \"drinks_separate_from_budget\": false, \"include_dessert\": false, \"min_items\": 1, \"max_items\": 20, \"must_include_keywords\": [\"ปลา\"]}"
+    ],
+    "missing_field": null
+  },
+  {
+    "id": "only_กุ้ง",
+    "data_mode": "strict",
+    "arguments": {
+      "budget": 300,
+      "num_people": 2,
+      "drink_selection": [
+        "ชาเขียวร้อน"
+      ],
+      "drink_quantity": 2,
+      "drinks_separate_from_budget": false,
+      "include_dessert": false,
+      "min_items": 1,
+      "max_items": 20,
+      "must_include_keywords": [
+        "กุ้ง"
+      ]
+    },
+    "expected": "recommendation",
+    "messages": [
+      "จัดชุดตามเงื่อนไขต่อไปนี้ งบเป็นบาท จำนวนคนและเครื่องดื่มตามที่ระบุ หากไม่ได้ระบุอย่างอื่น ไม่มีแพ้อาหาร ไม่รับของหวาน: {\"budget\": 300, \"num_people\": 2, \"drink_selection\": [\"ชาเขียวร้อน\"], \"drink_quantity\": 2, \"drinks_separate_from_budget\": false, \"include_dessert\": false, \"min_items\": 1, \"max_items\": 20, \"must_include_keywords\": [\"กุ้ง\"]}"
+    ],
+    "missing_field": null
+  },
+  {
+    "id": "dislike_not_banned",
+    "data_mode": "strict",
+    "arguments": {
+      "budget": 300,
+      "num_people": 2,
+      "drink_selection": [
+        "ชาเขียวร้อน"
+      ],
+      "drink_quantity": 2,
+      "drinks_separate_from_budget": false,
+      "include_dessert": false,
+      "min_items": 1,
+      "max_items": 20,
+      "dislikes": [
+        "ปลา"
+      ]
+    },
+    "expected": "recommendation",
+    "messages": [
+      "จัดชุดตามเงื่อนไขต่อไปนี้ งบเป็นบาท จำนวนคนและเครื่องดื่มตามที่ระบุ หากไม่ได้ระบุอย่างอื่น ไม่มีแพ้อาหาร ไม่รับของหวาน: {\"budget\": 300, \"num_people\": 2, \"drink_selection\": [\"ชาเขียวร้อน\"], \"drink_quantity\": 2, \"drinks_separate_from_budget\": false, \"include_dessert\": false, \"min_items\": 1, \"max_items\": 20, \"dislikes\": [\"ปลา\"]}"
+    ],
+    "missing_field": null
+  },
+  {
+    "id": "minimum_4",
+    "data_mode": "strict",
+    "arguments": {
+      "budget": 300,
+      "num_people": 2,
+      "drink_selection": [
+        "ชาเขียวร้อน"
+      ],
+      "drink_quantity": 2,
+      "drinks_separate_from_budget": false,
+      "include_dessert": false,
+      "min_items": 4,
+      "max_items": 20
+    },
+    "expected": "recommendation",
+    "messages": [
+      "จัดชุดตามเงื่อนไขต่อไปนี้ งบเป็นบาท จำนวนคนและเครื่องดื่มตามที่ระบุ หากไม่ได้ระบุอย่างอื่น ไม่มีแพ้อาหาร ไม่รับของหวาน: {\"budget\": 300, \"num_people\": 2, \"drink_selection\": [\"ชาเขียวร้อน\"], \"drink_quantity\": 2, \"drinks_separate_from_budget\": false, \"include_dessert\": false, \"min_items\": 4, \"max_items\": 20}"
+    ],
+    "missing_field": null
+  },
+  {
+    "id": "maximum_4",
+    "data_mode": "strict",
+    "arguments": {
+      "budget": 300,
+      "num_people": 2,
+      "drink_selection": [
+        "ชาเขียวร้อน"
+      ],
+      "drink_quantity": 2,
+      "drinks_separate_from_budget": false,
+      "include_dessert": false,
+      "min_items": 1,
+      "max_items": 4
+    },
+    "expected": "recommendation",
+    "messages": [
+      "จัดชุดตามเงื่อนไขต่อไปนี้ งบเป็นบาท จำนวนคนและเครื่องดื่มตามที่ระบุ หากไม่ได้ระบุอย่างอื่น ไม่มีแพ้อาหาร ไม่รับของหวาน: {\"budget\": 300, \"num_people\": 2, \"drink_selection\": [\"ชาเขียวร้อน\"], \"drink_quantity\": 2, \"drinks_separate_from_budget\": false, \"include_dessert\": false, \"min_items\": 1, \"max_items\": 4}"
+    ],
+    "missing_field": null
+  },
+  {
+    "id": "decimal_budget",
+    "data_mode": "strict",
+    "arguments": {
+      "budget": 300.25,
+      "num_people": 2,
+      "drink_selection": [
+        "ชาเขียวร้อน"
+      ],
+      "drink_quantity": 2,
+      "drinks_separate_from_budget": false,
+      "include_dessert": false,
+      "min_items": 1,
+      "max_items": 20
+    },
+    "expected": "recommendation",
+    "messages": [
+      "จัดชุดตามเงื่อนไขต่อไปนี้ งบเป็นบาท จำนวนคนและเครื่องดื่มตามที่ระบุ หากไม่ได้ระบุอย่างอื่น ไม่มีแพ้อาหาร ไม่รับของหวาน: {\"budget\": 300.25, \"num_people\": 2, \"drink_selection\": [\"ชาเขียวร้อน\"], \"drink_quantity\": 2, \"drinks_separate_from_budget\": false, \"include_dessert\": false, \"min_items\": 1, \"max_items\": 20}"
+    ],
+    "missing_field": null
+  },
+  {
+    "id": "drinks_separate",
+    "data_mode": "strict",
+    "arguments": {
+      "budget": 300,
+      "num_people": 2,
+      "drink_selection": [
+        "โค้ก"
+      ],
+      "drink_quantity": 2,
+      "drinks_separate_from_budget": true,
+      "include_dessert": false,
+      "min_items": 1,
+      "max_items": 20
+    },
+    "expected": "recommendation",
+    "messages": [
+      "จัดชุดตามเงื่อนไขต่อไปนี้ งบเป็นบาท จำนวนคนและเครื่องดื่มตามที่ระบุ หากไม่ได้ระบุอย่างอื่น ไม่มีแพ้อาหาร ไม่รับของหวาน: {\"budget\": 300, \"num_people\": 2, \"drink_selection\": [\"โค้ก\"], \"drink_quantity\": 2, \"drinks_separate_from_budget\": true, \"include_dessert\": false, \"min_items\": 1, \"max_items\": 20}"
+    ],
+    "missing_field": null
+  },
+  {
+    "id": "drinks_within",
+    "data_mode": "strict",
+    "arguments": {
+      "budget": 300,
+      "num_people": 2,
+      "drink_selection": [
+        "โค้ก"
+      ],
+      "drink_quantity": 2,
+      "drinks_separate_from_budget": false,
+      "include_dessert": false,
+      "min_items": 1,
+      "max_items": 20
+    },
+    "expected": "recommendation",
+    "messages": [
+      "จัดชุดตามเงื่อนไขต่อไปนี้ งบเป็นบาท จำนวนคนและเครื่องดื่มตามที่ระบุ หากไม่ได้ระบุอย่างอื่น ไม่มีแพ้อาหาร ไม่รับของหวาน: {\"budget\": 300, \"num_people\": 2, \"drink_selection\": [\"โค้ก\"], \"drink_quantity\": 2, \"drinks_separate_from_budget\": false, \"include_dessert\": false, \"min_items\": 1, \"max_items\": 20}"
+    ],
+    "missing_field": null
+  },
+  {
+    "id": "dessert_requested",
+    "data_mode": "strict",
+    "arguments": {
+      "budget": 300,
+      "num_people": 2,
+      "drink_selection": [
+        "ชาเขียวร้อน"
+      ],
+      "drink_quantity": 2,
+      "drinks_separate_from_budget": false,
+      "include_dessert": true,
+      "min_items": 1,
+      "max_items": 20,
+      "dessert_selection": [
+        "วาราบิโมจิ"
+      ],
+      "dessert_quantity": 1
+    },
+    "expected": "recommendation",
+    "messages": [
+      "จัดชุดตามเงื่อนไขต่อไปนี้ งบเป็นบาท จำนวนคนและเครื่องดื่มตามที่ระบุ หากไม่ได้ระบุอย่างอื่น ไม่มีแพ้อาหาร ไม่รับของหวาน: {\"budget\": 300, \"num_people\": 2, \"drink_selection\": [\"ชาเขียวร้อน\"], \"drink_quantity\": 2, \"drinks_separate_from_budget\": false, \"include_dessert\": true, \"min_items\": 1, \"max_items\": 20, \"dessert_selection\": [\"วาราบิโมจิ\"], \"dessert_quantity\": 1}"
+    ],
+    "missing_field": null
+  },
+  {
+    "id": "simulation_allergy",
+    "data_mode": "simulation",
+    "arguments": {
+      "budget": 300,
+      "num_people": 2,
+      "drink_selection": [
+        "ชาเขียวร้อน"
+      ],
+      "drink_quantity": 2,
+      "drinks_separate_from_budget": false,
+      "include_dessert": false,
+      "min_items": 1,
+      "max_items": 20,
+      "allergens": [
+        "crustacean"
+      ]
+    },
+    "expected": "recommendation",
+    "messages": [
+      "จัดชุดตามเงื่อนไขต่อไปนี้ งบเป็นบาท จำนวนคนและเครื่องดื่มตามที่ระบุ หากไม่ได้ระบุอย่างอื่น ไม่มีแพ้อาหาร ไม่รับของหวาน: {\"budget\": 300, \"num_people\": 2, \"drink_selection\": [\"ชาเขียวร้อน\"], \"drink_quantity\": 2, \"drinks_separate_from_budget\": false, \"include_dessert\": false, \"min_items\": 1, \"max_items\": 20, \"allergens\": [\"crustacean\"]}"
+    ],
+    "missing_field": null
+  },
+  {
+    "id": "strict_unknown_fish",
+    "data_mode": "strict",
+    "arguments": {
+      "budget": 300,
+      "num_people": 2,
+      "drink_selection": [
+        "ชาเขียวร้อน"
+      ],
+      "drink_quantity": 2,
+      "drinks_separate_from_budget": false,
+      "include_dessert": false,
+      "min_items": 1,
+      "max_items": 20,
+      "allergens": [
+        "fish"
+      ]
+    },
+    "expected": "blocked",
+    "messages": [
+      "จัดชุดตามเงื่อนไขต่อไปนี้ งบเป็นบาท จำนวนคนและเครื่องดื่มตามที่ระบุ หากไม่ได้ระบุอย่างอื่น ไม่มีแพ้อาหาร ไม่รับของหวาน: {\"budget\": 300, \"num_people\": 2, \"drink_selection\": [\"ชาเขียวร้อน\"], \"drink_quantity\": 2, \"drinks_separate_from_budget\": false, \"include_dessert\": false, \"min_items\": 1, \"max_items\": 20, \"allergens\": [\"fish\"]}"
+    ],
+    "missing_field": null
+  },
+  {
+    "id": "strict_unknown_crustacean",
+    "data_mode": "strict",
+    "arguments": {
+      "budget": 300,
+      "num_people": 2,
+      "drink_selection": [
+        "ชาเขียวร้อน"
+      ],
+      "drink_quantity": 2,
+      "drinks_separate_from_budget": false,
+      "include_dessert": false,
+      "min_items": 1,
+      "max_items": 20,
+      "allergens": [
+        "crustacean"
+      ]
+    },
+    "expected": "blocked",
+    "messages": [
+      "จัดชุดตามเงื่อนไขต่อไปนี้ งบเป็นบาท จำนวนคนและเครื่องดื่มตามที่ระบุ หากไม่ได้ระบุอย่างอื่น ไม่มีแพ้อาหาร ไม่รับของหวาน: {\"budget\": 300, \"num_people\": 2, \"drink_selection\": [\"ชาเขียวร้อน\"], \"drink_quantity\": 2, \"drinks_separate_from_budget\": false, \"include_dessert\": false, \"min_items\": 1, \"max_items\": 20, \"allergens\": [\"crustacean\"]}"
+    ],
+    "missing_field": null
+  },
+  {
+    "id": "strict_unknown_milk",
+    "data_mode": "strict",
+    "arguments": {
+      "budget": 300,
+      "num_people": 2,
+      "drink_selection": [
+        "ชาเขียวร้อน"
+      ],
+      "drink_quantity": 2,
+      "drinks_separate_from_budget": false,
+      "include_dessert": false,
+      "min_items": 1,
+      "max_items": 20,
+      "allergens": [
+        "milk"
+      ]
+    },
+    "expected": "blocked",
+    "messages": [
+      "จัดชุดตามเงื่อนไขต่อไปนี้ งบเป็นบาท จำนวนคนและเครื่องดื่มตามที่ระบุ หากไม่ได้ระบุอย่างอื่น ไม่มีแพ้อาหาร ไม่รับของหวาน: {\"budget\": 300, \"num_people\": 2, \"drink_selection\": [\"ชาเขียวร้อน\"], \"drink_quantity\": 2, \"drinks_separate_from_budget\": false, \"include_dessert\": false, \"min_items\": 1, \"max_items\": 20, \"allergens\": [\"milk\"]}"
+    ],
+    "missing_field": null
+  },
+  {
+    "id": "strict_unknown_unknown spice",
+    "data_mode": "strict",
+    "arguments": {
+      "budget": 300,
+      "num_people": 2,
+      "drink_selection": [
+        "ชาเขียวร้อน"
+      ],
+      "drink_quantity": 2,
+      "drinks_separate_from_budget": false,
+      "include_dessert": false,
+      "min_items": 1,
+      "max_items": 20,
+      "allergens": [
+        "unknown spice"
+      ]
+    },
+    "expected": "blocked",
+    "messages": [
+      "จัดชุดตามเงื่อนไขต่อไปนี้ งบเป็นบาท จำนวนคนและเครื่องดื่มตามที่ระบุ หากไม่ได้ระบุอย่างอื่น ไม่มีแพ้อาหาร ไม่รับของหวาน: {\"budget\": 300, \"num_people\": 2, \"drink_selection\": [\"ชาเขียวร้อน\"], \"drink_quantity\": 2, \"drinks_separate_from_budget\": false, \"include_dessert\": false, \"min_items\": 1, \"max_items\": 20, \"allergens\": [\"unknown spice\"]}"
+    ],
+    "missing_field": null
+  },
+  {
+    "id": "budget_too_small",
+    "data_mode": "strict",
+    "arguments": {
+      "budget": 1,
+      "num_people": 2,
+      "drink_selection": [
+        "ชาเขียวร้อน"
+      ],
+      "drink_quantity": 2,
+      "drinks_separate_from_budget": false,
+      "include_dessert": false,
+      "min_items": 1,
+      "max_items": 20
+    },
+    "expected": "blocked",
+    "messages": [
+      "จัดชุดตามเงื่อนไขต่อไปนี้ งบเป็นบาท จำนวนคนและเครื่องดื่มตามที่ระบุ หากไม่ได้ระบุอย่างอื่น ไม่มีแพ้อาหาร ไม่รับของหวาน: {\"budget\": 1, \"num_people\": 2, \"drink_selection\": [\"ชาเขียวร้อน\"], \"drink_quantity\": 2, \"drinks_separate_from_budget\": false, \"include_dessert\": false, \"min_items\": 1, \"max_items\": 20}"
+    ],
+    "missing_field": null
+  },
+  {
+    "id": "minimum_impossible",
+    "data_mode": "strict",
+    "arguments": {
+      "budget": 40,
+      "num_people": 2,
+      "drink_selection": [
+        "ชาเขียวร้อน"
+      ],
+      "drink_quantity": 2,
+      "drinks_separate_from_budget": false,
+      "include_dessert": false,
+      "min_items": 5,
+      "max_items": 20
+    },
+    "expected": "blocked",
+    "messages": [
+      "จัดชุดอาหารงบ40บาท 2คน ไม่มีแพ้หรือไม่ชอบ ชาเขียวร้อน2แก้ว รวมในงบ ไม่รับของหวาน ต้องการรวมอย่างน้อย5รายการ"
+    ],
+    "missing_field": null
+  },
+  {
+    "id": "fixed_items_over_limit",
+    "data_mode": "strict",
+    "arguments": {
+      "budget": 300,
+      "num_people": 2,
+      "drink_selection": [
+        "โค้ก"
+      ],
+      "drink_quantity": 3,
+      "drinks_separate_from_budget": false,
+      "include_dessert": false,
+      "min_items": 1,
+      "max_items": 1
+    },
+    "expected": "blocked",
+    "messages": [
+      "จัดชุดตามเงื่อนไขต่อไปนี้ งบเป็นบาท จำนวนคนและเครื่องดื่มตามที่ระบุ หากไม่ได้ระบุอย่างอื่น ไม่มีแพ้อาหาร ไม่รับของหวาน: {\"budget\": 300, \"num_people\": 2, \"drink_selection\": [\"โค้ก\"], \"drink_quantity\": 3, \"drinks_separate_from_budget\": false, \"include_dessert\": false, \"min_items\": 1, \"max_items\": 1}"
+    ],
+    "missing_field": null
+  },
+  {
+    "id": "empty_food_candidates",
+    "data_mode": "strict",
+    "arguments": {
+      "budget": 300,
+      "num_people": 2,
+      "drink_selection": [
+        "ชาเขียวร้อน"
+      ],
+      "drink_quantity": 2,
+      "drinks_separate_from_budget": false,
+      "include_dessert": false,
+      "min_items": 1,
+      "max_items": 20,
+      "must_include_keywords": [
+        "xyz-not-a-menu-123"
+      ]
+    },
+    "expected": "blocked",
+    "messages": [
+      "จัดชุดตามเงื่อนไขต่อไปนี้ งบเป็นบาท จำนวนคนและเครื่องดื่มตามที่ระบุ หากไม่ได้ระบุอย่างอื่น ไม่มีแพ้อาหาร ไม่รับของหวาน: {\"budget\": 300, \"num_people\": 2, \"drink_selection\": [\"ชาเขียวร้อน\"], \"drink_quantity\": 2, \"drinks_separate_from_budget\": false, \"include_dessert\": false, \"min_items\": 1, \"max_items\": 20, \"must_include_keywords\": [\"xyz-not-a-menu-123\"]}"
+    ],
+    "missing_field": null
+  },
+  {
+    "id": "fixed_drink_forbidden",
+    "data_mode": "strict",
+    "arguments": {
+      "budget": 300,
+      "num_people": 2,
+      "drink_selection": [
+        "ชาเขียวร้อน"
+      ],
+      "drink_quantity": 2,
+      "drinks_separate_from_budget": false,
+      "include_dessert": false,
+      "min_items": 1,
+      "max_items": 20,
+      "hard_exclude_keywords": [
+        "ชาเขียว"
+      ]
+    },
+    "expected": "blocked",
+    "messages": [
+      "จัดชุดตามเงื่อนไขต่อไปนี้ งบเป็นบาท จำนวนคนและเครื่องดื่มตามที่ระบุ หากไม่ได้ระบุอย่างอื่น ไม่มีแพ้อาหาร ไม่รับของหวาน: {\"budget\": 300, \"num_people\": 2, \"drink_selection\": [\"ชาเขียวร้อน\"], \"drink_quantity\": 2, \"drinks_separate_from_budget\": false, \"include_dessert\": false, \"min_items\": 1, \"max_items\": 20, \"hard_exclude_keywords\": [\"ชาเขียว\"]}"
+    ],
+    "missing_field": null
+  },
+  {
+    "id": "fixed_milk_allergy",
+    "data_mode": "simulation",
+    "arguments": {
+      "budget": 300,
+      "num_people": 2,
+      "drink_selection": [
+        "มัทฉะลาเต้เย็น"
+      ],
+      "drink_quantity": 2,
+      "drinks_separate_from_budget": false,
+      "include_dessert": false,
+      "min_items": 1,
+      "max_items": 20,
+      "allergens": [
+        "milk"
+      ]
+    },
+    "expected": "blocked",
+    "messages": [
+      "จัดชุดตามเงื่อนไขต่อไปนี้ งบเป็นบาท จำนวนคนและเครื่องดื่มตามที่ระบุ หากไม่ได้ระบุอย่างอื่น ไม่มีแพ้อาหาร ไม่รับของหวาน: {\"budget\": 300, \"num_people\": 2, \"drink_selection\": [\"มัทฉะลาเต้เย็น\"], \"drink_quantity\": 2, \"drinks_separate_from_budget\": false, \"include_dessert\": false, \"min_items\": 1, \"max_items\": 20, \"allergens\": [\"milk\"]}"
+    ],
+    "missing_field": null
+  },
+  {
+    "id": "zero_budget",
+    "data_mode": "strict",
+    "arguments": {
+      "budget": 0
+    },
+    "expected": "rejected",
+    "messages": [
+      "จัดชุดตามเงื่อนไขต่อไปนี้ งบเป็นบาท จำนวนคนและเครื่องดื่มตามที่ระบุ หากไม่ได้ระบุอย่างอื่น ไม่มีแพ้อาหาร ไม่รับของหวาน: {\"budget\": 0}"
+    ],
+    "missing_field": null
+  },
+  {
+    "id": "negative_budget",
+    "data_mode": "strict",
+    "arguments": {
+      "budget": -1
+    },
+    "expected": "rejected",
+    "messages": [
+      "จัดชุดตามเงื่อนไขต่อไปนี้ งบเป็นบาท จำนวนคนและเครื่องดื่มตามที่ระบุ หากไม่ได้ระบุอย่างอื่น ไม่มีแพ้อาหาร ไม่รับของหวาน: {\"budget\": -1}"
+    ],
+    "missing_field": null
+  },
+  {
+    "id": "count_over_limit",
+    "data_mode": "strict",
+    "arguments": {
+      "budget": 300,
+      "num_people": 2,
+      "drink_selection": [
+        "ชาเขียวร้อน"
+      ],
+      "drink_quantity": 2,
+      "drinks_separate_from_budget": false,
+      "include_dessert": false,
+      "min_items": 1,
+      "max_items": 61
+    },
+    "expected": "rejected",
+    "messages": [
+      "จัดชุดตามเงื่อนไขต่อไปนี้ งบเป็นบาท จำนวนคนและเครื่องดื่มตามที่ระบุ หากไม่ได้ระบุอย่างอื่น ไม่มีแพ้อาหาร ไม่รับของหวาน: {\"budget\": 300, \"num_people\": 2, \"drink_selection\": [\"ชาเขียวร้อน\"], \"drink_quantity\": 2, \"drinks_separate_from_budget\": false, \"include_dessert\": false, \"min_items\": 1, \"max_items\": 61}"
+    ],
+    "missing_field": null
+  },
+  {
+    "id": "unknown_drink",
+    "data_mode": "strict",
+    "arguments": {
+      "budget": 300,
+      "num_people": 2,
+      "drink_selection": [
+        "zzzz-not-a-drink-123"
+      ],
+      "drink_quantity": 2,
+      "drinks_separate_from_budget": false,
+      "include_dessert": false,
+      "min_items": 1,
+      "max_items": 20
+    },
+    "expected": "rejected",
+    "messages": [
+      "จัดชุดตามเงื่อนไขต่อไปนี้ งบเป็นบาท จำนวนคนและเครื่องดื่มตามที่ระบุ หากไม่ได้ระบุอย่างอื่น ไม่มีแพ้อาหาร ไม่รับของหวาน: {\"budget\": 300, \"num_people\": 2, \"drink_selection\": [\"zzzz-not-a-drink-123\"], \"drink_quantity\": 2, \"drinks_separate_from_budget\": false, \"include_dessert\": false, \"min_items\": 1, \"max_items\": 20}"
+    ],
+    "missing_field": null
+  },
+  {
+    "id": "missing_budget",
+    "data_mode": "strict",
+    "arguments": {},
+    "expected": "clarification",
+    "messages": [
+      "ช่วยจัดชุดอาหารให้หน่อย"
+    ],
+    "missing_field": "budget"
+  },
+  {
+    "id": "missing_people",
+    "data_mode": "strict",
+    "arguments": {
+      "budget": 300
+    },
+    "expected": "clarification",
+    "messages": [
+      "จัดชุดงบ 300 บาท"
+    ],
+    "missing_field": "num_people"
+  },
+  {
+    "id": "missing_allergy",
+    "data_mode": "strict",
+    "arguments": {
+      "budget": 300,
+      "num_people": 2
+    },
+    "expected": "clarification",
+    "messages": [
+      "จัดชุดงบ300บาทสำหรับ2คน ยังไม่ได้แจ้งเรื่องแพ้อาหาร"
+    ],
+    "missing_field": "allergy"
+  }
+]

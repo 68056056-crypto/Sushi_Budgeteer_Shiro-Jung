@@ -1,0 +1,23 @@
+.env
+__pycache__/
+*.pyc
+faiss_index/
+.venv/
+.env.*
+!.env.example
+data/*.sqlite3
+data/*.sqlite3-*
+.pytest_cache/
+
+tools/opa/opa
+tools/opa/opa.exe
+
+# local-only: backups, archives, report/slides (submitted separately)
+Backup file/
+docs/
+*.zip
+*.zip.sha256
+*.docx
+*.pptx
+/presentation-report*.html
+update_repo_v4.ps1

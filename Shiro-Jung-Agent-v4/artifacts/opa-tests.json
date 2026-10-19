@@ -1,0 +1,152 @@
+[
+  {
+    "location": {
+      "file": "policies/recommendation_test.rego",
+      "row": 13,
+      "col": 1
+    },
+    "package": "data.shiro_test",
+    "name": "test_allow_valid",
+    "duration": 825636
+  },
+  {
+    "location": {
+      "file": "policies/recommendation_test.rego",
+      "row": 14,
+      "col": 1
+    },
+    "package": "data.shiro_test",
+    "name": "test_deny_missing_input",
+    "duration": 130631
+  },
+  {
+    "location": {
+      "file": "policies/recommendation_test.rego",
+      "row": 15,
+      "col": 1
+    },
+    "package": "data.shiro_test",
+    "name": "test_deny_missing_line_schema",
+    "duration": 166415
+  },
+  {
+    "location": {
+      "file": "policies/recommendation_test.rego",
+      "row": 19,
+      "col": 1
+    },
+    "package": "data.shiro_test",
+    "name": "test_deny_over_budget_independently",
+    "duration": 466092
+  },
+  {
+    "location": {
+      "file": "policies/recommendation_test.rego",
+      "row": 25,
+      "col": 1
+    },
+    "package": "data.shiro_test",
+    "name": "test_deny_allergen_independently",
+    "duration": 546198
+  },
+  {
+    "location": {
+      "file": "policies/recommendation_test.rego",
+      "row": 30,
+      "col": 1
+    },
+    "package": "data.shiro_test",
+    "name": "test_deny_strict_unknown_evidence",
+    "duration": 454874
+  },
+  {
+    "location": {
+      "file": "policies/recommendation_test.rego",
+      "row": 34,
+      "col": 1
+    },
+    "package": "data.shiro_test",
+    "name": "test_simulation_still_enforces_allergen",
+    "duration": 382926
+  },
+  {
+    "location": {
+      "file": "policies/recommendation_test.rego",
+      "row": 39,
+      "col": 1
+    },
+    "package": "data.shiro_test",
+    "name": "test_allow_simulation_unknown_only",
+    "duration": 332430
+  },
+  {
+    "location": {
+      "file": "policies/recommendation_test.rego",
+      "row": 43,
+      "col": 1
+    },
+    "package": "data.shiro_test",
+    "name": "test_deny_hard_exclusion",
+    "duration": 1313907
+  },
+  {
+    "location": {
+      "file": "policies/recommendation_test.rego",
+      "row": 47,
+      "col": 1
+    },
+    "package": "data.shiro_test",
+    "name": "test_deny_price_tampering",
+    "duration": 1361160
+  },
+  {
+    "location": {
+      "file": "policies/recommendation_test.rego",
+      "row": 51,
+      "col": 1
+    },
+    "package": "data.shiro_test",
+    "name": "test_deny_subtotal_tampering",
+    "duration": 716278
+  },
+  {
+    "location": {
+      "file": "policies/recommendation_test.rego",
+      "row": 55,
+      "col": 1
+    },
+    "package": "data.shiro_test",
+    "name": "test_deny_revision_changed",
+    "duration": 621686
+  },
+  {
+    "location": {
+      "file": "policies/recommendation_test.rego",
+      "row": 59,
+      "col": 1
+    },
+    "package": "data.shiro_test",
+    "name": "test_deny_count_mismatch",
+    "duration": 536361
+  },
+  {
+    "location": {
+      "file": "policies/recommendation_test.rego",
+      "row": 63,
+      "col": 1
+    },
+    "package": "data.shiro_test",
+    "name": "test_deny_food_required",
+    "duration": 438392
+  },
+  {
+    "location": {
+      "file": "policies/recommendation_test.rego",
+      "row": 67,
+      "col": 1
+    },
+    "package": "data.shiro_test",
+    "name": "test_deny_python_issues",
+    "duration": 399022
+  }
+]

@@ -1,0 +1,25 @@
+{
+  "checked_at": "2026-10-18T13:59:15.484559+00:00",
+  "python": "3.12.3",
+  "platform": "linux",
+  "release": "4.0.0",
+  "regression": {
+    "run": 45,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "legacy_smoke": {
+    "exit_code": 0,
+    "passed_checks": 61,
+    "mode": "simulation"
+  },
+  "real_mcp_subprocess_tested": true,
+  "agent_model": "scripted fake model in tests; real MCP tools",
+  "opa": {
+    "exit_code": 0,
+    "rego_tests": 15
+  },
+  "live_llm_api_tested": false,
+  "official_sources_verified": false
+}

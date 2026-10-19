@@ -1,0 +1,12 @@
+Tools: search_menu, get_menu_item, database_status, filter_menu, build_set, verify_set, clarify
+Database: {'row_count': 41, 'catalog_revision': '69f57a8aeef7706505998d5820166e8b1bd390b37b6e9701535f4a0c7d8e89ce', 'database': 'data/menu.sqlite3', 'unverified_prices': 41, 'unknown_allergens': 41, 'mode': 'strict'}
+Search: {'count': 5, 'items': [{'item_id': 'S001', 'name_th': 'ซูชิแซลมอน', 'name_en': 'Salmon Sushi', 'category': 'ปลาดิบ', 'price_baht': 40.0, 'allergens_verified': 'fish', 'score': None, 'allergen_status': 'unknown', 'price_status': 'unverified', 'source_url': ''}, {'item_id': 'S006', 'name_th': 'ซูชิไข่ปลาแซลมอน', 'name_en': 'Salmon Roe Sushi (Ikura)', 'category': 'ไข่ปลา', 'price_baht': 80.0, 'allergens_verified': 'fish', 'score': None, 'allergen_status': 'unknown', 'price_status': 'unverified', 'source_url': ''}, {'item_id': 'S014', 'name_th': 'ซูชิปลาแซลมอนย่างเนยเลมอน', 'name_en': 'Grilled Salmon Butter Lemon Sushi', 'category': 'ปลาปรุงสุก', 'price_baht': 60.0, 'allergens_verified': 'fish;soy', 'score': None, 'allergen_status': 'unknown', 'price_status': 'unverified', 'source_url': ''}, {'item_id': 'S016', 'name_th': 'ซูชิหน้าท้องแซลมอน', 'name_en': 'Salmon Belly Sushi', 'category': 'ปลาดิบ', 'price_baht': 60.0, 'allergens_verified': 'fish', 'score': None, 'allergen_status': 'unknown', 'price_status': 'unverified', 'source_url': ''}, {'item_id': 'R002', 'name_th': 'ข้าวปั้นหน้าแซลมอนสไปซี่', 'name_en': 'Spicy Salmon Roll', 'category': 'ปลาดิบ', 'price_baht': 60.0, 'allergens_verified': 'fish;soy;sesame', 'score': None, 'allergen_status': 'unknown', 'price_status': 'unverified', 'source_url': ''}]}
+Verified total: 300.0
+MCP integration passed (no LLM API used).
+Processing request of type ListToolsRequest
+Processing request of type CallToolRequest
+Processing request of type CallToolRequest
+Processing request of type CallToolRequest
+Processing request of type CallToolRequest
+Processing request of type ReadResourceRequest
+Processing request of type GetPromptRequest

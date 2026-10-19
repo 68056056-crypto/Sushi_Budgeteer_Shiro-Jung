@@ -1,0 +1,11 @@
+{
+  "created_at": "2026-10-18T13:59:34.831118+00:00",
+  "mode": "live",
+  "catalog_revision": "69f57a8aeef7706505998d5820166e8b1bd390b37b6e9701535f4a0c7d8e89ce",
+  "model_source": "live OpenAI",
+  "scope": "single-turn gold scenarios; multi-turn behavior is covered separately by regression tests",
+  "status": "blocked_missing_credentials",
+  "executed_cases": 0,
+  "metrics": null,
+  "action": "Set SUSHI_OPENAI_API_KEY securely in environment settings or OPENAI_API_KEY in local .env."
+}
