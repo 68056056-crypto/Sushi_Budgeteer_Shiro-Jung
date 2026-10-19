@@ -2,6 +2,7 @@
 from __future__ import annotations
 import asyncio
 import json
+import logging
 import os
 import re
 import sys
@@ -24,6 +25,13 @@ from .database import cents
 from .telemetry import redact
 
 ROOT=Path(__file__).resolve().parents[1]
+LOG=logging.getLogger('shiro_jung.agent')
+
+def _root_cause(exc):
+    """Unwrap anyio/asyncio ExceptionGroups so the user sees the real error type."""
+    while hasattr(exc,'exceptions') and getattr(exc,'exceptions'):
+        exc=exc.exceptions[0]
+    return exc
 GREETING_MESSAGE='สวัสดีครับ ผม Shiro-Jung ช่วยจัดชุดซูชิจากฐานข้อมูล กรุณาบอกงบและจำนวนคนครับ'
 SYSTEM_PROMPT='''คุณคือ Shiro-Jung ผู้ช่วยจัดชุดซูชิ ตอบภาษาไทย
 คุณเป็นผู้เลือกเครื่องมือจาก MCP และอ่านผลเพื่อเลือกการกระทำถัดไป:
@@ -249,13 +257,18 @@ class BudgeteerAgent:
                 if not 0<new_budget<=100000:
                     return 'กรุณาระบุงบใหม่ระหว่าง 0.01–100000 บาทครับ'
             self.state.update_from_extraction(extracted)
-        except Exception:
-            return 'อ่านข้อมูลหรือเรียกโมเดลไม่สำเร็จ ยังไม่ได้จัดชุด กรุณาระบุงบ จำนวนคน และข้อจำกัดให้ชัดเจน หรือตรวจการตั้งค่า API ครับ'
+        except Exception as exc:
+            cause=_root_cause(exc)
+            LOG.exception('intent extraction failed: %s',type(cause).__name__)
+            return f'อ่านข้อมูลหรือเรียกโมเดลไม่สำเร็จ ({type(cause).__name__}) ยังไม่ได้จัดชุด กรุณาระบุงบ จำนวนคน และข้อจำกัดให้ชัดเจน หรือตรวจการตั้งค่า API ครับ'
         self.state.add_message('user',user_message)
         try:
             answer=asyncio.run(self._run(user_message,extracted.get('budget_change_unclear',False)))
-        except Exception:
-            answer='เชื่อมต่อโมเดลหรือ MCP ไม่สำเร็จ ยังไม่มีคำแนะนำที่ผ่านตรวจสอบ กรุณาตรวจการตั้งค่าแล้วลองใหม่ครับ'
+        except Exception as exc:
+            cause=_root_cause(exc)
+            LOG.exception('agent turn failed: %s',type(cause).__name__)
+            self.last_trace.append({'step':'turn','error':f'{type(cause).__name__}: {str(cause)[:300]}'})
+            answer=f'เชื่อมต่อโมเดลหรือ MCP ไม่สำเร็จ ({type(cause).__name__}) ยังไม่มีคำแนะนำที่ผ่านตรวจสอบ กรุณาตรวจการตั้งค่าแล้วลองใหม่ครับ'
         self.state.add_message('assistant',answer)
         self.state.conversation=self.state.conversation[-24:]
         return answer

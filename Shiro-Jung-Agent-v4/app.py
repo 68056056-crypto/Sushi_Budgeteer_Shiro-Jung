@@ -167,7 +167,9 @@ else:
 
         st.session_state["chat_history"].append({"role": "assistant", "content": full_text})
         st.rerun()
-if "agent" in st.session_state:
+# Developer details are hidden by default; turn on in the sidebar for demos.
+show_dev = st.sidebar.toggle("แสดงข้อมูลสำหรับผู้พัฒนา (MCP trace)", value=False)
+if "agent" in st.session_state and show_dev:
     with st.expander("MCP tool trace ของ turn ล่าสุด (ไม่มี API key)"):
         st.json(st.session_state["agent"].last_trace)
 
@@ -189,6 +191,7 @@ if "agent" in st.session_state:
                 'วันที่ตรวจ':x['checked_at'] or 'ยังไม่ตรวจ'} for x in evidence.get('items',[])],hide_index=True)
             with st.expander("รายละเอียดองค์ประกอบคะแนนและ constraints"):
                 st.json(evidence)
-    st.download_button("ดาวน์โหลด trace ของ turn ล่าสุด (ไม่มี prompt หรือ API key)",
-        data=__import__('json').dumps(current_agent.run_report(),ensure_ascii=False,indent=2),
-        file_name="shiro-turn-trace.json",mime="application/json")
+    if show_dev:
+        st.download_button("ดาวน์โหลด trace ของ turn ล่าสุด (ไม่มี prompt หรือ API key)",
+            data=__import__('json').dumps(current_agent.run_report(),ensure_ascii=False,indent=2),
+            file_name="shiro-turn-trace.json",mime="application/json")
