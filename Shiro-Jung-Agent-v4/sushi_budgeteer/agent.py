@@ -214,7 +214,7 @@ class BudgeteerAgent:
                             if checked.get('passed'):
                                 self.state.last_result=checked['checked_result']
                                 return self.render_result(checked['checked_result'])
-                            return 'ผลตรวจไม่ผ่าน: '+'; '.join(checked.get('issues',[]))+'\n'+DISCLAIMER
+                            return self._friendly_issues(checked.get('issues', []))
                         if nudged and missing:
                             # Model stalled twice: ask the next missing field directly instead of
                             # spending up to 10 model rounds (slow and costly).
@@ -282,6 +282,22 @@ class BudgeteerAgent:
                             self.last_trace.append({'step':step,'tool':name,'error':str(exc),
                                 'elapsed_ms':round((time.perf_counter()-started)*1000,3)})
                         messages.append(ToolMessage(content=json.dumps(payload,ensure_ascii=False),tool_call_id=call['id']))
+                    # A verified result is rendered deterministically. Another model call
+                    # cannot improve it; recheck the live catalog before returning instead.
+                    if verified:
+                        final = await session.call_tool('verify_set', {'result_id': candidate})
+                        checked = json.loads(final.content[0].text)
+                        self.last_policy = checked.get('policy_decision')
+                        self.last_run['final_recheck'] = {'passed': checked.get('passed'),
+                            'result_id': candidate, 'policy_decision': self.last_policy}
+                        if not final.isError and checked.get('passed'):
+                            self.state.last_result = checked['checked_result']
+                            return self.render_result(checked['checked_result'])
+                        return 'ฐานข้อมูลเปลี่ยนหรือผลตรวจไม่ผ่าน กรุณาให้จัดชุดใหม่ครับ\n' + DISCLAIMER
+                    if last_display and any(c['name'] == 'clarify' for c in response.tool_calls):
+                        return last_display
+                    if issues and any(c['name'] in {'build_set', 'verify_set'} for c in response.tool_calls):
+                        return self._friendly_issues(issues)
         return 'หยุดเมื่อครบจำนวนรอบเครื่องมือ ยังไม่มีชุดที่อนุญาตให้ตอบ กรุณาระบุข้อมูลใหม่ครับ\n'+DISCLAIMER
 
     @staticmethod

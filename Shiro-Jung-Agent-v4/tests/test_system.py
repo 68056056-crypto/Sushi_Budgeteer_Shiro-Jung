@@ -216,6 +216,22 @@ class AgentFlowTest(unittest.TestCase):
         self.assertLessEqual(a.state.last_result['total_price'],300)
         self.assertEqual(a.last_trace[0]['arguments']['budget'],300)
         self.assertEqual([x['tool'] for x in a.last_trace],['build_set','verify_set'])
+    def test_verified_result_does_not_wait_for_another_model_response(self):
+        model=ScriptedModel([('build_set',{}),('verify_current',{}),('final',{})])
+        agent=BudgeteerAgent(llm=model)
+        agent.chat('จัดชุด')
+        self.assertIsNotNone(agent.state.last_result)
+        self.assertTrue(agent.last_run['final_recheck']['passed'])
+        self.assertEqual(model.steps,[('final',{})])
+        self.assertEqual(agent.last_run['model_calls'],3)  # extraction + build + verify
+
+    def test_clarification_does_not_wait_for_another_model_response(self):
+        model=ScriptedModel([('clarify',{}),('final',{})],{})
+        agent=BudgeteerAgent(llm=model)
+        self.assertIn('งบประมาณ',agent.chat('ช่วยจัดอาหาร'))
+        self.assertEqual(model.steps,[('final',{})])
+        self.assertIsNone(agent.state.last_result)
+
     def test_no_verify_means_no_recommendation(self):
         a=BudgeteerAgent(llm=ScriptedModel([('build_set',{}),('final',{})]))
         answer=a.chat('จัดชุด')

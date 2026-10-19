@@ -115,5 +115,9 @@ class OPATest(unittest.TestCase):
             page.run(timeout=30)
             self.assertFalse(page.exception)
             self.assertGreater(len(page.dataframe),0)
+            self.assertFalse(any('OPA' in e.label for e in page.expander))
+            page.toggle[0].set_value(True).run()
+            self.assertFalse(page.exception)
+            self.assertTrue(any('OPA' in e.label for e in page.expander))
 
 if __name__=='__main__':unittest.main()
