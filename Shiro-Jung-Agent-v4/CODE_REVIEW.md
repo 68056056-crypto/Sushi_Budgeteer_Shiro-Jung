@@ -1,8 +1,4 @@
-# ผลตรวจและการแก้ไข (release 4.0 ต่อยอดจาก 3.0)
 
-## เพิ่มใน 4.0
-
-| ประเด็นจากการตรวจ v3 | การแก้ไขใน v4 |
 |---|---|
 | README สั่ง `cd Sushi_Budgeteer_Shiro-Jung` แต่โฟลเดอร์ชื่ออื่น | ใช้ชื่อ `Shiro-Jung-Agent-v4` ทุกที่ รวม `mcp-config.example.json` และ package script |
 | Artifacts มี absolute path ของ cloud (`/workspace/...`) | `database.display_path()` รายงาน path แบบ relative; `run_checks.py` ตัด root path ออกจากผล OPA |
@@ -33,7 +29,6 @@
 | RAG build เป็นเส้นทางข้าม constraints | ไม่เปิด RAG ใน MCP release; legacy wrapper ใช้ shared builder |
 | UI ไม่แสดง disclaimer ถาวร | เพิ่ม warning ถาวรและแสดงทุกคำตอบชุดอาหาร |
 
-**แก้ข้อมูลในรายงานเดิม:** การอ่านไฟล์ที่ต่อกันทำให้รายงานก่อนหน้าระบุผิดว่า `.env.example.env` มี model ลงท้าย `.env` และ `.gitignore` ไม่กัน `.env` ตรวจไฟล์แยกแล้วต้นฉบับใช้ `gpt-4o-mini` และ ignore `.env` อยู่แล้ว รอบนี้จัดตัวอย่าง `.env.example` และขยาย ignore patterns โดยไม่อ้างว่าแก้ defect สองเรื่องนั้น
 
 ## ขอบเขตของหลักฐาน
 
@@ -48,7 +43,7 @@
 
 ก่อนนำเสนอควรตั้ง key แล้วเก็บ trace จริงสำหรับข้อมูลไม่ครบ → ค้นหา → จัดชุด → ตรวจผล และกรณีไม่ผ่าน → ถามใหม่ พร้อมรายงานสิ่งที่ยังไม่ตรวจ ห้ามนำ traces แบบ scripted ไปอ้างว่าเป็นการตัดสินใจของ LLM จริง
 
-## เพิ่มใน 3.0
+## ปรับปรุง
 
 - OPA executable ตรวจ checksum จาก release ทางการก่อนใช้; Rego tests 15 กรณี และ integration tests ตรวจ fail closed เมื่อ binary หาย
 - Trace แยก model source, tool events, final recheck, latency, provider token usage และ redaction
