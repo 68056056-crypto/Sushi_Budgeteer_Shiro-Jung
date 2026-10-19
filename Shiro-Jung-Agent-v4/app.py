@@ -64,7 +64,7 @@ def page_header(icon: str, title: str, subtitle: str = "") -> None:
 def _load_agent(api_key: str, model: str):
     try:
         from sushi_budgeteer.agent import BudgeteerAgent
-        return BudgeteerAgent(api_key=api_key, model=model)
+        return BudgeteerAgent(api_key=api_key, model=model, consumer_flow=True)
     except Exception:
         st.error("เตรียมผู้ช่วยไม่สำเร็จ กรุณาตรวจการตั้งค่าระบบแล้วลองใหม่ครับ")
         return None
@@ -75,17 +75,11 @@ def _load_agent(api_key: str, model: str):
 # ----------------------------------------------------------------------
 st.sidebar.title("🍣 Shiro-Jung")
 from sushi_budgeteer.presentation import ALLERGY_WARNING, MENU_NOTICE
-st.info('🛡️ หากแพ้อาหารรุนแรง ให้เลือก Strict และแจ้งพนักงานร้านก่อนสั่งอาหารทุกครั้ง '
-        'หากข้อมูลส่วนผสมไม่ยืนยัน ระบบจะไม่จัดชุดให้')
+st.info('🍱 บอกงบ จำนวนคน การแพ้ และความชอบพร้อมกันได้เลย แล้วเช็กสรุปเพียงครั้งเดียวก่อนจัดชุด '
+        'หากแพ้อาหารรุนแรง กรุณาให้พนักงานยืนยันส่วนผสมก่อนสั่ง')
 st.sidebar.caption("จัดมื้ออร่อยให้พอดีงบ 🍣")
-mode = st.sidebar.selectbox(
-    "รูปแบบการแนะนำ", ["strict", "simulation"],
-    format_func=lambda value: {"strict": "Strict · ตรวจส่วนผสมที่ยืนยันแล้ว",
-                               "simulation": "ทดลองจัดชุด · ข้อมูลจำลอง"}[value],
-    help="Strict เหมาะเมื่อมีอาการแพ้ โดยต้องมีข้อมูลส่วนผสมยืนยันก่อนแนะนำเมนู")
-if mode == "simulation":
-    st.sidebar.warning("ชุดทดลองใช้วางแผนเท่านั้น ไม่รับรองความปลอดภัยสำหรับผู้แพ้อาหาร")
-# Mode is passed per Agent subprocess, not assigned to global os.environ.
+# Safety mode is a backend deployment setting, not a second consumer questionnaire.
+mode = os.getenv("SUSHI_DATA_MODE", "strict")
 
 
 api_key = ""
@@ -153,15 +147,7 @@ if "agent" in st.session_state and st.session_state["agent"] is not None:
     st.sidebar.caption("จำข้อมูลให้ตลอดบทสนทนานี้ เปลี่ยนเมนูได้โดยไม่ต้องเริ่มใหม่")
 
     if st.sidebar.button("รีเซ็ตบทสนทนา"):
-        try:
-            st.session_state["agent"].state.reset()
-            st.session_state["agent"]._has_recommended = False
-            st.session_state["agent"].clear_choices()
-            st.session_state["agent"].last_policy = None
-            st.session_state["agent"].last_trace = []
-            st.session_state["agent"].last_run = {}
-        except Exception:
-            pass
+        st.session_state["agent"].reset_order()
         st.session_state["chat_history"] = [{"role": "assistant", "content": GREETING_MESSAGE}]
         st.rerun()
 
@@ -221,21 +207,14 @@ if "agent" in st.session_state:
                         {"role": "assistant", "content": answer})
                     st.rerun()
         st.caption("การเลือกชุดเป็นเพียงสรุปสำหรับแจ้งร้าน ยังไม่มีการส่งคำสั่งซื้อหรือชำระเงิน")
-    if current_agent.state.last_asked_field == "dessert":
-        yes, no = st.columns(2)
-        for column, label, answer in [(yes, "🍡 รับของหวาน", "รับของหวาน"),
-                                      (no, "พอแล้ว ไม่รับของหวาน", "ไม่รับของหวาน")]:
+    if current_agent.pending_confirmation:
+        allergies=[a for a in current_agent.state.allergens if a not in current_agent.pending_allergy_removals]
+        confirm_label="ยืนยันข้อมูลและจัดชุด" if allergies else "ยืนยันว่าไม่แพ้และจัดชุด"
+        confirm, edit = st.columns(2)
+        for column, label in [(confirm, confirm_label), (edit, "แก้ไขข้อมูล")]:
             with column:
-                if st.button(label):
-                    st.session_state["pending_message"] = answer
-                    st.rerun()
-    elif current_agent.state.last_asked_field == "drinks_budget_mode":
-        within, separate = st.columns(2)
-        for column, label, answer in [(within, "รวมเครื่องดื่มในงบ", "รวมในงบ"),
-                                      (separate, "คิดเครื่องดื่มแยก", "คิดแยกนอกงบ")]:
-            with column:
-                if st.button(label):
-                    st.session_state["pending_message"] = answer
+                if st.button(label, key="confirm_order" if column is confirm else "edit_order"):
+                    st.session_state["pending_message"] = label
                     st.rerun()
 
 st.caption(MENU_NOTICE)

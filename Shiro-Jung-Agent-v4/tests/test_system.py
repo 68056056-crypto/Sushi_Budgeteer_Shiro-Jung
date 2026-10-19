@@ -162,8 +162,7 @@ class UITest(unittest.TestCase):
             self.assertEqual(len(app.error),1)
             self.assertIn('ผู้ช่วยยังไม่พร้อม',app.error[0].value)
             self.assertNotIn('OPENAI_API_KEY',app.error[0].value)
-            app.selectbox[0].set_value('simulation').run()
-            self.assertFalse(app.exception)
+            self.assertEqual(len(app.selectbox),0)
 
 class OptimizerTest(unittest.TestCase):
     def test_count_counterexample_fixed(self):

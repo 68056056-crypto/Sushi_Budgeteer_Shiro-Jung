@@ -19,7 +19,7 @@ from langchain_openai import ChatOpenAI
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
 from pydantic import BaseModel, Field, ConfigDict
-from .extraction import EXTRACT_PROMPT, _sanitize_extraction, contextual_answer
+from .extraction import EXTRACT_PROMPT, _sanitize_extraction, contextual_answer, requested_allergy_corrections
 from .state import BudgeteerState
 from .presentation import render_menu, ALLERGY_WARNING, MENU_NOTICE
 from .database import cents
@@ -70,13 +70,17 @@ class Extraction(BaseModel):
     intent: str='info'
 
 class BudgeteerAgent:
-    def __init__(self, api_key=None, model=None, llm=None):
+    def __init__(self, api_key=None, model=None, llm=None, consumer_flow=False):
         load_dotenv()
         self._api_key=api_key or os.getenv('OPENAI_API_KEY') or os.getenv('SUSHI_OPENAI_API_KEY')
         self.llm=llm if llm is not None else ChatOpenAI(
             api_key=self._api_key,
             model=model or os.getenv('OPENAI_MODEL','gpt-4o-mini'),temperature=0,
             timeout=30,max_retries=1)
+        self.consumer_flow=consumer_flow
+        self.pending_confirmation=False
+        self.details_confirmed=False
+        self.pending_allergy_removals=[]
         self._turn_llm=None
         self.model_source='scripted' if llm is not None else 'live'
         self.model_name=model or os.getenv('OPENAI_MODEL','gpt-4o-mini')
@@ -107,6 +111,9 @@ class BudgeteerAgent:
         raw=json.loads(text)
         if not isinstance(raw,dict): raise ValueError('expected object')
         raw=_sanitize_extraction(raw,self.state.last_asked_field,message)
+        if (self.consumer_flow and self.state.wants_dessert is False
+                and not re.search(r'ของหวาน|ขอหวาน|dessert|โมจิ|ไอศกรีม|ขนม',message,re.IGNORECASE)):
+            raw={**raw,'wants_dessert':None,'dessert_selection':[],'dessert_quantity':None}
         return Extraction.model_validate(raw).model_dump()
 
     def _record_usage(self,response,phase):
@@ -126,6 +133,9 @@ class BudgeteerAgent:
 
     def missing_fields(self):
         s=self.state
+        if self.consumer_flow:
+            return [key for key,missing in [('budget',s.budget is None),
+                    ('num_people',s.num_people is None),('allergy',not s.allergy_check_done)] if missing]
         checks=[('budget',s.budget is None),('num_people',s.num_people is None),
                 ('allergy',not s.allergy_check_done),('drinks',not s.drink_selection),
                 ('drink_quantity',s.drink_quantity is None),
@@ -134,6 +144,70 @@ class BudgeteerAgent:
                 ('dessert_selection',s.wants_dessert is True and not s.dessert_selection),
                 ('dessert_quantity',s.wants_dessert is True and s.dessert_quantity is None)]
         return [key for key,missing in checks if missing]
+
+    def reset_order(self):
+        self.state.reset()
+        self.clear_choices()
+        self.pending_confirmation=False
+        self.details_confirmed=False
+        self.pending_allergy_removals=[]
+        self._has_recommended=False
+        self.last_trace=[]
+        self.last_run={}
+
+    def order_summary(self):
+        s=self.state
+        allergy=[a for a in s.allergens if a not in self.pending_allergy_removals]
+        names=', '.join(self._ALLERGEN_TH.get(a,a) for a in allergy)
+        lines=['**ขอเช็กมื้อของคุณครั้งเดียวครับ 🍱**',
+               f'- งบ {s.budget:,.2f} บาท · {s.num_people} คน',
+               '- แพ้อาหาร: '+(names or 'ไม่มีที่แจ้ง — กดยืนยันด้านล่างหากไม่แพ้'),
+               '- ชอบ: '+(', '.join(s.preferred_keywords) or 'ไม่ได้ระบุ'),
+               '- ไม่ชอบ: '+(', '.join(s.dislikes) or 'ไม่ได้ระบุ')]
+        if s.drink_selection:
+            drinks=(', '.join(f'{name} {qty} แก้ว' for name,qty in s.drink_quantities.items())
+                    if s.drink_quantities else ', '.join(s.drink_selection)+f' รวม {s.drink_quantity or s.num_people} แก้ว')
+            lines.append('- เครื่องดื่ม: '+drinks)
+        else:
+            lines.append('- เครื่องดื่ม: ไม่เพิ่มในชุด')
+        if s.wants_dessert:
+            lines.append('- ของหวาน: '+(', '.join(s.dessert_selection) or 'กรุณาบอกชื่อที่ต้องการ')
+                         +f' {s.dessert_quantity or s.num_people} ชิ้น')
+        else:
+            lines.append('- ของหวาน: ไม่รับ')
+        lines.append('- ค่าเครื่องดื่ม/ของหวาน: '+('คิดเพิ่มนอกงบ' if s.drinks_budget_mode=='separate' else 'รวมในงบ'))
+        if self.pending_allergy_removals:
+            corrected=', '.join(self._ALLERGEN_TH.get(a,a) for a in self.pending_allergy_removals)
+            lines.append('คุณขอแก้ว่าไม่ได้แพ้ '+corrected+' — จะเปลี่ยนข้อมูลเมื่อคุณกดยืนยันเท่านั้น')
+        return '\n\n'.join([lines[0], '\n'.join(lines[1:]),
+            'ถ้าตรงแล้วกดยืนยันเพื่อจัดชุด หรือพิมพ์แก้เฉพาะส่วนที่ต้องการได้เลยครับ'])
+
+    def _confirm_order(self):
+        s=self.state
+        if s.budget is None or s.num_people is None:
+            return 'ขอทราบงบและจำนวนคนก่อนจัดชุดครับ'
+        s.allergens=[a for a in s.allergens if a not in self.pending_allergy_removals]
+        self.pending_allergy_removals=[]
+        s.allergy_check_done=True
+        if s.wants_dessert is None:
+            s.wants_dessert=False
+        if s.drink_selection and s.drink_quantity is None:
+            s.drink_quantity=sum(s.drink_quantities.values()) if s.drink_quantities else s.num_people
+        if s.wants_dessert and s.dessert_quantity is None:
+            s.dessert_quantity=s.num_people
+        if s.drinks_budget_mode is None:
+            s.drinks_budget_mode='within'
+        self.pending_confirmation=False
+        self.details_confirmed=True
+        s.last_asked_field=None
+        self.clear_choices()
+        self._replan=True
+        try:
+            return asyncio.run(self._run('จัดชุดตามข้อมูลที่ยืนยัน'))
+        except Exception:
+            LOG.exception('confirmed order failed')
+            self.clear_choices()
+            return 'จัดชุดไม่สำเร็จชั่วคราวครับ ลองใหม่ได้เลย ข้อมูลเดิมยังอยู่'
 
     def build_arguments(self):
         s=self.state
@@ -402,6 +476,16 @@ class BudgeteerAgent:
         return message+('\n\n'+ALLERGY_WARNING if self.state.allergens else '')
 
     def _chat(self,user_message):
+        if self.consumer_flow and self.pending_confirmation:
+            if user_message.strip() in {'ยืนยัน','ยืนยันข้อมูล','ใช่','ใช่ครับ','ถูกต้อง','ถูกต้องครับ','ตกลง','โอเค','ได้เลย','ยืนยันข้อมูลและจัดชุด','ยืนยันว่าไม่แพ้และจัดชุด'}:
+                answer=self._confirm_order()
+                self.state.add_message('user',user_message)
+                self.state.add_message('assistant',answer)
+                return answer
+            if user_message.strip() in {'แก้ไขข้อมูล','ไม่','ไม่ใช่','ยังไม่ใช่'}:
+                self.pending_confirmation=False
+                self.state.last_asked_field='order_details'
+                return 'พิมพ์เฉพาะส่วนที่อยากแก้ได้เลยครับ เช่น ไม่ชอบปลาหมึก ไม่ได้แพ้ หรือ ไม่รับของหวาน'
         choice=re.fullmatch(r'(?:เลือก\s*)?(?:ชุด(?:ที่)?\s*)?([12])',user_message.strip())
         if self.last_options and choice:
             answer=self.select_option(int(choice.group(1))-1)
@@ -436,7 +520,12 @@ class BudgeteerAgent:
                 # Keep the rest of this answer (budget, people...) but drop the drink plan,
                 # because a split that includes an off-menu drink cannot be priced.
                 extracted={**extracted,'drink_selection':[],'drink_quantities':{},'drink_quantity':None}
+            corrections=requested_allergy_corrections(user_message,self.state.allergens)
+            self.pending_allergy_removals=list(dict.fromkeys([*self.pending_allergy_removals,*corrections]))
+            self.pending_allergy_removals=[a for a in self.pending_allergy_removals if a not in extracted.get('allergens',[])]
             self.state.update_from_extraction(extracted)
+            if self.state.last_asked_field not in self.missing_fields():
+                self.state.last_asked_field=None
             # Preference updates after a recommendation mean replan, not an empty search.
             explicit_search=any(word in user_message for word in ('มีเมนู','ราคาเท่า','ค้นหา','ดูเมนู'))
             self._replan=had_result and not explicit_search and (
@@ -445,6 +534,7 @@ class BudgeteerAgent:
                     'must_include_keywords','budget','budget_delta','num_people'))
                 or any(word in user_message for word in ('จัดใหม่','ชุดใหม่','เปลี่ยนเมนู','อีกชุด','อยากกิน','อยากทาน')))
             if unknown:
+                self.pending_confirmation=False
                 self.state.last_asked_field='drinks'
                 answer=(f"ไม่มี {', '.join(unknown)} ในรายการเครื่องดื่มครับ "
                         f"เลือกได้จาก: {', '.join(available)} — กรุณาระบุเครื่องดื่มและจำนวนแต่ละอย่างใหม่ครับ")
@@ -455,6 +545,30 @@ class BudgeteerAgent:
             LOG.exception('intent extraction failed: %s',type(cause).__name__)
             return 'อ่านความต้องการไม่สำเร็จชั่วคราว ลองส่งข้อความอีกครั้งได้เลยครับ ผมยังเก็บข้อมูลเดิมไว้'
         self.state.add_message('user',user_message)
+        if self.consumer_flow and not explicit_search:
+            missing=[]
+            if self.state.budget is None: missing.append('งบรวมกี่บาท')
+            if self.state.num_people is None: missing.append('ทานกี่คน')
+            if missing:
+                self.pending_confirmation=False
+                self.state.last_asked_field='order_details'
+                answer='ขอทราบ'+ ' และ '.join(missing)+'ครับ บอกการแพ้อาหาร ความชอบ และเครื่องดื่มพร้อมกันได้เลย ไม่รับของหวานจะไม่เพิ่มให้ครับ'
+                self.state.add_message('assistant',answer)
+                return answer
+            if self.state.wants_dessert and not self.state.dessert_selection:
+                self.pending_confirmation=False
+                self.state.last_asked_field='dessert_selection'
+                answer='รับของหวานอะไรครับ? บอกชื่อและจำนวนพร้อมกันได้เลย หรือเลือกไม่รับของหวานได้ครับ'
+                self.state.add_message('assistant',answer)
+                return answer
+            if not self.details_confirmed or extracted.get('allergens') or self.pending_allergy_removals:
+                self.pending_confirmation=True
+                self.state.last_asked_field='order_confirmation'
+                answer=self.order_summary()
+                self.state.add_message('assistant',answer)
+                return answer
+            self.pending_confirmation=False
+            self._replan=not explicit_search
         try:
             answer=asyncio.run(self._run(user_message,extracted.get('budget_change_unclear',False)))
         except Exception as exc:

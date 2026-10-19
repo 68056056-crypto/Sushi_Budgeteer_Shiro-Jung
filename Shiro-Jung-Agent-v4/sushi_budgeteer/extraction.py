@@ -1,5 +1,6 @@
 """Thai intent extraction prompt and deterministic slot guards."""
 from typing import Any, Dict, Optional
+import re
 
 _NARROW_SLOT_FIELDS = {
     "num_people", "drinks", "drink_quantity", "drinks_budget_mode",
@@ -12,6 +13,19 @@ _HARD_EXCLUDE_TRIGGERS = ("ไม่กินเลย", "ไม่เอาเ�
 def _sanitize_extraction(
     extracted: Dict[str, Any], last_asked_field: Optional[str], user_message: str
 ) -> Dict[str, Any]:
+    # A preference is not a medical declaration. Never invent allergies from context.
+    positive=re.sub(r'(?:ไม่ได้|ไม่เคย|ไม่|มิได้|ไม่มีอาการ|ไม่มี)\s*แพ้.*?(?=แต่|[,;\n]|$)', '', user_message)
+    positive=re.sub(r'\b(?:not allergic|no allerg(?:y|ies))\b.*?(?=but|[,;\n]|$)', '', positive, flags=re.IGNORECASE)
+    if not re.search(r'แพ้|\ballerg(?:ic|y|ies)\b', positive, re.IGNORECASE):
+        extracted={**extracted,'allergens':[]}
+    dislikes=list(extracted.get('dislikes') or [])
+    for name in ('ปลาหมึก','แซลมอน','กุ้ง','หอย','ปลา','ไข่','นม','ถั่วเหลือง'):
+        term=re.escape(name)+(r'(?!หมึก)' if name=='ปลา' else '')
+        if re.search(r'(?:ไม่ค่อยชอบ|ไม่ชอบ)(?:กิน|ทาน)?\s*'+term, user_message) or re.search(
+                term+r'(?:เป็น)?(?:แค่)?ไม่ชอบ',user_message):
+            if name not in dislikes:
+                dislikes.append(name)
+    extracted={**extracted,'dislikes':dislikes}
     # Drink names are an order, not a food preference: keep them out of food scoring.
     drink_names = {str(x).strip().lower() for x in (extracted.get("drink_selection") or [])}
     drink_names |= {str(x).strip().lower() for x in (extracted.get("drink_quantities") or {})}
@@ -35,6 +49,9 @@ EXTRACT_PROMPT = """คุณคือระบบสกัดข้อมูล
 "อยากกินเซลมอน" หรือ "อยากทานแซลมอน" คือ preferred_keywords=["แซลมอน"], intent="optimize"
 เมื่อผู้ใช้บอกความชอบต่อจากชุดก่อน ให้ปรับชุดเดิม ไม่ใช่ค้นหาเมนู ยกเว้นถามชัดเจนว่า "มีเมนูอะไร" หรือ "ขอดูราคา"
 ห้ามเปลี่ยนหรือลบอาการแพ้ที่จำไว้เพียงเพราะผู้ใช้บอกว่าอยากกินเมนูใหม่
+"ไม่ชอบปลาหมึก" คือ dislikes=["ปลาหมึก"] เท่านั้น ไม่ใช่ allergens=["molluscs"]
+ถ้าผู้ใช้บอก "ไม่ได้แพ้ แค่ไม่ชอบ" อย่าสร้าง allergy ใหม่ ระบบจะให้ยืนยันการแก้ไขเอง
+สกัดเฉพาะข้อมูลจากข้อความล่าสุด ไม่คัดลอก allergens จากบริบทมาว่าเป็นการแจ้งใหม่
 
 อ่านข้อความของผู้ใช้ แล้วคืนค่าเป็น JSON เท่านั้น (ห้ามมีข้อความอื่นนอกเหนือจาก JSON)
 ด้วยโครงสร้างดังนี้:
@@ -160,6 +177,8 @@ JSON: {"budget": null, "budget_delta": null, "budget_change_unclear": false, "al
 def contextual_answer(last_asked_field, message):
     """Handle exact button/short replies only; richer messages still use extraction."""
     text=message.strip().lower()
+    if text in {'ไม่รับของหวาน','ไม่เอาของหวาน','ไม่รับขอหวาน','ไม่เอาขอหวาน'}:
+        return {'wants_dessert':False}
     no={'ไม่','ไม่มี','ไม่เอา','ไม่รับ','ไม่รับของหวาน','ไม่แพ้','ไม่แพ้อะไร','ไม่มีค่ะ','ไม่มีครับ'}
     if last_asked_field=='allergy' and text in no:
         return {'allergy_check_answered':True}
@@ -176,3 +195,25 @@ def contextual_answer(last_asked_field, message):
     if text.isdecimal() and last_asked_field in {'budget','num_people','drink_quantity','dessert_quantity'}:
         return {last_asked_field:int(text)}
     return None
+
+
+ALLERGEN_ALIASES={
+    'molluscs':('ปลาหมึก','หมึก','หอย'), 'crustacean':('กุ้ง','ปู'),
+    'fish':('ปลา','แซลมอน'), 'egg':('ไข่',), 'milk':('นม',),
+    'soy':('ถั่วเหลือง','ซีอิ๊ว'), 'gluten':('กลูเตน','แป้งสาลี'),
+    'sesame':('งา',), 'peanut':('ถั่วลิสง',), 'tree_nuts':('ถั่วเปลือกแข็ง',),
+    'seafood':('อาหารทะเล',), 'pork':('หมู',), 'sulphites':('ซัลไฟต์',)}
+
+
+def requested_allergy_corrections(message, current_allergens):
+    """Propose removals only for an explicit user correction, applied after confirmation."""
+    if not re.search(r'(?:ไม่ได้|ไม่เคย|ไม่|มิได้)\s*แพ้',message):
+        return []
+    if message.strip() in {'ไม่แพ้','ไม่แพ้อะไร','ไม่ได้แพ้อาหาร','ไม่แพ้อาหาร'}:
+        return list(current_allergens)
+    # Prefer specific shellfish words over the generic Thai word for fish.
+    mentioned=[tag for tag in current_allergens
+               if any(alias in message for alias in ALLERGEN_ALIASES.get(tag,(tag,)))]
+    if 'ปลาหมึก' in message and 'molluscs' in mentioned:
+        mentioned=[tag for tag in mentioned if tag!='fish']
+    return mentioned

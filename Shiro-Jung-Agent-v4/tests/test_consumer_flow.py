@@ -24,7 +24,7 @@ class ConsumerFlowTest(unittest.TestCase):
     def recommend(self, **changes):
         model=ScriptedModel([('build_set',{}),('verify_current',{})],{**READY,**changes})
         agent=BudgeteerAgent(llm=model)
-        answer=agent.chat('จัดชุดให้หน่อย')
+        answer=agent.chat('จัดชุดให้หน่อย'+(' แพ้กุ้ง' if changes.get('allergens') else ''))
         return agent,model,answer
 
     def test_two_distinct_options_keep_constraints_and_hide_diagnostics(self):
@@ -110,7 +110,7 @@ class ConsumerFlowTest(unittest.TestCase):
         self.assertEqual(service.alternative(built['result_id'])['status'],'unavailable')
         self.assertTrue(service.verify(built['result_id'])['passed'])
 
-    def test_consumer_ui_selection_reset_and_mode_change(self):
+    def test_consumer_ui_selection_reset_and_single_safety_flow(self):
         agent,_,answer=self.recommend()
         with patch.dict(os.environ,{'OPENAI_API_KEY':'ui-test-placeholder'}):
             page=AppTest.from_file(str(ROOT/'app.py'))
@@ -125,9 +125,7 @@ class ConsumerFlowTest(unittest.TestCase):
             page.button(key='choose_1').click().run()
             self.assertFalse(page.exception)
             self.assertEqual(agent.confirmed_option,1)
-            page.selectbox[0].select('simulation').run()
-            self.assertFalse(page.exception)
-            self.assertEqual(agent.last_options,[])
+            self.assertEqual(len(page.selectbox),0)
             self.assertEqual(agent.state.budget,READY['budget'])
             next(b for b in page.button if b.label=='รีเซ็ตบทสนทนา').click().run()
             self.assertIsNone(agent.state.budget)
