@@ -31,6 +31,14 @@ def cents(value) -> int:
     except (InvalidOperation, TypeError) as e:
         raise ValueError('จำนวนเงินไม่ถูกต้อง') from e
 
+def budget_target_cents(budget, spend_ratio=1.0):
+    """Round the usable share down to satang so the reserve is never overspent."""
+    ratio=Decimal(str(spend_ratio))
+    if not ratio.is_finite() or not 0 < ratio <= 1:
+        raise ValueError('สัดส่วนงบจัดชุดต้องมากกว่า 0 และไม่เกิน 1')
+    return int(Decimal(cents(budget))*ratio)
+
+
 def import_csv(source: str | Path, target: str | Path | None = None) -> dict:
     source = Path(source).resolve()
     raw = source.read_bytes()

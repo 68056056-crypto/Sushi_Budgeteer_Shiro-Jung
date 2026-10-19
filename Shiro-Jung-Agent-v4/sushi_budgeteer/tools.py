@@ -15,7 +15,7 @@ from __future__ import annotations
 
 import json
 from uuid import uuid4
-from .database import catalog_revision, cents
+from .database import catalog_revision, cents, budget_target_cents
 from .policy import data_mode, validate_result, DISCLAIMER
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -276,6 +276,7 @@ def build_optimal_set(
     dessert_quantity: Optional[int] = None,
     drink_quantities: Optional[Dict[str, int]] = None,
     excluded_item_ids: Optional[List[str]] = None,
+    spend_ratio: float = 1.0,
 ) -> str:
     """จัดชุดเมนูที่คุ้มค่าที่สุดภายในงบประมาณด้วย 0/1 Knapsack Dynamic Programming.
 
@@ -303,7 +304,7 @@ def build_optimal_set(
     ขั้นตอนภายใน: (1) กรอง allergen/hard_exclude/must_include แบบ hard block,
     (2) ให้คะแนนแต่ละเมนูด้วย preference/price-efficiency/diversity แล้วหักคะแนน
     รายการที่ตรงกับ dislikes, (3) เลือกชุดที่คะแนนรวมสูงสุดภายในงบประมาณด้วย DP
-    (คำตอบที่ดีที่สุดจริง ไม่ใช่ค่าประมาณ). เรียกใช้เมื่อมีงบประมาณครบถ้วนและพร้อม
+    (เลือกชุดในช่วง 95–100% ของงบอาหารก่อน แล้วให้คะแนนความชอบสูงสุด; ถ้าทำไม่ได้ เลือกยอดใกล้งบที่สุด). เรียกใช้เมื่อมีงบประมาณครบถ้วนและพร้อม
     คำนวณ. หลังเรียก tool นี้ ต้องเรียก verify_result เสมอก่อนตอบผู้ใช้.
 
     ผลลัพธ์มีฟิลด์ count_by_must_include_keyword (คำนวณให้แล้ว ไม่ต้องนับเอง)
@@ -316,6 +317,7 @@ def build_optimal_set(
     """
     if not 0 < cents(budget) <= 10_000_000 or not 1 <= min_items <= max_items <= 60:
         raise ValueError("งบต้องมากกว่า 0 และไม่เกิน 100000 บาท; จำนวนรายการ 1–60")
+    target_budget=budget_target_cents(budget,spend_ratio)/100
     if not 1 <= num_people <= 60:
         raise ValueError("จำนวนคนต้องอยู่ระหว่าง 1–60")
     for qty in (drink_quantity, dessert_quantity):
@@ -335,7 +337,7 @@ def build_optimal_set(
         num_people=num_people, drink_selection=drink_selection or [], drink_quantity=drink_quantity,
         drinks_separate_from_budget=drinks_separate_from_budget, include_dessert=include_dessert,
         dessert_selection=dessert_selection or [], dessert_quantity=dessert_quantity,
-        drink_quantities=drink_quantities or {}, excluded_item_ids=excluded_item_ids or [])
+        drink_quantities=drink_quantities or {}, excluded_item_ids=excluded_item_ids or [],spend_ratio=spend_ratio)
     menu = menu_records()
 
     # Drinks/dessert: a fixed allocation by name, reserved out of the budget
@@ -357,7 +359,7 @@ def build_optimal_set(
         preflight_issues.append("เครื่องดื่ม/ของหวานขัดข้อจำกัดหรือยังไม่ทราบ allergen โปรดเลือกใหม่")
     fixed_items = safe_fixed
     fixed_cost = round(sum(float(it["price_baht"]) for it in fixed_items), 2)
-    food_budget = budget if drinks_separate_from_budget else max(0.0, budget - fixed_cost)
+    food_budget = target_budget if drinks_separate_from_budget else max(0.0, target_budget - fixed_cost)
     food_max_items = max(0, max_items - len(fixed_items))
 
     food_menu = [row for row in menu if row.get("category") not in (_DRINK_CATEGORY, _DESSERT_CATEGORY)]
@@ -380,7 +382,7 @@ def build_optimal_set(
 
     food_min_items = max(1, min_items - len(fixed_items))
     food_selected = (dp_knapsack(scored_items, round(food_budget,2), max_items=food_max_items,
-                                min_items=food_min_items)
+                                min_items=food_min_items, objective="budget", diversity=True)
                      if food_min_items <= food_max_items else [])
     selected = food_selected + fixed_items
     food_total_price = round(sum(float(it["price_baht"]) for it in food_selected), 2)
@@ -416,6 +418,9 @@ def build_optimal_set(
         "total_price": total_price,  # grand total actually paid (food + drinks + dessert)
         "food_total_price": food_total_price,
         "budget": budget,
+        "spend_target": target_budget,
+        "reserved_budget": round(budget-target_budget,2),
+        "selection_score_total": round(sum(it["score"] for it in food_selected),3),
         "budget_used_pct": budget_used_pct,
         "drinks_separate_from_budget": drinks_separate_from_budget,
         "item_count": len(selected),  # total plates, repeats counted individually

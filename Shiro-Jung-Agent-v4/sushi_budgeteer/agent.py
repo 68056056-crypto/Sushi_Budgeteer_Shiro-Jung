@@ -175,6 +175,11 @@ class BudgeteerAgent:
                          +f' {s.dessert_quantity or s.num_people} ชิ้น')
         else:
             lines.append('- ของหวาน: ไม่รับ')
+        if self.consumer_flow:
+            from .database import budget_target_cents
+            target=budget_target_cents(s.budget,0.8)/100
+            lines.append(f'- จัดชุดประมาณ 80%: {target:,.2f} บาท · เผื่อเพิ่มภายหลัง {s.budget-target:,.2f} บาท')
+        lines.append('- จำนวนรายการ: '+(f'ไม่เกิน {s.max_items} รายการ' if s.max_items_explicit else 'ปรับให้ใกล้งบ ไม่เกิน 60 รายการ'))
         lines.append('- ค่าเครื่องดื่ม/ของหวาน: '+('คิดเพิ่มนอกงบ' if s.drinks_budget_mode=='separate' else 'รวมในงบ'))
         if self.pending_allergy_removals:
             corrected=', '.join(self._ALLERGEN_TH.get(a,a) for a in self.pending_allergy_removals)
@@ -209,15 +214,23 @@ class BudgeteerAgent:
             self.clear_choices()
             return 'จัดชุดไม่สำเร็จชั่วคราวครับ ลองใหม่ได้เลย ข้อมูลเดิมยังอยู่'
 
+    def item_limit(self):
+        # The old implicit 20-item cap prevents a 3000-baht meal from fitting its budget.
+        # Explicit user limits always win; retain the backend's existing 60-item bound.
+        if self.consumer_flow and not self.state.max_items_explicit:
+            return 60
+        return self.state.max_items
+
     def build_arguments(self):
         s=self.state
         return dict(budget=s.budget,allergens=s.allergens,dislikes=s.dislikes,
           preferred_keywords=s.preferred_keywords,hard_exclude_keywords=s.hard_exclude_keywords,
-          must_include_keywords=s.must_include_keywords,min_items=s.min_items,max_items=s.max_items,
+          must_include_keywords=s.must_include_keywords,min_items=s.min_items,max_items=self.item_limit(),
           num_people=s.num_people,drink_selection=s.drink_selection,drink_quantity=s.drink_quantity,
           drink_quantities=s.drink_quantities or None,
           drinks_separate_from_budget=s.drinks_budget_mode=='separate',include_dessert=s.wants_dessert,
-          dessert_selection=s.dessert_selection,dessert_quantity=s.dessert_quantity)
+          dessert_selection=s.dessert_selection,dessert_quantity=s.dessert_quantity,
+          spend_ratio=0.8 if self.consumer_flow else 1.0)
 
     @staticmethod
     def render_result(result):
@@ -506,7 +519,7 @@ class BudgeteerAgent:
             if extracted.get('budget_delta') is not None and self.state.budget is not None and self.state.budget+extracted['budget_delta']<=0:
                 return 'งบหลังปรับต้องมากกว่า 0 บาท กรุณาระบุใหม่ครับ'
             effective_min=extracted.get('min_items') or self.state.min_items
-            effective_max=extracted.get('max_items') or self.state.max_items
+            effective_max=extracted.get('max_items') or self.item_limit()
             if effective_min>effective_max:
                 return 'จำนวนขั้นต่ำมากกว่าจำนวนสูงสุด กรุณาระบุใหม่ครับ'
             if extracted.get('budget') is not None: cents(extracted['budget'])

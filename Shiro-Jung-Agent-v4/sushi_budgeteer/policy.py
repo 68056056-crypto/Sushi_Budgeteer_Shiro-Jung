@@ -1,7 +1,7 @@
 """Deterministic policy enforcement independent of the LLM."""
 from __future__ import annotations
 import os
-from .database import cents, catalog_revision
+from .database import cents, catalog_revision, budget_target_cents
 
 DISCLAIMER = ('ข้อมูลจำลองเพื่อการศึกษา ราคาและสารก่อภูมิแพ้ยังไม่ได้รับรองจากร้าน '
               'ไม่รับประกันการปนเปื้อนจริง ผู้แพ้อาหารต้องตรวจสอบกับพนักงานร้านโดยตรง')
@@ -69,6 +69,13 @@ def validate_result(result, menu, constraints=None, mode=None):
     if food_count<1: issues.append('ไม่มีอาหารหลักที่จัดได้ตามข้อจำกัด')
     if (food if constraints.get('drinks_separate_from_budget') else total)>cents(constraints['budget']):
         issues.append('ยอดเกินงบ')
+    target_limit=budget_target_cents(constraints['budget'],constraints.get('spend_ratio',1.0))
+    if (food if constraints.get('drinks_separate_from_budget') else total)>target_limit:
+        issues.append('ยอดเกินวงเงินจัดชุดที่กันงบสำรองไว้')
+    if 'spend_target' in result and cents(result['spend_target'])!=target_limit:
+        issues.append('วงเงินจัดชุดไม่ตรงข้อมูลที่ยืนยัน')
+    if 'reserved_budget' in result and cents(result['reserved_budget'])!=cents(constraints['budget'])-target_limit:
+        issues.append('งบสำรองไม่ตรงข้อมูลที่ยืนยัน')
     if cents(result.get('total_price',-1))!=total or cents(result.get('food_total_price',-1))!=food:
         issues.append('ยอดรวมไม่ตรงยอดที่คำนวณจากฐานข้อมูล')
     if result.get('item_count')!=count: issues.append('จำนวนรวมไม่ตรงรายการ')

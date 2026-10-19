@@ -50,6 +50,7 @@ class BudgeteerState:
     must_include_keywords: List[str] = field(default_factory=list)
     min_items: int = 1
     max_items: int = 20
+    max_items_explicit: bool = False
 
     # Group-dining fields. num_people is a second hard prerequisite (like
     # budget) before optimizing — a set built for 1 person and one built for
@@ -227,6 +228,7 @@ class BudgeteerState:
         if extracted.get("max_items") is not None:
             try:
                 self.max_items = max(self.min_items, int(extracted["max_items"]))
+                self.max_items_explicit = True
             except (TypeError, ValueError):
                 pass
 
@@ -359,6 +361,7 @@ class BudgeteerState:
         self.must_include_keywords = []
         self.min_items = 1
         self.max_items = 20
+        self.max_items_explicit = False
         self.num_people = None
         self.allergy_check_done = False
         self.wants_dessert = None

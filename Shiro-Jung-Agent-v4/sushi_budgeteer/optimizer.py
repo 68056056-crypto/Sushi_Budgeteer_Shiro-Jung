@@ -178,15 +178,23 @@ def score_item(row, preferred_keywords=None, budget=None, is_disliked=False):
 # ----------------------------------------------------------------------
 # 4.2.2  dp_knapsack() — 0/1 Knapsack via Dynamic Programming
 # ----------------------------------------------------------------------
-def dp_knapsack(items, budget, max_items=20, max_repeat_per_item=3, min_items=0):
+def dp_knapsack(items, budget, max_items=20, max_repeat_per_item=3, min_items=0, objective="score", diversity=False):
     """Exact bounded knapsack: score first, actual spend second; count is a DP dimension."""
     if not 1 <= max_repeat_per_item <= 10:
         raise ValueError("repeat cap ต้องอยู่ระหว่าง 1–10")
-    return _dp_knapsack_01([x for x in items for _ in range(max_repeat_per_item)],
-                           budget, max_items=max_items, min_items=min_items)
+    expanded=[]
+    for item in items:
+        for repeat in range(max_repeat_per_item):
+            copy=dict(item)
+            if diversity:
+                copy['score']=float(item['score'])*(0.5**repeat)
+            expanded.append(copy)
+    return _dp_knapsack_01(expanded,budget,max_items=max_items,min_items=min_items,objective=objective)
 
 
-def _dp_knapsack_01(items, budget, max_items=20, min_items=0):
+def _dp_knapsack_01(items, budget, max_items=20, min_items=0, objective="score"):
+    if objective not in {"score", "budget"}:
+        raise ValueError("unknown optimization objective")
     cap = cents(budget)
     if cap > 10_000_000 or not 0 <= min_items <= max_items <= 60 or len(items)>1500:
         raise ValueError("เกินขอบเขต: งบไม่เกิน 100000 บาท จำนวนรายการไม่เกิน 60")
@@ -214,7 +222,16 @@ def _dp_knapsack_01(items, budget, max_items=20, min_items=0):
                 if min_items <= count <= max_items]
     if not feasible:
         return []
-    _, _, path = max(feasible, key=lambda x:(x[0],x[1]))
+    if objective == "budget":
+        # Meet a useful budget band first, then retain the original preference objective.
+        # Compare integer satang against the actual budget, never a rounded/scaled target.
+        near=[entry for entry in feasible if entry[1]*scale*100 >= cap*95]
+        if near:
+            _, _, path=max(near,key=lambda x:(x[0],x[1]))
+        else:
+            _, _, path=max(feasible,key=lambda x:(x[1],x[0]))
+    else:
+        _, _, path = max(feasible, key=lambda x:(x[0],x[1]))
     return [items[i] for i in path]
 
 

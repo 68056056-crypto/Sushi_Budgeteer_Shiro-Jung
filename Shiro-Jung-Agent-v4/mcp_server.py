@@ -52,6 +52,7 @@ def build_set(
     dessert_selection: Optional[List[str]] = None,
     dessert_quantity: Optional[int] = None,
     drink_quantities: Optional[Dict[str, int]] = None,
+    spend_ratio: float = 1.0,
 ) -> str:
     """สร้าง candidate ด้วย bounded exact DP จาก SQLite หลังกรอง hard constraints.
 
