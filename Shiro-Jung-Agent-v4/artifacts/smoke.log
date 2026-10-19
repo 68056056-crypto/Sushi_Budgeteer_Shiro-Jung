@@ -23,7 +23,7 @@
 [PASS] aggregated subtotal_baht = quantity x price
 
 === 5. dp_knapsack() beats random_baseline() on average ===
-[PASS] DP score (40.5) >= random score (25.5)
+[PASS] DP score (45.0) >= random score (25.5)
 [PASS] DP stays within budget
 
 === 6. Allergen hard-block filtering (tools._run_filter) ===

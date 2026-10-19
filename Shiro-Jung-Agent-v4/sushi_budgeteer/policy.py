@@ -70,11 +70,11 @@ def validate_result(result, menu, constraints=None):
     # Match fixed allocations back to the requested names and trusted catalog.
     from collections import Counter
     from .tools import _resolve_quantity_items
-    for category, selection, quantity in [
-        ('เครื่องดื่ม', constraints.get('drink_selection') or [], constraints.get('drink_quantity')),
-        ('ของหวาน', (constraints.get('dessert_selection') or []) if constraints.get('include_dessert') else [], constraints.get('dessert_quantity'))]:
+    for category, selection, quantity, per_item in [
+        ('เครื่องดื่ม', constraints.get('drink_selection') or [], constraints.get('drink_quantity'), constraints.get('drink_quantities') or None),
+        ('ของหวาน', (constraints.get('dessert_selection') or []) if constraints.get('include_dessert') else [], constraints.get('dessert_quantity'), None)]:
         expected_items=_resolve_quantity_items(menu,category,selection,
-            quantity if quantity is not None else constraints.get('num_people',1))
+            quantity if quantity is not None else constraints.get('num_people',1), per_item)
         expected_ids=Counter(x['item_id'] for x in expected_items)
         actual_ids=Counter({x['item_id']:x['quantity'] for x in selected
             if x.get('item_id') in catalog and catalog[x['item_id']]['category']==category})

@@ -121,6 +121,7 @@ def _resolve_quantity_items(
     category: str,
     selection_keywords: List[str],
     total_quantity: int,
+    per_item_quantities: Optional[Dict[str, int]] = None,
 ) -> List[Dict[str, Any]]:
     """Resolve free-text choices (e.g. drink names) against one menu category,
     then split total_quantity as evenly as possible across however many
@@ -132,10 +133,27 @@ def _resolve_quantity_items(
     name, not competed for on value-for-money, since "1 drink per person" is
     a fixed requirement, not an optimization.
     """
+    category_items = [row for row in menu if row.get("category") == category]
+
+    def _find(kw: str) -> Dict[str, Any]:
+        hit = next((row for row in category_items if kw.lower() in {str(row['item_id']).lower(), row['name_th'].lower(), row['name_en'].lower()}), None)
+        if hit is None:
+            hit = next((row for row in category_items if matches_any_keyword(row, [kw])), None)
+        if hit is None:
+            raise ValueError(f"ไม่พบตัวเลือก {kw} ในหมวด {category}")
+        return hit
+
+    # Explicit per-item quantities ("ชาเขียว 2 โค้ก 2 น้ำส้ม 2") win over an even split.
+    if per_item_quantities:
+        flat_explicit: List[Dict[str, Any]] = []
+        for kw, qty in per_item_quantities.items():
+            if int(qty) > 0:
+                flat_explicit.extend([_find(str(kw))] * int(qty))
+        return flat_explicit
+
     if not selection_keywords or total_quantity <= 0:
         return []
 
-    category_items = [row for row in menu if row.get("category") == category]
     matched: List[Dict[str, Any]] = []
     seen_ids = set()
     for kw in selection_keywords:
@@ -256,6 +274,7 @@ def build_optimal_set(
     include_dessert: bool = False,
     dessert_selection: Optional[List[str]] = None,
     dessert_quantity: Optional[int] = None,
+    drink_quantities: Optional[Dict[str, int]] = None,
 ) -> str:
     """จัดชุดเมนูที่คุ้มค่าที่สุดภายในงบประมาณด้วย 0/1 Knapsack Dynamic Programming.
 
@@ -303,12 +322,19 @@ def build_optimal_set(
             raise ValueError("จำนวนเครื่องดื่ม/ของหวานต้องอยู่ระหว่าง 1–60")
     if include_dessert and not dessert_selection:
         raise ValueError("โปรดเลือกชื่อของหวานก่อน")
+    if drink_quantities:
+        drink_quantities = {str(k): int(v) for k, v in drink_quantities.items() if int(v) > 0}
+        if any(not 1 <= v <= 60 for v in drink_quantities.values()) or sum(drink_quantities.values()) > 60:
+            raise ValueError("จำนวนเครื่องดื่มแต่ละอย่างต้อง 1–60 และรวมไม่เกิน 60")
+        drink_selection = list(dict.fromkeys([*(drink_selection or []), *drink_quantities]))
+        drink_quantity = sum(drink_quantities.values())
     constraints = dict(budget=budget, allergens=allergens or [], dislikes=dislikes or [],
         preferred_keywords=preferred_keywords or [], hard_exclude_keywords=hard_exclude_keywords or [],
         must_include_keywords=must_include_keywords or [], min_items=min_items, max_items=max_items,
         num_people=num_people, drink_selection=drink_selection or [], drink_quantity=drink_quantity,
         drinks_separate_from_budget=drinks_separate_from_budget, include_dessert=include_dessert,
-        dessert_selection=dessert_selection or [], dessert_quantity=dessert_quantity)
+        dessert_selection=dessert_selection or [], dessert_quantity=dessert_quantity,
+        drink_quantities=drink_quantities or {})
     menu = menu_records()
 
     # Drinks/dessert: a fixed allocation by name, reserved out of the budget
@@ -317,7 +343,7 @@ def build_optimal_set(
     # fallback for callers that skip the quantity question entirely.
     resolved_drink_qty = drink_quantity if drink_quantity is not None else num_people
     resolved_dessert_qty = dessert_quantity if dessert_quantity is not None else num_people
-    drink_items = _resolve_quantity_items(menu, _DRINK_CATEGORY, drink_selection or [], resolved_drink_qty)
+    drink_items = _resolve_quantity_items(menu, _DRINK_CATEGORY, drink_selection or [], resolved_drink_qty, drink_quantities)
     dessert_items = (
         _resolve_quantity_items(menu, _DESSERT_CATEGORY, dessert_selection or [], resolved_dessert_qty)
         if include_dessert
@@ -475,10 +501,16 @@ def request_clarification(missing: List[str]) -> str:
     build_optimal_set ไม่ได้. รับรายการชื่อฟิลด์ที่ขาด เช่น ["budget"] แล้ว
     คืนค่าคำถามภาษาไทยที่เหมาะสมให้ Agent นำไปถามผู้ใช้ต่อ.
     """
-    questions = [
-        _CLARIFICATION_QUESTIONS.get(field, f"ขอข้อมูลเพิ่มเติมเกี่ยวกับ {field} หน่อยครับ")
-        for field in missing
-    ]
+    aliases = {"drink_selection": "drinks", "drink": "drinks", "beverages": "drinks",
+               "drink_quantities": "drink_quantity", "people": "num_people",
+               "include_dessert": "dessert", "wants_dessert": "dessert"}
+    questions = []
+    for field in missing:
+        key = aliases.get(field, field)
+        # Never show raw field names to the user.
+        q = _CLARIFICATION_QUESTIONS.get(key, "ขอข้อมูลเพิ่มเติมอีกนิดครับ เช่น งบ จำนวนคน เครื่องดื่ม หรือของหวาน")
+        if q not in questions:
+            questions.append(q)
     return json.dumps({"missing": missing, "questions": questions}, ensure_ascii=False, indent=2)
 
 

@@ -70,6 +70,8 @@ class BudgeteerState:
     # chosen — never silently assumed to equal num_people, even though that's
     # the likely default a user will give.
     drink_quantity: Optional[int] = None
+    # Per-drink split when the user names quantities per drink ("ชาเขียว 2 โค้ก 2").
+    drink_quantities: Dict[str, int] = field(default_factory=dict)
     dessert_quantity: Optional[int] = None
     # "within" = drinks/dessert cost comes out of the stated budget (default);
     # "separate" = they're billed on top, food gets the full stated budget.
@@ -180,6 +182,24 @@ class BudgeteerState:
         mode = extracted.get("drinks_budget_mode")
         if mode in ("within", "separate"):
             self.drinks_budget_mode = mode
+
+        per_drink = extracted.get("drink_quantities") or {}
+        if isinstance(per_drink, dict) and per_drink:
+            cleaned = {}
+            for name, qty in per_drink.items():
+                try:
+                    qty = int(qty)
+                except (TypeError, ValueError):
+                    continue
+                name = str(name).strip()
+                if name and qty > 0:
+                    cleaned[name] = qty
+            if cleaned:
+                # A new per-drink answer replaces the previous drink plan entirely.
+                self.drink_quantities = cleaned
+                self.drink_selection = list(cleaned)
+                self.drink_quantity = sum(cleaned.values())
+                extracted = {**extracted, "drink_quantity": None}
 
         if extracted.get("drink_quantity") is not None:
             try:
@@ -309,10 +329,14 @@ class BudgeteerState:
         lines.append(f"จำนวนจาน: {self.min_items}-{self.max_items} จาน")
         dessert_status = "ยังไม่ถาม" if self.wants_dessert is None else ("รับ" if self.wants_dessert else "ไม่รับ")
         lines.append(f"ของหวาน: {dessert_status}")
-        drink_qty_label = f"{self.drink_quantity} แก้ว" if self.drink_quantity else "ยังไม่ระบุจำนวน"
-        lines.append(
-            f"เครื่องดื่มที่เลือก: {', '.join(self.drink_selection) if self.drink_selection else 'ยังไม่ระบุ'} ({drink_qty_label})"
-        )
+        if self.drink_quantities:
+            breakdown = ", ".join(f"{name} {qty}" for name, qty in self.drink_quantities.items())
+            lines.append(f"เครื่องดื่มที่เลือก: {breakdown} (รวม {self.drink_quantity} แก้ว)")
+        else:
+            drink_qty_label = f"{self.drink_quantity} แก้ว" if self.drink_quantity else "ยังไม่ระบุจำนวน"
+            lines.append(
+                f"เครื่องดื่มที่เลือก: {', '.join(self.drink_selection) if self.drink_selection else 'ยังไม่ระบุ'} ({drink_qty_label})"
+            )
         dessert_qty_label = f"{self.dessert_quantity} ชิ้น" if self.dessert_quantity else "ยังไม่ระบุจำนวน"
         if self.wants_dessert:
             lines.append(
@@ -340,6 +364,7 @@ class BudgeteerState:
         self.drink_selection = []
         self.dessert_selection = []
         self.drink_quantity = None
+        self.drink_quantities = {}
         self.dessert_quantity = None
         self.drinks_budget_mode = None
         self.last_asked_field = None

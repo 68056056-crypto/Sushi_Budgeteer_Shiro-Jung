@@ -1,7 +1,7 @@
 """SQLite-backed MCP server. One stdio subprocess per client/session."""
 from __future__ import annotations
 import json
-from typing import List, Optional
+from typing import Dict, List, Optional
 from mcp.server.fastmcp import FastMCP
 from sushi_budgeteer.database import records, status
 from sushi_budgeteer.service import MenuService
@@ -51,6 +51,7 @@ def build_set(
     include_dessert: bool = False,
     dessert_selection: Optional[List[str]] = None,
     dessert_quantity: Optional[int] = None,
+    drink_quantities: Optional[Dict[str, int]] = None,
 ) -> str:
     """สร้าง candidate ด้วย bounded exact DP จาก SQLite หลังกรอง hard constraints.
 

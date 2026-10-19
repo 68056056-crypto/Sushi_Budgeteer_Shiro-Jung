@@ -1,6 +1,6 @@
 # Data dictionary และ provenance
 
-`CSV → import validation → SQLite` โดยตาราง `menu` มี primary key `item_id` และ `metadata` เก็บชื่อไฟล์ SHA256 วันที่ import และลิงก์เกณฑ์ allergen ที่ผู้ใช้ให้ dataset ปัจจุบันมี 41 รายการ ไม่มี secret หรือประวัติสนทนาในฐานข้อมูล
+`CSV → import validation → SQLite` โดยตาราง `menu` มี primary key `item_id` และ `metadata` เก็บชื่อไฟล์ SHA256 วันที่ import และลิงก์เกณฑ์ allergen ที่ผู้ใช้ให้ dataset ปัจจุบันมี 42 รายการ (B005 น้ำเปล่า 20 บาท เพิ่มตามราคาที่ผู้ใช้แจ้ง สถานะ unverified) ไม่มี secret หรือประวัติสนทนาในฐานข้อมูล
 
 | คอลัมน์ | ความหมาย |
 |---|---|

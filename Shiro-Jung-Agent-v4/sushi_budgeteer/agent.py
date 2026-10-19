@@ -64,6 +64,7 @@ class Extraction(BaseModel):
     drink_selection: list[str]=Field(default_factory=list,max_length=10)
     dessert_selection: list[str]=Field(default_factory=list,max_length=10)
     drink_quantity: int | None=Field(None,ge=1,le=60)
+    drink_quantities: dict[str,int]=Field(default_factory=dict)
     dessert_quantity: int | None=Field(None,ge=1,le=60)
     drinks_budget_mode: str | None=None
     intent: str='info'
@@ -132,6 +133,7 @@ class BudgeteerAgent:
           preferred_keywords=s.preferred_keywords,hard_exclude_keywords=s.hard_exclude_keywords,
           must_include_keywords=s.must_include_keywords,min_items=s.min_items,max_items=s.max_items,
           num_people=s.num_people,drink_selection=s.drink_selection,drink_quantity=s.drink_quantity,
+          drink_quantities=s.drink_quantities or None,
           drinks_separate_from_budget=s.drinks_budget_mode=='separate',include_dessert=s.wants_dessert,
           dessert_selection=s.dessert_selection,dessert_quantity=s.dessert_quantity)
 
@@ -178,7 +180,7 @@ class BudgeteerAgent:
                 schemas=[{'type':'function','function':{'name':t.name,'description':t.description or '',
                           'parameters':t.inputSchema}} for t in available]
                 model=(self._turn_llm or self.llm).bind_tools(schemas)
-                nudged=False
+                nudged=False; attempted_build=False
                 for step in range(10):
                     response=await model.ainvoke(messages)
                     self._record_usage(response,'tool_selection')
@@ -198,6 +200,21 @@ class BudgeteerAgent:
                         if last_display: return last_display
                         if issues: return 'ยังจัดชุดที่ผ่านเงื่อนไขไม่ได้: '+'; '.join(issues)+'\nโปรดตรวจตัวเลือก/งบกับระบบใหม่ ข้อจำกัดการแพ้จะไม่ถูกผ่อนเอง\n'+DISCLAIMER
                         missing=self.missing_fields()
+                        if nudged and not missing and not unclear and not attempted_build:
+                            # Model stalled with complete data: run the gated build→verify path directly.
+                            built=json.loads((await session.call_tool('build_set',self.build_arguments())).content[0].text)
+                            self.last_trace.append({'step':step,'tool':'build_set','status':built.get('status'),
+                                                    'issues':built.get('issues',[]),'fallback':'after_stall'})
+                            if built.get('status')!='candidate':
+                                return 'ยังจัดชุดที่ผ่านเงื่อนไขไม่ได้: '+'; '.join(built.get('issues',['จัดชุดไม่ได้']))+'\n'+DISCLAIMER
+                            checked=json.loads((await session.call_tool('verify_set',{'result_id':built['result_id']})).content[0].text)
+                            self.last_policy=checked.get('policy_decision')
+                            self.last_trace.append({'step':step,'tool':'verify_set','passed':checked.get('passed'),
+                                                    'policy_decision':self.last_policy,'fallback':'after_stall'})
+                            if checked.get('passed'):
+                                self.state.last_result=checked['checked_result']
+                                return self.render_result(checked['checked_result'])
+                            return 'ผลตรวจไม่ผ่าน: '+'; '.join(checked.get('issues',[]))+'\n'+DISCLAIMER
                         if nudged and missing:
                             # Model stalled twice: ask the next missing field directly instead of
                             # spending up to 10 model rounds (slow and costly).
@@ -217,6 +234,7 @@ class BudgeteerAgent:
                         try:
                             if name not in names: raise ValueError('ไม่มีเครื่องมือนี้')
                             if name=='build_set':
+                                attempted_build=True
                                 candidate=verified=None;last_display=None
                                 missing=self.missing_fields()
                                 if unclear: missing=['budget']
@@ -230,7 +248,10 @@ class BudgeteerAgent:
                             elif name=='clarify':
                                 missing=self.missing_fields()
                                 if unclear: missing=['budget']
-                                if missing: args={'missing':[missing[0]]}
+                                if not missing:
+                                    # Everything is answered: asking again only confuses the user.
+                                    raise ValueError('ข้อมูลครบแล้ว ห้ามถามซ้ำ ให้เรียก build_set แล้ว verify_set')
+                                args={'missing':[missing[0]]}
                                 self.state.last_asked_field=(args.get('missing') or [None])[0]
                             result=await asyncio.wait_for(session.call_tool(name,args),timeout=60)
                             if result.isError: raise ValueError('MCP tool ล้มเหลว: '+result.content[0].text[:300])
@@ -263,6 +284,21 @@ class BudgeteerAgent:
                         messages.append(ToolMessage(content=json.dumps(payload,ensure_ascii=False),tool_call_id=call['id']))
         return 'หยุดเมื่อครบจำนวนรอบเครื่องมือ ยังไม่มีชุดที่อนุญาตให้ตอบ กรุณาระบุข้อมูลใหม่ครับ\n'+DISCLAIMER
 
+    @staticmethod
+    def _unknown_drinks(extracted):
+        """Names the user asked for that the drink catalog cannot match (e.g. water not on the menu)."""
+        names=list(dict.fromkeys([*(extracted.get('drink_selection') or []),*(extracted.get('drink_quantities') or {})]))
+        if not names: return [],[]
+        from .database import records
+        from .tools import _resolve_quantity_items
+        menu=records()
+        available=[r['name_th'] for r in menu if r.get('category')=='เครื่องดื่ม']
+        unknown=[]
+        for name in names:
+            try: _resolve_quantity_items(menu,'เครื่องดื่ม',[str(name)],1)
+            except ValueError: unknown.append(str(name))
+        return unknown,available
+
     def _chat(self,user_message):
         self.last_trace=[];self.state.last_result=None;self.last_policy=None
         if len(user_message)>4000: return 'กรุณาย่อข้อความให้ไม่เกิน 4000 ตัวอักษรครับ'
@@ -284,7 +320,18 @@ class BudgeteerAgent:
                 new_budget=(self.state.budget or 0)+extracted['budget_delta']
                 if not 0<new_budget<=100000:
                     return 'กรุณาระบุงบใหม่ระหว่าง 0.01–100000 บาทครับ'
+            unknown,available=self._unknown_drinks(extracted)
+            if unknown:
+                # Keep the rest of this answer (budget, people...) but drop the drink plan,
+                # because a split that includes an off-menu drink cannot be priced.
+                extracted={**extracted,'drink_selection':[],'drink_quantities':{},'drink_quantity':None}
             self.state.update_from_extraction(extracted)
+            if unknown:
+                self.state.last_asked_field='drinks'
+                answer=(f"ไม่มี {', '.join(unknown)} ในเมนูเครื่องดื่มของฐานข้อมูลครับ "
+                        f"เลือกได้จาก: {', '.join(available)} — กรุณาระบุเครื่องดื่มและจำนวนแต่ละอย่างใหม่ครับ")
+                self.state.add_message('user',user_message);self.state.add_message('assistant',answer)
+                return answer
         except Exception as exc:
             cause=_root_cause(exc)
             LOG.exception('intent extraction failed: %s',type(cause).__name__)

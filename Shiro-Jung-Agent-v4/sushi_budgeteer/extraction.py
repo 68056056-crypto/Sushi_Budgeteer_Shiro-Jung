@@ -12,6 +12,12 @@ _HARD_EXCLUDE_TRIGGERS = ("ไม่กินเลย", "ไม่เอาเ�
 def _sanitize_extraction(
     extracted: Dict[str, Any], last_asked_field: Optional[str], user_message: str
 ) -> Dict[str, Any]:
+    # Drink names are an order, not a food preference: keep them out of food scoring.
+    drink_names = {str(x).strip().lower() for x in (extracted.get("drink_selection") or [])}
+    drink_names |= {str(x).strip().lower() for x in (extracted.get("drink_quantities") or {})}
+    if drink_names and extracted.get("preferred_keywords"):
+        extracted = {**extracted, "preferred_keywords": [
+            k for k in extracted["preferred_keywords"] if str(k).strip().lower() not in drink_names]}
     if last_asked_field not in _NARROW_SLOT_FIELDS:
         return extracted
     lowered = user_message.lower()
@@ -52,6 +58,13 @@ EXTRACT_PROMPT = """คุณคือระบบสกัดข้อมูล
     (เช่น "เอา"/"รับ" -> true, "ไม่เอา"/"ไม่รับ" -> false) มิฉะนั้น null>,
   "drink_selection": [<string ชื่อเครื่องดื่มที่ผู้ใช้เลือกจากเมนูเครื่องดื่ม
     เช่น "ชาเขียวร้อน", "โค้ก", "น้ำส้ม" เมื่อตอบคำถาม "รับน้ำอะไรบ้าง">],
+  "drink_quantities": {<ชื่อเครื่องดื่ม>: <จำนวนแก้ว>} — ใช้เมื่อผู้ใช้บอกจำนวน "แยกแต่ละอย่าง"
+    เช่น "ชาเขียว 2 โค้ก 2" -> {"ชาเขียวร้อน": 2, "โค้ก": 2}; คำว่า "ที่เหลือ"/"คนที่เหลือ"
+    ให้คำนวณจาก num_people ในบริบท ลบด้วยจำนวนที่ระบุแล้ว เช่น 6 คน "ชาเขียว 2 โค้ก 2
+    ที่เหลือน้ำส้ม" -> {"ชาเขียวร้อน": 2, "โค้ก": 2, "น้ำส้ม": 2}; ใช้ชื่อตามที่ผู้ใช้พูด
+    แม้ไม่แน่ใจว่ามีในเมนู (ระบบจะตรวจกับฐานข้อมูลเอง) เมื่อใช้ฟิลด์นี้ให้ใส่ชื่อเดียวกันใน
+    drink_selection และตั้ง drink_quantity เป็น null; ถ้าไม่ได้แยกจำนวนให้เป็น {}
+    ชื่อเครื่องดื่มห้ามใส่ใน preferred_keywords>,
   "drink_quantity": <number จำนวนแก้วเครื่องดื่มที่ผู้ใช้ระบุ หรือ null — เป็นคนละ
     คำถามกับ "รับน้ำอะไรบ้าง" เสมอ (ถามชื่อก่อน แล้วจึงถามจำนวนแยกต่างหาก)>,
   "drinks_budget_mode": <"within" เมื่อผู้ใช้บอกว่าให้รวมค่าเครื่องดื่ม/ของหวาน
@@ -119,6 +132,9 @@ JSON: {"budget": null, "budget_delta": null, "budget_change_unclear": false, "al
 
 ข้อความ: "[บริบท: คำถามล่าสุดที่ระบบถามคือเรื่อง 'drinks']\nรับชาเขียวร้อนค่ะ"
 JSON: {"budget": null, "budget_delta": null, "budget_change_unclear": false, "allergens": [], "dislikes": [], "preferred_keywords": [], "hard_exclude_keywords": [], "must_include_keywords": [], "min_items": null, "max_items": null, "num_people": null, "allergy_check_answered": false, "wants_dessert": null, "drink_selection": ["ชาเขียวร้อน"], "drink_quantity": null, "drinks_budget_mode": null, "dessert_selection": [], "dessert_quantity": null, "intent": "clarify_answer"}
+
+ข้อความ: "[บริบท: คำถามล่าสุดที่ระบบถามคือเรื่อง 'drinks'; บริบท num_people=6]\nชาเขียวร้อน 2 โค้ก 2 ที่เหลือน้ำส้ม"
+JSON: {"budget": null, "budget_delta": null, "budget_change_unclear": false, "allergens": [], "dislikes": [], "preferred_keywords": [], "hard_exclude_keywords": [], "must_include_keywords": [], "min_items": null, "max_items": null, "num_people": null, "allergy_check_answered": false, "wants_dessert": null, "drink_selection": ["ชาเขียวร้อน", "โค้ก", "น้ำส้ม"], "drink_quantities": {"ชาเขียวร้อน": 2, "โค้ก": 2, "น้ำส้ม": 2}, "drink_quantity": null, "drinks_budget_mode": null, "dessert_selection": [], "dessert_quantity": null, "intent": "clarify_answer"}
 
 ข้อความ: "[บริบท: คำถามล่าสุดที่ระบบถามคือเรื่อง 'drink_quantity']\n2 แก้ว"
 JSON: {"budget": null, "budget_delta": null, "budget_change_unclear": false, "allergens": [], "dislikes": [], "preferred_keywords": [], "hard_exclude_keywords": [], "must_include_keywords": [], "min_items": null, "max_items": null, "num_people": null, "allergy_check_answered": false, "wants_dessert": null, "drink_selection": [], "drink_quantity": 2, "drinks_budget_mode": null, "dessert_selection": [], "dessert_quantity": null, "intent": "clarify_answer"}

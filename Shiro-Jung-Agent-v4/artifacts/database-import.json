@@ -1,8 +1,8 @@
 {
   "source_csv": "sushiro_menu_dataset.csv",
-  "source_sha256": "65b6345269e9129ee4f194947814d993d007ac5532b376c1a299624069789168",
-  "imported_at": "2026-10-18T13:58:44.331135+00:00",
-  "row_count": 41,
+  "source_sha256": "6f802fc5136ec0f372392dcfa07f5d3cd1d128cf3fc6019c8618a10ac59debe3",
+  "imported_at": "2026-10-19T14:30:26.697774+00:00",
+  "row_count": 42,
   "allergen_policy_reference": "https://food.fda.moph.go.th/media.php?id=654869394207416320&name=P450.pdf",
   "database": "data/menu.sqlite3"
 }

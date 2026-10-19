@@ -38,7 +38,7 @@ class CatalogTest(unittest.TestCase):
         source=Path(self.tmp.name)/'bad.csv'
         source.write_text('item_id,name_th,category,price_baht,allergens_verified\nx,a,c,1,\nx,b,c,2,\n')
         with self.assertRaises(ValueError): import_csv(source)
-        self.assertEqual(len(records()),41)
+        self.assertEqual(len(records()),42)
 
     def test_unknown_allergen_fails_closed(self):
         result=MenuService().build(budget=300,allergens=['crustacean'])
@@ -138,7 +138,7 @@ class CatalogTest(unittest.TestCase):
                         result=await s.call_tool(name,args)
                         self.assertFalse(result.isError,result)
                         return json.loads(result.content[0].text)
-                    self.assertEqual((await call('database_status',{}))['row_count'],41)
+                    self.assertEqual((await call('database_status',{}))['row_count'],42)
                     item=(await call('get_menu_item',{'item_id':'S001'}))['item']
                     self.assertEqual(item['price_baht'],40)
                     with sqlite3.connect(self.db) as c: c.execute("UPDATE menu SET price_baht=42.25 WHERE item_id='S001'")

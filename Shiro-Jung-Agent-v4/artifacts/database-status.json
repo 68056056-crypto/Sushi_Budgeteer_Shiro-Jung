@@ -1,8 +1,8 @@
 {
-  "row_count": 41,
-  "catalog_revision": "69f57a8aeef7706505998d5820166e8b1bd390b37b6e9701535f4a0c7d8e89ce",
+  "row_count": 42,
+  "catalog_revision": "4b328c4f31a581464aebb9c7a871ff165e72f06a547412af947aad360065a3a9",
   "database": "data/menu.sqlite3",
-  "unverified_prices": 41,
-  "unknown_allergens": 41,
+  "unverified_prices": 42,
+  "unknown_allergens": 42,
   "mode": "strict"
 }

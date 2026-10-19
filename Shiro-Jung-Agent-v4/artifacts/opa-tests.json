@@ -7,7 +7,7 @@
     },
     "package": "data.shiro_test",
     "name": "test_allow_valid",
-    "duration": 825636
+    "duration": 1037593
   },
   {
     "location": {
@@ -17,7 +17,7 @@
     },
     "package": "data.shiro_test",
     "name": "test_deny_missing_input",
-    "duration": 130631
+    "duration": 262241
   },
   {
     "location": {
@@ -27,7 +27,7 @@
     },
     "package": "data.shiro_test",
     "name": "test_deny_missing_line_schema",
-    "duration": 166415
+    "duration": 395897
   },
   {
     "location": {
@@ -37,7 +37,7 @@
     },
     "package": "data.shiro_test",
     "name": "test_deny_over_budget_independently",
-    "duration": 466092
+    "duration": 681149
   },
   {
     "location": {
@@ -47,7 +47,7 @@
     },
     "package": "data.shiro_test",
     "name": "test_deny_allergen_independently",
-    "duration": 546198
+    "duration": 618055
   },
   {
     "location": {
@@ -57,7 +57,7 @@
     },
     "package": "data.shiro_test",
     "name": "test_deny_strict_unknown_evidence",
-    "duration": 454874
+    "duration": 601011
   },
   {
     "location": {
@@ -67,7 +67,7 @@
     },
     "package": "data.shiro_test",
     "name": "test_simulation_still_enforces_allergen",
-    "duration": 382926
+    "duration": 590929
   },
   {
     "location": {
@@ -77,7 +77,7 @@
     },
     "package": "data.shiro_test",
     "name": "test_allow_simulation_unknown_only",
-    "duration": 332430
+    "duration": 601290
   },
   {
     "location": {
@@ -87,7 +87,7 @@
     },
     "package": "data.shiro_test",
     "name": "test_deny_hard_exclusion",
-    "duration": 1313907
+    "duration": 1643041
   },
   {
     "location": {
@@ -97,7 +97,7 @@
     },
     "package": "data.shiro_test",
     "name": "test_deny_price_tampering",
-    "duration": 1361160
+    "duration": 864936
   },
   {
     "location": {
@@ -107,7 +107,7 @@
     },
     "package": "data.shiro_test",
     "name": "test_deny_subtotal_tampering",
-    "duration": 716278
+    "duration": 706950
   },
   {
     "location": {
@@ -117,7 +117,7 @@
     },
     "package": "data.shiro_test",
     "name": "test_deny_revision_changed",
-    "duration": 621686
+    "duration": 606303
   },
   {
     "location": {
@@ -127,7 +127,7 @@
     },
     "package": "data.shiro_test",
     "name": "test_deny_count_mismatch",
-    "duration": 536361
+    "duration": 629617
   },
   {
     "location": {
@@ -137,7 +137,7 @@
     },
     "package": "data.shiro_test",
     "name": "test_deny_food_required",
-    "duration": 438392
+    "duration": 617779
   },
   {
     "location": {
@@ -147,6 +147,6 @@
     },
     "package": "data.shiro_test",
     "name": "test_deny_python_issues",
-    "duration": 399022
+    "duration": 603283
   }
 ]
