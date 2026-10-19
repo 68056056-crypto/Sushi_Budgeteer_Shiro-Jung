@@ -7,6 +7,7 @@ import os
 import re
 import sys
 import time
+import httpx
 from datetime import datetime, timezone
 from dataclasses import asdict
 from pathlib import Path
@@ -70,10 +71,12 @@ class Extraction(BaseModel):
 class BudgeteerAgent:
     def __init__(self, api_key=None, model=None, llm=None):
         load_dotenv()
+        self._api_key=api_key or os.getenv('OPENAI_API_KEY') or os.getenv('SUSHI_OPENAI_API_KEY')
         self.llm=llm if llm is not None else ChatOpenAI(
-            api_key=api_key or os.getenv('OPENAI_API_KEY') or os.getenv('SUSHI_OPENAI_API_KEY'),
+            api_key=self._api_key,
             model=model or os.getenv('OPENAI_MODEL','gpt-4o-mini'),temperature=0,
             timeout=30,max_retries=1)
+        self._turn_llm=None
         self.model_source='scripted' if llm is not None else 'live'
         self.model_name=model or os.getenv('OPENAI_MODEL','gpt-4o-mini')
         self.last_policy=None
@@ -145,6 +148,20 @@ class BudgeteerAgent:
         return '\n'.join(lines)
 
     async def _run(self, user_message, unclear=False):
+        # langchain_openai caches one async HTTP client per process, but every turn runs in a
+        # fresh event loop (asyncio.run). Reusing pooled connections from a closed loop raises
+        # "RuntimeError: Event loop is closed", so live turns get their own client in this loop.
+        if self.model_source!='live':
+            return await self._run_turn(user_message, unclear)
+        async with httpx.AsyncClient(timeout=30) as http:
+            self._turn_llm=ChatOpenAI(api_key=self._api_key,model=self.model_name,temperature=0,
+                                      timeout=30,max_retries=1,http_async_client=http)
+            try:
+                return await self._run_turn(user_message, unclear)
+            finally:
+                self._turn_llm=None
+
+    async def _run_turn(self, user_message, unclear=False):
         state=asdict(self.state);state.pop('conversation');state.pop('last_result')
         messages=[SystemMessage(content=SYSTEM_PROMPT+'\nstate='+json.dumps(state,ensure_ascii=False)),
                   *[HumanMessage(content=x['content']) if x['role']=='user' else AIMessage(content=x['content'])
@@ -160,7 +177,8 @@ class BudgeteerAgent:
                 names={t.name for t in available}
                 schemas=[{'type':'function','function':{'name':t.name,'description':t.description or '',
                           'parameters':t.inputSchema}} for t in available]
-                model=self.llm.bind_tools(schemas)
+                model=(self._turn_llm or self.llm).bind_tools(schemas)
+                nudged=False
                 for step in range(10):
                     response=await model.ainvoke(messages)
                     self._record_usage(response,'tool_selection')
@@ -179,6 +197,16 @@ class BudgeteerAgent:
                             return 'ฐานข้อมูลเปลี่ยนหรือผลตรวจไม่ผ่าน กรุณาให้จัดชุดใหม่ครับ\n'+DISCLAIMER
                         if last_display: return last_display
                         if issues: return 'ยังจัดชุดที่ผ่านเงื่อนไขไม่ได้: '+'; '.join(issues)+'\nโปรดตรวจตัวเลือก/งบกับระบบใหม่ ข้อจำกัดการแพ้จะไม่ถูกผ่อนเอง\n'+DISCLAIMER
+                        missing=self.missing_fields()
+                        if nudged and missing:
+                            # Model stalled twice: ask the next missing field directly instead of
+                            # spending up to 10 model rounds (slow and costly).
+                            asked=await session.call_tool('clarify',{'missing':[missing[0]]})
+                            self.state.last_asked_field=missing[0]
+                            self.last_trace.append({'step':step,'tool':'clarify','arguments':{'missing':[missing[0]]},
+                                                    'status':'fallback_after_stall'})
+                            return '\n'.join(json.loads(asked.content[0].text)['questions'])
+                        nudged=True
                         messages.append(HumanMessage(content='ยังไม่มีผลจากเครื่องมือ กรุณาเลือก search_menu หรือ clarify; หากจะเสนอชุดต้อง build_set แล้ว verify_set'))
                         continue
                     if len(response.tool_calls)>8:
