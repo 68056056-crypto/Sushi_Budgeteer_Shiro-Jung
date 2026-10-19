@@ -103,6 +103,10 @@ GREETING_MESSAGE = (
 )
 
 if api_key:
+    # Switching strict/simulation keeps the conversation: only the data mode of the next turn changes.
+    if "agent" in st.session_state and st.session_state.get("_agent_key", (None, None, None))[:2] == (api_key, model_name):
+        st.session_state["agent"].data_mode = mode
+        st.session_state["_agent_key"] = (api_key, model_name, mode)
     if "agent" not in st.session_state or st.session_state.get("_agent_key") != (api_key, model_name, mode):
         loaded_agent = _load_agent(api_key, model_name)
         if loaded_agent:

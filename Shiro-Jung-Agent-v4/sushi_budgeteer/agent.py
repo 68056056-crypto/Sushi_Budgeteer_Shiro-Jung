@@ -198,7 +198,7 @@ class BudgeteerAgent:
                                 return self.render_result(checked['checked_result'])
                             return 'ฐานข้อมูลเปลี่ยนหรือผลตรวจไม่ผ่าน กรุณาให้จัดชุดใหม่ครับ\n'+DISCLAIMER
                         if last_display: return last_display
-                        if issues: return 'ยังจัดชุดที่ผ่านเงื่อนไขไม่ได้: '+'; '.join(issues)+'\nโปรดตรวจตัวเลือก/งบกับระบบใหม่ ข้อจำกัดการแพ้จะไม่ถูกผ่อนเอง\n'+DISCLAIMER
+                        if issues: return self._friendly_issues(issues)
                         missing=self.missing_fields()
                         if nudged and not missing and not unclear and not attempted_build:
                             # Model stalled with complete data: run the gated build→verify path directly.
@@ -206,7 +206,7 @@ class BudgeteerAgent:
                             self.last_trace.append({'step':step,'tool':'build_set','status':built.get('status'),
                                                     'issues':built.get('issues',[]),'fallback':'after_stall'})
                             if built.get('status')!='candidate':
-                                return 'ยังจัดชุดที่ผ่านเงื่อนไขไม่ได้: '+'; '.join(built.get('issues',['จัดชุดไม่ได้']))+'\n'+DISCLAIMER
+                                return self._friendly_issues(built.get('issues',['จัดชุดไม่ได้']))
                             checked=json.loads((await session.call_tool('verify_set',{'result_id':built['result_id']})).content[0].text)
                             self.last_policy=checked.get('policy_decision')
                             self.last_trace.append({'step':step,'tool':'verify_set','passed':checked.get('passed'),
@@ -298,6 +298,36 @@ class BudgeteerAgent:
             try: _resolve_quantity_items(menu,'เครื่องดื่ม',[str(name)],1)
             except ValueError: unknown.append(str(name))
         return unknown,available
+
+    _ALLERGEN_TH={'fish':'ปลา','crustacean':'สัตว์น้ำมีเปลือก (กุ้ง/ปู)','molluscs':'หอย/ปลาหมึก','egg':'ไข่',
+                  'milk':'นม','gluten':'กลูเตน/แป้งสาลี','soy':'ถั่วเหลือง','sesame':'งา','pork':'หมู'}
+
+    def _friendly_issues(self, issues):
+        """Explain a blocked set in plain Thai; never dump internal OPA/validator codes."""
+        issues=list(dict.fromkeys(issues or []))
+        opa_codes=[str(i)[4:].strip() for i in issues if str(i).startswith('OPA:')]
+        issues=[i for i in issues if not str(i).startswith('OPA:')]
+        opa_th={'over_budget':'เกินงบ','over_food_budget':'ค่าอาหารเกินงบ','allergen_conflict':'ขัดกับการแพ้อาหาร',
+                'hard_exclusion':'มีรายการที่ห้าม','empty_food_set':'ไม่มีอาหารหลัก','too_few_items':'จำนวนรายการน้อยกว่าที่ขอ',
+                'too_many_items':'จำนวนรายการเกินที่ขอ','catalog_changed':'ข้อมูลเมนูเปลี่ยนระหว่างตรวจ',
+                'unknown_evidence':'ยังไม่มีหลักฐาน allergen'}
+        if any(c.startswith('opa_unavailable') for c in opa_codes):
+            issues.append('ระบบตรวจนโยบาย OPA ใช้งานไม่ได้ จึงไม่ปล่อยคำแนะนำ (opa_unavailable)')
+        elif not issues:
+            issues=[opa_th[c] for c in opa_codes if c in opa_th]
+        strict_block=self.data_mode=='strict' and self.state.allergens and any(
+            ('allergen' in i) or ('ไม่มีอาหารหลัก' in i) for i in issues)
+        if strict_block:
+            from .database import records
+            confirmed=sum(r.get('allergen_status')=='confirmed' for r in records())
+            names=', '.join(self._ALLERGEN_TH.get(a,a) for a in self.state.allergens)
+            return ('ยังจัดชุดให้ไม่ได้ครับ เพราะแจ้งว่าแพ้ '+names+' และโหมด strict จะเลือกเฉพาะเมนูที่มี'
+                    'หลักฐานส่วนผสม/สารก่อภูมิแพ้ยืนยันจากร้านเท่านั้น '
+                    +(f'ตอนนี้มีเมนูที่ยืนยันแล้ว {confirmed} รายการ ซึ่งไม่พอจัดชุดได้' if confirmed else 'ตอนนี้ยังไม่มีเมนูใดที่ยืนยันข้อมูลนี้')
+                    +'\nทางเลือก: (1) เลือกโหมด simulation ในแถบซ้าย เพื่อทดลองด้วยข้อมูล allergen จำลอง (ไม่ใช่การรับรองความปลอดภัย)'
+                    ' หรือ (2) ถ้าไม่ได้แพ้จริง แจ้งว่า "ไม่ได้แพ้ แค่ไม่ชอบ" แล้วระบบจะลดคะแนนแทนการตัดออก\n'+DISCLAIMER)
+        shown='; '.join(issues[:3]) if issues else 'จัดชุดไม่ได้'
+        return 'ยังจัดชุดที่ผ่านเงื่อนไขไม่ได้: '+shown+'\nโปรดตรวจตัวเลือก/งบกับระบบใหม่ ข้อจำกัดการแพ้จะไม่ถูกผ่อนเอง\n'+DISCLAIMER
 
     def _chat(self,user_message):
         self.last_trace=[];self.state.last_result=None;self.last_policy=None
