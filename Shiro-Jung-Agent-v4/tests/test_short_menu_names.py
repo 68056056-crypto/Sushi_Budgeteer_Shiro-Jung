@@ -34,6 +34,13 @@ class ShortNameParserTest(unittest.TestCase):
                 self.assertEqual(result['orders'],{'D003':1,'D002':1})
                 self.assertFalse(result['ambiguous'])
 
+    def test_dessert_menu_context_and_warabi_spelling(self):
+        for message in ('วาราบี 1 ชาเขียว 1','วาราบี 1 ชาเขียวไอศครีม 1'):
+            result=parse_order(message,records(),category='ของหวาน')
+            self.assertEqual(result['orders'],{'D002':1,'D001':1})
+            self.assertFalse(result['ambiguous'])
+        self.assertEqual(parse_order('ชาเขียว 1',records(),category='เครื่องดื่ม')['orders'],{'B001':1})
+
     def test_ice_cream_spellings_keep_quantity_without_guessing_flavor(self):
         for name in ('ไอศกรีม','ไอศครีม','ไอครีม','ไอติม'):
             for suffix in ('2',' 2 ชิ้น',' ๒ ถ้วย'):
@@ -83,6 +90,24 @@ class ShortNameCheckoutTest(unittest.TestCase):
         self.assertEqual(agent.last_run['model_calls'],0)
         agent.chat('ยืนยันรายการทั้งหมด')
         self.assertTrue(agent.order_closed)
+
+    def test_screenshot_warabi_and_green_tea_desserts_finish(self):
+        for message in ('วาราบี 1 ชาเขียว 1','วาราบี 1 ชาเขียวไอศครีม 1'):
+            with self.subTest(message=message):
+                agent=self.ready()
+                food=agent.food_choice.copy()
+                agent.chat('ของหวาน')
+                answer=agent.chat(message)
+                self.assertIn('สรุปรายการทั้งหมด',answer)
+                self.assertEqual(agent.extras_plan,{'D002':1,'D001':1})
+                self.assertEqual(agent.food_choice,food)
+                self.assertEqual(agent.checkout_result['total_price'],food['food_total_price']+80)
+                self.assertEqual(agent.last_run['model_calls'],0)
+                agent.chat('ชาเขียว 2')
+                self.assertEqual(agent.extras_plan,{'D002':1,'D001':2})
+                self.assertEqual(agent.checkout_result['total_price'],food['food_total_price']+120)
+                agent.chat('ยืนยันรายการทั้งหมด')
+                self.assertTrue(agent.order_closed)
 
     def test_one_ice_cream_clarification_preserves_quantity_and_other_orders(self):
         agent=self.ready()

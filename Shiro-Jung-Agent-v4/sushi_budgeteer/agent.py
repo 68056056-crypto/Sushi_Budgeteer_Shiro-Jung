@@ -340,7 +340,7 @@ class BudgeteerAgent:
     def parse_extra_quantities(self, message):
         from .database import records
         from .extra_order import parse_order
-        parsed=parse_order(message,records())
+        parsed=parse_order(message,records(),category=self.extra_category)
         return parsed['orders'] if parsed and not parsed['ambiguous'] else None
 
     def extra_choice_prompt(self):
@@ -390,7 +390,7 @@ class BudgeteerAgent:
                     key=matches[0]
                     if suffix:
                         item['quantity']=int(suffix.group(1))
-                parsed=parse_order(message,records()) if key is None else None
+                parsed=parse_order(message,records(),category=self.extra_category) if key is None else None
                 if parsed and not parsed['ambiguous']:
                     chosen=set(parsed['orders']) & set(item['candidates'])
                     pending['orders'].update(parsed['orders'])
@@ -527,7 +527,6 @@ class BudgeteerAgent:
 
     def checkout_summary(self):
         result,error=self.compose_checkout()
-        self.extra_category=None
         self.checkout_result=result
         self.checkout_step='review_error' if error else 'review'
         if error:
@@ -809,7 +808,7 @@ class BudgeteerAgent:
                 return self.checkout_action({'ไม่รับน้ำ':'ไม่รับเครื่องดื่ม'}.get(text,text))
             from .database import records
             from .extra_order import parse_order
-            parsed=parse_order(text,records())
+            parsed=parse_order(text,records(),category=self.extra_category)
             if parsed:
                 return self.accept_extra_order(parsed)
             if text in {'สรุป','สรุปรายการ','ยอดรวม'}:
