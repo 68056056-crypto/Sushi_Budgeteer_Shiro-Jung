@@ -25,6 +25,15 @@ class ShortNameParserTest(unittest.TestCase):
                 self.assertEqual(result['orders'],expected)
                 self.assertFalse(result['ambiguous'])
 
+    def test_multiple_short_dessert_names(self):
+        for message in ('ชีสเค้ก 1 วาราบิ 1','ชีสเค้ก1วาราบิ1',
+                        'ชีสเค้ก ๑ ชิ้น และ วาราบิ ๑ ชิ้น',
+                        'ทาร์ตชีสเค้ก 1 วาราบิโมจิ 1'):
+            with self.subTest(message=message):
+                result=parse_order(message,records())
+                self.assertEqual(result['orders'],{'D003':1,'D002':1})
+                self.assertFalse(result['ambiguous'])
+
     def test_ice_cream_spellings_keep_quantity_without_guessing_flavor(self):
         for name in ('ไอศกรีม','ไอศครีม','ไอครีม','ไอติม'):
             for suffix in ('2',' 2 ชิ้น',' ๒ ถ้วย'):
@@ -58,6 +67,19 @@ class ShortNameCheckoutTest(unittest.TestCase):
         answer=agent.chat('น้ำส้ม 2 ชาเขียว 1 น้ำเปล่า 2')
         self.assertIn('สรุปรายการทั้งหมด',answer)
         self.assertEqual(agent.checkout_result['total_price'],food+130)
+        self.assertEqual(agent.last_run['model_calls'],0)
+        agent.chat('ยืนยันรายการทั้งหมด')
+        self.assertTrue(agent.order_closed)
+
+    def test_screenshot_desserts_preserve_food_and_finish_without_model(self):
+        agent=self.ready()
+        food_choice=agent.food_choice.copy()
+        agent.chat('ของหวาน')
+        answer=agent.chat('ชีสเค้ก 1 วาราบิ 1')
+        self.assertIn('สรุปรายการทั้งหมด',answer)
+        self.assertEqual(agent.extras_plan,{'D003':1,'D002':1})
+        self.assertEqual(agent.food_choice,food_choice)
+        self.assertEqual(agent.checkout_result['total_price'],food_choice['food_total_price']+100)
         self.assertEqual(agent.last_run['model_calls'],0)
         agent.chat('ยืนยันรายการทั้งหมด')
         self.assertTrue(agent.order_closed)

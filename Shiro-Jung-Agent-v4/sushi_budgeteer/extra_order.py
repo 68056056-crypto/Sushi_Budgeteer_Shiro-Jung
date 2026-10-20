@@ -17,7 +17,7 @@ def parse_order(message, rows):
     rows=[row for row in rows if row['category'] in {'เครื่องดื่ม','ของหวาน'}]
     ids={row['item_id'] for row in rows}
     aliases={normalize(row['name_th']):[row['item_id']] for row in rows}
-    for alias,key in {'โมจิ':'D002','พุดดิ้ง':'D004','ไอศกรีมชาเขียว':'D001',
+    for alias,key in {'โมจิ':'D002','วาราบิ':'D002','พุดดิ้ง':'D004','ไอศกรีมชาเขียว':'D001',
                       'ชาเขียว':'B001','ลาเต้':'B003','ชีสเค้ก':'D003','ซอร์เบต์องุ่น':'D005',
                       'น้ำเปล่า':'B005'}.items():
         if key in ids:
