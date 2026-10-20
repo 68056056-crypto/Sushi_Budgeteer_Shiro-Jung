@@ -1,6 +1,7 @@
 """A bounded model→MCP tool→observation loop with deterministic output gates."""
 from __future__ import annotations
 import asyncio
+import copy
 import json
 import logging
 import os
@@ -80,6 +81,9 @@ class BudgeteerAgent:
         self.consumer_flow=consumer_flow
         self.extra_category=None
         self.order_closed=False
+        self.checkout_step=None
+        self.food_choice=None
+        self.checkout_result=None
         self.pending_confirmation=False
         self.details_confirmed=False
         self.pending_allergy_removals=[]
@@ -154,6 +158,9 @@ class BudgeteerAgent:
         self.clear_choices()
         self.extra_category=None
         self.order_closed=False
+        self.checkout_step=None
+        self.food_choice=None
+        self.checkout_result=None
         self.pending_confirmation=False
         self.details_confirmed=False
         self.pending_allergy_removals=[]
@@ -265,6 +272,8 @@ class BudgeteerAgent:
         if self.order_closed:
             return CLOSING_MESSAGE
         self.extra_category=category
+        if self.food_choice is not None:
+            self.checkout_step='drinks_menu' if category=='เครื่องดื่ม' else 'desserts_menu'
         self.pending_confirmation=False
         items=self.extra_items(category)
         if not items:
@@ -287,6 +296,13 @@ class BudgeteerAgent:
             update={'wants_dessert':True,'dessert_selection':[row['name_th']],'dessert_quantity':quantity}
         else:
             update={'drink_selection':[row['name_th']],'drink_quantities':{row['name_th']:quantity},'drink_quantity':quantity}
+        if self.food_choice is not None:
+            self.state.update_from_extraction(update)
+            self.extra_category=None
+            if row['category']=='เครื่องดื่ม':
+                self.checkout_step='desserts_offer'
+                return f"เลือก {row['name_th']} {quantity} แก้วแล้วครับ ต้องการรับของหวานไหมครับ?"
+            return self.checkout_summary()
         # Feed a validated selection through the existing intake path without a model extraction.
         self._picker_update=update
         self.extra_category=None
@@ -294,6 +310,116 @@ class BudgeteerAgent:
             return self.chat(f"เลือก {row['name_th']} {quantity} รายการ")
         finally:
             self._picker_update=None
+
+    def checkout_action(self, action):
+        """Ordered optional categories followed by a separate, revalidated final confirmation."""
+        if self.order_closed:
+            return CLOSING_MESSAGE
+        if not self.food_choice:
+            return 'กรุณาเลือกชุดอาหารก่อนครับ'
+        if action in {'รับเครื่องดื่ม','เปลี่ยนเครื่องดื่ม'}:
+            self.checkout_step='drinks_menu'
+            return self.open_extras('เครื่องดื่ม')
+        if action=='ไม่รับเครื่องดื่ม':
+            self.state.drink_selection=[]
+            self.state.drink_quantities={}
+            self.state.drink_quantity=None
+            self.extra_category=None
+            self.checkout_step='desserts_offer'
+            return 'ต้องการรับของหวานไหมครับ?'
+        if action in {'รับของหวาน','เปลี่ยนของหวาน'}:
+            self.checkout_step='desserts_menu'
+            return self.open_extras('ของหวาน')
+        if action=='ไม่รับของหวาน':
+            self.state.wants_dessert=False
+            self.state.dessert_selection=[]
+            self.state.dessert_quantity=None
+            self.extra_category=None
+            return self.checkout_summary()
+        if action in {'ยืนยันรายการทั้งหมด','ยืนยัน','ตกลง','ถูกต้อง'} and self.checkout_step=='review':
+            result,error=self.compose_checkout()
+            if error:
+                self.checkout_result=None
+                self.checkout_step='review_error'
+                return error
+            self.checkout_result=result
+            self.state.last_result=result
+            self.last_policy=result['policy_decision']
+            self.order_closed=True
+            self.checkout_step='closed'
+            self.extra_category=None
+            return '✅ ยืนยันรายการแล้วครับ ยังไม่ได้ส่งคำสั่งซื้อหรือชำระเงิน\n\n'+self.render_result(result)+'\n\n'+CLOSING_MESSAGE
+        return 'เลือกเมนูหรือข้ามหมวดที่แสดงอยู่ได้เลยครับ'
+
+    def compose_checkout(self):
+        """Keep chosen food fixed. Extras may use the reserved portion of the full budget."""
+        from .database import records, cents
+        from .policy import validate_result
+        from .tools import _resolve_quantity_items, _aggregate_by_item_id
+        from .explain import explain
+        if self.food_choice is None:
+            return None,'กรุณาเลือกชุดอาหารก่อนครับ'
+        menu=records()
+        old=self.food_choice
+        try:
+            original=validate_result(old,menu,mode=self.data_mode)
+            if not original['passed']:
+                return None,'ราคา รายการ หรือข้อมูลส่วนผสมเปลี่ยนแล้ว กรุณารีเซ็ตคำถามเพื่อจัดชุดใหม่ครับ'
+            constraints=copy.deepcopy(old['constraints'])
+            args=self.build_arguments()
+            # Food restrictions must remain exactly as they were when this food was selected.
+            for key in ('budget','allergens','dislikes','preferred_keywords','hard_exclude_keywords',
+                        'must_include_keywords','min_items','max_items','num_people'):
+                if constraints.get(key)!=args.get(key):
+                    return None,'ความต้องการอาหารเปลี่ยนแล้ว กรุณาเลือกชุดอาหารใหม่ก่อนครับ'
+            for key in ('drink_selection','drink_quantity','drink_quantities','dessert_selection',
+                        'dessert_quantity','include_dessert'):
+                constraints[key]=args[key]
+            constraints['drink_quantities']=constraints['drink_quantities'] or {}
+            constraints['drinks_separate_from_budget']=False
+            constraints['spend_ratio']=1.0
+            drinks=_resolve_quantity_items(menu,'เครื่องดื่ม',self.state.drink_selection,
+                        self.state.drink_quantity or self.state.num_people,self.state.drink_quantities or None)
+            desserts=(_resolve_quantity_items(menu,'ของหวาน',self.state.dessert_selection,
+                        self.state.dessert_quantity or self.state.num_people) if self.state.wants_dessert else [])
+            result=copy.deepcopy(old)
+            food=[copy.deepcopy(row) for row in old['selected'] if row['category'] not in {'เครื่องดื่ม','ของหวาน'}]
+            result['selected']=food+_aggregate_by_item_id(drinks+desserts)
+            result['constraints']=constraints
+            result['result_id']=str(uuid4())
+            result['food_total_price']=sum(cents(row['subtotal_baht']) for row in food)/100
+            result['total_price']=(sum(cents(row['subtotal_baht']) for row in food)
+                                  +sum(cents(row['price_baht']) for row in drinks+desserts))/100
+            result['item_count']=sum(row['quantity'] for row in result['selected'])
+            result['distinct_dish_count']=len(result['selected'])
+            result['drinks_separate_from_budget']=False
+            result['spend_target']=result['budget']
+            result['reserved_budget']=0
+            result['budget_used_pct']=round(result['total_price']/result['budget']*100,1)
+            result['drinks_cost']=sum(cents(row['price_baht']) for row in drinks)/100
+            result['dessert_cost']=sum(cents(row['price_baht']) for row in desserts)/100
+            result['dessert_included']=bool(self.state.wants_dessert)
+            result['categories']=sorted({row['category'] for row in result['selected']})
+            if cents(result['total_price'])>cents(result['budget']):
+                excess=(cents(result['total_price'])-cents(result['budget']))/100
+                return None,f'ยอดรวมเกินงบ {excess:,.2f} บาทครับ กรุณาลดจำนวนหรือเปลี่ยนเครื่องดื่ม/ของหวานก่อนยืนยัน'
+            check=validate_result(result,menu,mode=self.data_mode)
+            if not check['passed']:
+                return None,'ยังยืนยันรายการนี้ไม่ได้ครับ กรุณาปรับเครื่องดื่ม/ของหวาน หรือเลือกชุดอาหารใหม่ โดยคงข้อจำกัดการแพ้เดิม'
+            result['policy_decision']=check['policy_decision']
+            result['explanation']=explain(result,menu)
+            return result,None
+        except (ValueError,TypeError,KeyError):
+            return None,'รายการที่เลือกไม่พร้อมใช้งานครับ กรุณาเลือกเครื่องดื่ม/ของหวานใหม่'
+
+    def checkout_summary(self):
+        result,error=self.compose_checkout()
+        self.extra_category=None
+        self.checkout_result=result
+        self.checkout_step='review_error' if error else 'review'
+        if error:
+            return error
+        return '**สรุปรายการทั้งหมดก่อนยืนยัน**\n\n'+self.render_result(result)+'\n\nตรวจยอดรวมและเงินคงเหลือ แล้วกด «ยืนยันรายการทั้งหมด» ได้เลยครับ'
 
     def select_option(self, index):
         """Confirm a simulated selection, rechecking current catalog and session constraints."""
@@ -321,9 +447,12 @@ class BudgeteerAgent:
         self.last_policy=checked['policy_decision']
         self.confirmed_option=index
         if self.consumer_flow:
-            self.order_closed=True
+            self.food_choice=copy.deepcopy(selected)
+            self.checkout_result=None
+            self.checkout_step='drinks_offer'
             self.extra_category=None
             self.pending_confirmation=False
+            return f'เลือกชุดที่ {index+1} แล้วครับ 🍣 ต้องการรับเครื่องดื่มไหมครับ?'
         return (f'เลือกชุดที่ {index+1} แล้วครับ ✅ นี่เป็นสรุปชุดสำหรับนำไปแจ้งร้าน ยังไม่ได้ส่งคำสั่งซื้อ\n\n'
                 +self.render_result(selected)
                 +'\n\n'+(CLOSING_MESSAGE if self.consumer_flow else 'อยากเปลี่ยนเมนูหรือปรับจำนวน บอกต่อได้เลยครับ ผมจะใช้ข้อมูลเดิมให้'))
@@ -550,6 +679,30 @@ class BudgeteerAgent:
     def _chat(self,user_message):
         if self.order_closed:
             return CLOSING_MESSAGE
+        if self.checkout_step:
+            text=re.sub(r'\s*(?:ครับ|ค่ะ|คะ)[!? ]*$','',user_message.strip())
+            if text in {'รับเครื่องดื่ม','รับน้ำ','ไม่รับเครื่องดื่ม','ไม่รับน้ำ','รับของหวาน',
+                        'ไม่รับของหวาน','เปลี่ยนเครื่องดื่ม','เปลี่ยนของหวาน','ยืนยันรายการทั้งหมด','ยืนยัน','ตกลง','ถูกต้อง'}:
+                text={'รับน้ำ':'รับเครื่องดื่ม','ไม่รับน้ำ':'ไม่รับเครื่องดื่ม'}.get(text,text)
+                return self.checkout_action(text)
+            if self.extra_category:
+                extracted=self._extract_intent(user_message)
+                if any(extracted.get(key) for key in ('allergens','dislikes','hard_exclude_keywords','preferred_keywords',
+                        'budget','budget_delta','num_people','must_include_keywords')):
+                    self.food_choice=None
+                    self.checkout_step=None
+                    self.checkout_result=None
+                else:
+                    names=extracted.get('drink_selection' if self.extra_category=='เครื่องดื่ม' else 'dessert_selection') or []
+                    quantity=extracted.get('drink_quantity' if self.extra_category=='เครื่องดื่ม' else 'dessert_quantity')
+                    if self.extra_category=='เครื่องดื่ม' and quantity is None and len(extracted.get('drink_quantities') or {})==1:
+                        quantity=next(iter(extracted['drink_quantities'].values()))
+                    if len(names)==1 and quantity:
+                        from .optimizer import matches_any_keyword
+                        hit=next((row for row in self.extra_items(self.extra_category) if matches_any_keyword(row,names)),None)
+                        if hit:
+                            return self.choose_extra(hit['item_id'],quantity)
+                    return self.open_extras(self.extra_category)
         if self.consumer_flow:
             text=re.sub(r'\s*(?:ครับ|ค่ะ|คะ)[!? ]*$','',user_message.strip())
             dessert_requests={'เมนูของหวาน','ขอดูเมนูของหวาน','รับของหวาน','เอาของหวาน','เพิ่มของหวาน','เมนูขนม','ขนมมีอะไรบ้าง'}
@@ -577,6 +730,9 @@ class BudgeteerAgent:
             self.state.add_message('assistant',answer)
             return answer
         self.extra_category=None
+        self.checkout_step=None
+        self.food_choice=None
+        self.checkout_result=None
         had_result=self._has_recommended or bool(self.last_options or self.state.last_result)
         self.last_trace=[]
         self.clear_choices()

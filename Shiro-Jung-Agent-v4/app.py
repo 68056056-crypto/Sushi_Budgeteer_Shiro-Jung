@@ -196,7 +196,7 @@ else:
 # Only consumer actions are exposed here. Full traces remain on the backend agent.
 if "agent" in st.session_state:
     current_agent = st.session_state["agent"]
-    if current_agent.last_options and not current_agent.order_closed:
+    if current_agent.last_options and not current_agent.order_closed and not current_agent.checkout_step:
         st.caption("เลือกชุดที่ถูกใจ หรือพิมพ์บอกสิ่งที่อยากเปลี่ยนได้เลย")
         columns = st.columns(len(current_agent.last_options))
         for index, (column, option) in enumerate(zip(columns, current_agent.last_options)):
@@ -219,8 +219,28 @@ if "agent" in st.session_state:
                     st.session_state["pending_message"] = label
                     st.rerun()
 
+    if current_agent.checkout_step in {"drinks_offer","desserts_offer"}:
+        category="เครื่องดื่ม" if current_agent.checkout_step=="drinks_offer" else "ของหวาน"
+        for column, action in zip(st.columns(2), ["รับ"+category,"ไม่รับ"+category]):
+            with column:
+                if st.button(action,key="checkout_"+action):
+                    answer=current_agent.checkout_action(action)
+                    st.session_state.setdefault("chat_history",[]).extend([
+                        {"role":"user","content":action},{"role":"assistant","content":answer}])
+                    st.rerun()
+    if current_agent.checkout_step in {"drinks_menu","desserts_menu"}:
+        action="ไม่รับเครื่องดื่ม" if current_agent.checkout_step=="drinks_menu" else "ไม่รับของหวาน"
+        if st.button(action,key="skip_extra_category"):
+            answer=current_agent.checkout_action(action)
+            st.session_state.setdefault("chat_history",[]).append({"role":"assistant","content":answer})
+            st.rerun()
+    if current_agent.checkout_step=="review":
+        if st.button("ยืนยันรายการทั้งหมด",key="final_confirm"):
+            answer=current_agent.checkout_action("ยืนยันรายการทั้งหมด")
+            st.session_state.setdefault("chat_history",[]).append({"role":"assistant","content":answer})
+            st.rerun()
     if not current_agent.order_closed:
-        if current_agent.last_options or current_agent.extra_category:
+        if (not current_agent.checkout_step and (current_agent.last_options or current_agent.extra_category)) or current_agent.checkout_step in {"review","review_error"}:
             for category, column in zip(["เครื่องดื่ม", "ของหวาน"], st.columns(2)):
                 with column:
                     if st.button("🍵 เลือก" + category, key="browse_" + category):
