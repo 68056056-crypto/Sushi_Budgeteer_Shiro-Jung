@@ -127,7 +127,7 @@ class ConsumerFlowTest(unittest.TestCase):
             self.assertEqual(agent.confirmed_option,1)
             self.assertEqual(len(page.selectbox),0)
             self.assertEqual(agent.state.budget,READY['budget'])
-            next(b for b in page.button if b.label=='รีเซ็ตบทสนทนา').click().run()
+            next(b for b in page.button if b.label=='รีเซ็ตคำถาม').click().run()
             self.assertIsNone(agent.state.budget)
             self.assertEqual(agent.state.preferred_keywords,[])
 

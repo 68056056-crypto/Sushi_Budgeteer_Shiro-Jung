@@ -4,6 +4,7 @@ ALLERGY_WARNING = (
     '⚠️ ผู้แพ้อาหาร: แจ้งพนักงานและยืนยันส่วนผสมก่อนรับประทานทุกครั้ง '
     'ยังมีความเสี่ยงจากส่วนผสมที่ไม่ระบุและการปนเปื้อนข้าม'
 )
+CLOSING_MESSAGE = 'ขอให้เป็นมื้ออาหารที่อร่อยครับ 🍣 หากต้องการเพิ่มเติม กรุณากด «รีเซ็ตคำถาม» เพื่อเริ่มการสนทนาใหม่'
 MENU_NOTICE = 'ราคาและส่วนผสมอาจเปลี่ยนแปลง กรุณายืนยันกับร้านก่อนสั่งอาหาร'
 
 def render_menu(result):
@@ -13,10 +14,8 @@ def render_menu(result):
     lines.extend(['', f"**รวม {result['item_count']} รายการ · {result['total_price']:,.2f} บาท**"])
     spent=result['food_total_price'] if result['drinks_separate_from_budget'] else result['total_price']
     remaining=max(0,round(result['budget']-spent,2))
-    lines.extend(['',f"งบ {result['budget']:,.2f} บาท · ใช้ {spent/result['budget']*100:.1f}% · เหลือ {remaining:,.2f} บาท"])
+    lines.extend(['',f"งบ {result['budget']:,.2f} บาท · ใช้ {spent:,.2f} บาท · เหลือ {remaining:,.2f} บาท"])
     target=result.get('spend_target',result['budget'])
-    if target < result['budget']:
-        lines.extend(['',f"🍵 จัดชุดใกล้ {target/result['budget']*100:.0f}% ของงบ · กันไว้เพิ่มเมนูภายหลัง {remaining:,.2f} บาท"])
     if spent < target*0.95:
         limit=result.get('constraints',{}).get('max_items')
         reason=(f'เพดาน {limit} รายการ และ ' if limit is not None and result['item_count']>=limit else '')

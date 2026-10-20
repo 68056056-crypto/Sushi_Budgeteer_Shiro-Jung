@@ -146,8 +146,9 @@ if "agent" in st.session_state and st.session_state["agent"] is not None:
         st.sidebar.write("ไม่ชอบ: " + ", ".join(state.dislikes))
     st.sidebar.caption("จำข้อมูลให้ตลอดบทสนทนานี้ เปลี่ยนเมนูได้โดยไม่ต้องเริ่มใหม่")
 
-    if st.sidebar.button("รีเซ็ตบทสนทนา"):
+    if st.sidebar.button("รีเซ็ตคำถาม"):
         st.session_state["agent"].reset_order()
+        st.session_state.pop("pending_message",None)
         st.session_state["chat_history"] = [{"role": "assistant", "content": GREETING_MESSAGE}]
         st.rerun()
 
@@ -169,7 +170,8 @@ else:
         with st.chat_message(msg["role"]):
             st.markdown(msg["content"])
 
-    typed_prompt = st.chat_input("เช่น งบ 500 บาท 2 คน หรือ เปลี่ยนเป็นแซลมอน ใช้งบเดิม")
+    typed_prompt = st.chat_input("เช่น งบ 500 บาท 2 คน หรือ เปลี่ยนเป็นแซลมอน ใช้งบเดิม",
+                                 disabled=st.session_state["agent"].order_closed)
     prompt = st.session_state.pop("pending_message", None) or typed_prompt
     if prompt:
         st.session_state["chat_history"].append({"role": "user", "content": prompt})
@@ -194,7 +196,7 @@ else:
 # Only consumer actions are exposed here. Full traces remain on the backend agent.
 if "agent" in st.session_state:
     current_agent = st.session_state["agent"]
-    if current_agent.last_options:
+    if current_agent.last_options and not current_agent.order_closed:
         st.caption("เลือกชุดที่ถูกใจ หรือพิมพ์บอกสิ่งที่อยากเปลี่ยนได้เลย")
         columns = st.columns(len(current_agent.last_options))
         for index, (column, option) in enumerate(zip(columns, current_agent.last_options)):
@@ -207,7 +209,7 @@ if "agent" in st.session_state:
                         {"role": "assistant", "content": answer})
                     st.rerun()
         st.caption("การเลือกชุดเป็นเพียงสรุปสำหรับแจ้งร้าน ยังไม่มีการส่งคำสั่งซื้อหรือชำระเงิน")
-    if current_agent.pending_confirmation:
+    if current_agent.pending_confirmation and not current_agent.order_closed:
         allergies=[a for a in current_agent.state.allergens if a not in current_agent.pending_allergy_removals]
         confirm_label="ยืนยันข้อมูลและจัดชุด" if allergies else "ยืนยันว่าไม่แพ้และจัดชุด"
         confirm, edit = st.columns(2)
@@ -216,5 +218,35 @@ if "agent" in st.session_state:
                 if st.button(label, key="confirm_order" if column is confirm else "edit_order"):
                     st.session_state["pending_message"] = label
                     st.rerun()
+
+    if not current_agent.order_closed:
+        if current_agent.last_options or current_agent.extra_category:
+            for category, column in zip(["เครื่องดื่ม", "ของหวาน"], st.columns(2)):
+                with column:
+                    if st.button("🍵 เลือก" + category, key="browse_" + category):
+                        answer=current_agent.open_extras(category)
+                        st.session_state.setdefault("chat_history", []).append({"role":"assistant","content":answer})
+                        st.rerun()
+        if current_agent.extra_category:
+            category=current_agent.extra_category
+            items=current_agent.extra_items(category)
+            if items:
+                with st.form("extra_picker_" + category):
+                    item_id=st.selectbox("เลือก" + category, [row['item_id'] for row in items],
+                        format_func=lambda key: next(f"{r['name_th']} · {r['price_baht']:,.2f} บาท" for r in items if r['item_id']==key))
+                    quantity=st.number_input("จำนวน",min_value=1,max_value=60,value=1,step=1)
+                    st.caption("แทนรายการเดิมในหมวดนี้ ราคาจะรวมในชุดตามเงื่อนไขที่คุณยืนยันไว้")
+                    if st.form_submit_button("เลือกเมนูนี้"):
+                        name=next(r['name_th'] for r in items if r['item_id']==item_id)
+                        answer=current_agent.choose_extra(item_id,int(quantity))
+                        st.session_state.setdefault("chat_history", []).extend([
+                            {"role":"user","content":f"เลือก {name} {quantity} รายการ"},
+                            {"role":"assistant","content":answer}])
+                        st.rerun()
+    elif st.button("รีเซ็ตคำถามเพื่อเริ่มใหม่",key="new_order"):
+        current_agent.reset_order()
+        st.session_state.pop("pending_message",None)
+        st.session_state["chat_history"]=[{"role":"assistant","content":GREETING_MESSAGE}]
+        st.rerun()
 
 st.caption(MENU_NOTICE)

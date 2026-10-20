@@ -21,7 +21,7 @@ from mcp.client.stdio import stdio_client
 from pydantic import BaseModel, Field, ConfigDict
 from .extraction import EXTRACT_PROMPT, _sanitize_extraction, contextual_answer, requested_allergy_corrections
 from .state import BudgeteerState
-from .presentation import render_menu, ALLERGY_WARNING, MENU_NOTICE
+from .presentation import render_menu, ALLERGY_WARNING, MENU_NOTICE, CLOSING_MESSAGE
 from .database import cents
 from .telemetry import redact
 
@@ -78,6 +78,8 @@ class BudgeteerAgent:
             model=model or os.getenv('OPENAI_MODEL','gpt-4o-mini'),temperature=0,
             timeout=30,max_retries=1)
         self.consumer_flow=consumer_flow
+        self.extra_category=None
+        self.order_closed=False
         self.pending_confirmation=False
         self.details_confirmed=False
         self.pending_allergy_removals=[]
@@ -96,6 +98,8 @@ class BudgeteerAgent:
         self.data_mode=os.getenv('SUSHI_DATA_MODE','strict')
 
     def _extract_intent(self, message):
+        if getattr(self,"_picker_update",None) is not None:
+            return Extraction.model_validate(self._picker_update).model_dump()
         direct=contextual_answer(self.state.last_asked_field,message)
         if direct is not None:
             return Extraction.model_validate(direct).model_dump()
@@ -148,6 +152,8 @@ class BudgeteerAgent:
     def reset_order(self):
         self.state.reset()
         self.clear_choices()
+        self.extra_category=None
+        self.order_closed=False
         self.pending_confirmation=False
         self.details_confirmed=False
         self.pending_allergy_removals=[]
@@ -175,10 +181,6 @@ class BudgeteerAgent:
                          +f' {s.dessert_quantity or s.num_people} ชิ้น')
         else:
             lines.append('- ของหวาน: ไม่รับ')
-        if self.consumer_flow:
-            from .database import budget_target_cents
-            target=budget_target_cents(s.budget,0.8)/100
-            lines.append(f'- จัดชุดประมาณ 80%: {target:,.2f} บาท · เผื่อเพิ่มภายหลัง {s.budget-target:,.2f} บาท')
         lines.append('- จำนวนรายการ: '+(f'ไม่เกิน {s.max_items} รายการ' if s.max_items_explicit else 'ปรับให้ใกล้งบ ไม่เกิน 60 รายการ'))
         lines.append('- ค่าเครื่องดื่ม/ของหวาน: '+('คิดเพิ่มนอกงบ' if s.drinks_budget_mode=='separate' else 'รวมในงบ'))
         if self.pending_allergy_removals:
@@ -242,8 +244,61 @@ class BudgeteerAgent:
         self.state.last_result=None
         self.last_policy=None
 
+    def extra_items(self, category):
+        """Read selectable extras using this session's safety mode, without global mutation."""
+        from .database import records
+        from .optimizer import parse_allergen_tags, matches_any_keyword
+        from .state import KNOWN_ALLERGENS
+        if category not in {'เครื่องดื่ม','ของหวาน'}:
+            return []
+        allergens=set(self.state.allergens)
+        if allergens-KNOWN_ALLERGENS:
+            return []
+        if 'seafood' in allergens:
+            allergens|={'fish','crustacean','molluscs'}
+        return [row for row in records() if row['category']==category
+                and not allergens & parse_allergen_tags(row['allergens_verified'])
+                and not matches_any_keyword(row,self.state.hard_exclude_keywords)
+                and not (allergens and self.data_mode=='strict' and row.get('allergen_status')!='confirmed')]
+
+    def open_extras(self, category):
+        if self.order_closed:
+            return CLOSING_MESSAGE
+        self.extra_category=category
+        self.pending_confirmation=False
+        items=self.extra_items(category)
+        if not items:
+            return 'ยังไม่มี'+category+'ที่เลือกได้ตามข้อจำกัดของคุณครับ กรุณาตรวจส่วนผสมกับพนักงานร้านก่อน'
+        return ('**เมนู'+category+' 🍵**\n\n'
+                +'\n'.join(f"- {row['name_th']} — {row['price_baht']:,.2f} บาท" for row in items)
+                +'\n\nเลือกเมนูและจำนวนด้านล่าง หรือพิมพ์ชื่อพร้อมจำนวนได้เลยครับ '
+                'ตัวเลือกนี้จะแทนรายการเดิมในหมวดเดียวกัน')
+
+    def choose_extra(self, item_id, quantity):
+        """Canonical item/quantity from the picker; normal confirmation and checks still apply."""
+        if self.order_closed:
+            return CLOSING_MESSAGE
+        if type(quantity) is not int or not 1<=quantity<=60:
+            return 'กรุณาเลือกจำนวน 1–60 ครับ'
+        row=next((r for r in self.extra_items(self.extra_category) if r['item_id']==item_id),None)
+        if row is None:
+            return 'เมนูนี้เลือกไม่ได้แล้ว กรุณาเปิดรายการใหม่ครับ'
+        if self.extra_category=='ของหวาน':
+            update={'wants_dessert':True,'dessert_selection':[row['name_th']],'dessert_quantity':quantity}
+        else:
+            update={'drink_selection':[row['name_th']],'drink_quantities':{row['name_th']:quantity},'drink_quantity':quantity}
+        # Feed a validated selection through the existing intake path without a model extraction.
+        self._picker_update=update
+        self.extra_category=None
+        try:
+            return self.chat(f"เลือก {row['name_th']} {quantity} รายการ")
+        finally:
+            self._picker_update=None
+
     def select_option(self, index):
         """Confirm a simulated selection, rechecking current catalog and session constraints."""
+        if self.order_closed:
+            return CLOSING_MESSAGE
         from .database import records
         from .policy import validate_result
         if not 0 <= index < len(self.last_options):
@@ -265,9 +320,13 @@ class BudgeteerAgent:
         self.state.last_result=selected
         self.last_policy=checked['policy_decision']
         self.confirmed_option=index
+        if self.consumer_flow:
+            self.order_closed=True
+            self.extra_category=None
+            self.pending_confirmation=False
         return (f'เลือกชุดที่ {index+1} แล้วครับ ✅ นี่เป็นสรุปชุดสำหรับนำไปแจ้งร้าน ยังไม่ได้ส่งคำสั่งซื้อ\n\n'
                 +self.render_result(selected)
-                +'\n\nอยากเปลี่ยนเมนูหรือปรับจำนวน บอกต่อได้เลยครับ ผมจะใช้ข้อมูลเดิมให้')
+                +'\n\n'+(CLOSING_MESSAGE if self.consumer_flow else 'อยากเปลี่ยนเมนูหรือปรับจำนวน บอกต่อได้เลยครับ ผมจะใช้ข้อมูลเดิมให้'))
 
     async def _option_call(self, session, name, arguments):
         started=time.perf_counter()
@@ -489,6 +548,18 @@ class BudgeteerAgent:
         return message+('\n\n'+ALLERGY_WARNING if self.state.allergens else '')
 
     def _chat(self,user_message):
+        if self.order_closed:
+            return CLOSING_MESSAGE
+        if self.consumer_flow:
+            text=re.sub(r'\s*(?:ครับ|ค่ะ|คะ)[!? ]*$','',user_message.strip())
+            dessert_requests={'เมนูของหวาน','ขอดูเมนูของหวาน','รับของหวาน','เอาของหวาน','เพิ่มของหวาน','เมนูขนม','ขนมมีอะไรบ้าง'}
+            drink_requests={'เมนูน้ำ','เมนูเครื่องดื่ม','ขอดูเมนูน้ำ','ขอดูเมนูเครื่องดื่ม','รับน้ำ','เพิ่มน้ำ','น้ำมีอะไรบ้าง','เครื่องดื่มมีอะไรบ้าง'}
+            category='ของหวาน' if text in dessert_requests else 'เครื่องดื่ม' if text in drink_requests else None
+            if category:
+                answer=self.open_extras(category)
+                self.state.add_message('user',user_message)
+                self.state.add_message('assistant',answer)
+                return answer
         if self.consumer_flow and self.pending_confirmation:
             if user_message.strip() in {'ยืนยัน','ยืนยันข้อมูล','ใช่','ใช่ครับ','ถูกต้อง','ถูกต้องครับ','ตกลง','โอเค','ได้เลย','ยืนยันข้อมูลและจัดชุด','ยืนยันว่าไม่แพ้และจัดชุด'}:
                 answer=self._confirm_order()
@@ -505,6 +576,7 @@ class BudgeteerAgent:
             self.state.add_message('user',user_message)
             self.state.add_message('assistant',answer)
             return answer
+        self.extra_category=None
         had_result=self._has_recommended or bool(self.last_options or self.state.last_result)
         self.last_trace=[]
         self.clear_choices()
@@ -571,7 +643,7 @@ class BudgeteerAgent:
             if self.state.wants_dessert and not self.state.dessert_selection:
                 self.pending_confirmation=False
                 self.state.last_asked_field='dessert_selection'
-                answer='รับของหวานอะไรครับ? บอกชื่อและจำนวนพร้อมกันได้เลย หรือเลือกไม่รับของหวานได้ครับ'
+                answer=self.open_extras('ของหวาน')
                 self.state.add_message('assistant',answer)
                 return answer
             if not self.details_confirmed or extracted.get('allergens') or self.pending_allergy_removals:

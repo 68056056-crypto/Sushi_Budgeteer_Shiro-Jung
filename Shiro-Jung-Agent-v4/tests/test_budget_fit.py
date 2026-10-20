@@ -118,7 +118,8 @@ class BudgetMealTest(unittest.TestCase):
         self.assertEqual(result['total_price'],result['food_total_price']+40)
         rendered=render_menu(result)
         self.assertIn('คิดเพิ่มนอกงบ',rendered)
-        self.assertIn(f"ใช้ {result['food_total_price']/3:.1f}%",rendered)
+        self.assertIn(f"ใช้ {result['food_total_price']:,.2f} บาท",rendered)
+        self.assertNotIn("%",rendered)
 
     def test_reserve_limit_is_rechecked_before_release(self):
         service=MenuService()
