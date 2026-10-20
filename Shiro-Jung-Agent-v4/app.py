@@ -170,7 +170,10 @@ else:
         with st.chat_message(msg["role"]):
             st.markdown(msg["content"])
 
-    typed_prompt = st.chat_input("เช่น งบ 500 บาท 2 คน หรือ เปลี่ยนเป็นแซลมอน ใช้งบเดิม",
+    placeholder_text=("เช่น น้ำส้ม 2 ชาเขียว 1 หรือ ไอศกรีมชาเขียว 2"
+                      if st.session_state["agent"].food_choice is not None
+                      else "เช่น งบ 500 บาท 2 คน หรือ เปลี่ยนเป็นแซลมอน ใช้งบเดิม")
+    typed_prompt = st.chat_input(placeholder_text,
                                  disabled=st.session_state["agent"].order_closed)
     prompt = st.session_state.pop("pending_message", None) or typed_prompt
     if prompt:
@@ -220,7 +223,7 @@ if "agent" in st.session_state:
                     st.rerun()
 
     if current_agent.food_choice is not None and current_agent.checkout_result is not None and not current_agent.order_closed:
-        if st.button("ยืนยันรายการทั้งหมด",key="final_confirm"):
+        if st.button("ยืนยันรายการทั้งหมด",key="final_confirm",disabled=bool(current_agent.pending_extra_order)):
             answer=current_agent.checkout_action("ยืนยันรายการทั้งหมด")
             st.session_state.setdefault("chat_history",[]).append({"role":"assistant","content":answer})
             st.rerun()

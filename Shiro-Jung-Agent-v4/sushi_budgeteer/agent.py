@@ -85,6 +85,7 @@ class BudgeteerAgent:
         self.food_choice=None
         self.checkout_result=None
         self.extras_plan={}
+        self.pending_extra_order=None
         self.pending_confirmation=False
         self.details_confirmed=False
         self.pending_allergy_removals=[]
@@ -167,6 +168,7 @@ class BudgeteerAgent:
         self.food_choice=None
         self.checkout_result=None
         self.extras_plan={}
+        self.pending_extra_order=None
         self.pending_confirmation=False
         self.details_confirmed=False
         self.pending_allergy_removals=[]
@@ -286,7 +288,7 @@ class BudgeteerAgent:
             return 'ยังไม่มี'+category+'ที่เลือกได้ตามข้อจำกัดของคุณครับ กรุณาตรวจส่วนผสมกับพนักงานร้านก่อน'
         return ('**เมนู'+category+' 🍵**\n\n'
                 +'\n'.join(f"- {row['name_th']} — {row['price_baht']:,.2f} บาท" for row in items)
-                +'\n\nพิมพ์ชื่อพร้อมจำนวน เช่น '+('น้ำส้ม 1 แก้ว' if category=='เครื่องดื่ม' else 'วาราบิโมจิ 2 ชิ้น')+' ได้เลยครับ')
+                +'\n\nพิมพ์ชื่อย่อพร้อมจำนวน เช่น '+('น้ำส้ม 2 ชาเขียว 1' if category=='เครื่องดื่ม' else 'โมจิ 2')+' ได้เลยครับ ไม่ต้องใส่หน่วย')
 
     def choose_extra(self, item_id, quantity):
         """Canonical item/quantity from the picker; normal confirmation and checks still apply."""
@@ -336,23 +338,76 @@ class BudgeteerAgent:
         self.state.wants_dessert=bool(desserts)
 
     def parse_extra_quantities(self, message):
-        """Read displayed menu names/short aliases + quantities without calling a model."""
         from .database import records
-        rows=[row for row in records() if row['category'] in {'เครื่องดื่ม','ของหวาน'}]
-        aliases={row['name_th']:row['item_id'] for row in rows}
-        aliases.update({'โมจิ':'D002','พุดดิ้ง':'D004','ไอศกรีมชาเขียว':'D001',
-                        'ชาเขียว':'B001','ลาเต้':'B003','ชีสเค้ก':'D003','ซอร์เบต์องุ่น':'D005'})
-        pattern='|'.join(re.escape(name) for name in sorted(aliases,key=len,reverse=True))
-        orders={}
-        def extract(match):
-            key=aliases[match.group(1)]
-            if key in orders:
-                return match.group(0)  # ambiguous duplicate; let the user clarify it
-            orders[key]=int(match.group(2))
-            return ' '
-        remaining=re.sub(r'('+pattern+r')\s*(?:x|×)?\s*(\d+)\s*(?:แก้ว|ชิ้น|จาน|รายการ)?',extract,message)
-        remaining=re.sub(r'เลือก|เพิ่ม|เอา|ขอ|รับ|ครับ|ค่ะ|และ|กับ|[,;+\s]','',remaining)
-        return orders if orders and not remaining else None
+        from .extra_order import parse_order
+        parsed=parse_order(message,records())
+        return parsed['orders'] if parsed and not parsed['ambiguous'] else None
+
+    def extra_choice_prompt(self):
+        from .database import records
+        pending=self.pending_extra_order['ambiguous'][0]
+        catalog={row['item_id']:row for row in records()}
+        rows=[catalog[key] for key in pending['candidates'] if key in catalog]
+        return (f"รับทราบ {pending['name']} {pending['quantity']} ชิ้นครับ เลือกชนิดอีกนิดเดียว:\n\n"
+                +'\n'.join(f"{index+1}. {row['name_th']} — {row['price_baht']:,.2f} บาท" for index,row in enumerate(rows))
+                +'\n\nตอบชื่อหรือเลขชนิดได้เลยครับ ไม่ต้องบอกจำนวนซ้ำ')
+
+    def accept_extra_order(self, parsed):
+        available={row['item_id'] for category in ('เครื่องดื่ม','ของหวาน') for row in self.extra_items(category)}
+        for item in parsed['ambiguous']:
+            item['candidates']=[key for key in item['candidates'] if key in available]
+            if not item['candidates']:
+                return 'ยังไม่มีไอศกรีมที่เลือกได้ตามข้อจำกัดของคุณครับ กรุณาตรวจส่วนผสมกับร้านก่อน'
+            if len(item['candidates'])==1:
+                parsed['orders'][item['candidates'][0]]=item['quantity']
+        parsed['ambiguous']=[item for item in parsed['ambiguous'] if len(item['candidates'])>1]
+        if parsed['ambiguous']:
+            self.pending_extra_order=parsed
+            return self.extra_choice_prompt()
+        return self.set_checkout_extras(parsed['orders'])
+
+    def resolve_extra_choice(self, message):
+        from .database import records
+        from .extra_order import normalize, parse_order
+        pending=self.pending_extra_order
+        text=normalize(message).strip()
+        if any(word in text for word in ('แพ้','ไม่ชอบ','งบ','เปลี่ยนอาหาร','เปลี่ยนชุด')):
+            self.pending_extra_order=None
+            return None
+        item=pending['ambiguous'][0]
+        if text in {'ยกเลิก','ไม่เอาไอศกรีม','ยกเลิกไอศกรีม','ไม่รับไอศกรีม'}:
+            pending['ambiguous'].pop(0)
+        else:
+            key=None
+            if text.isdecimal() and 1<=int(text)<=len(item['candidates']):
+                key=item['candidates'][int(text)-1]
+            else:
+                candidates=[row for row in records() if row['item_id'] in item['candidates']]
+                suffix=re.search(r'\s*(?:x|×)?\s*(\d+)\s*(?:ชิ้น|ถ้วย|ลูก|รายการ|แก้ว)?$',text)
+                choice_text=text[:suffix.start()].strip() if suffix else text
+                matches=[row['item_id'] for row in candidates if choice_text and choice_text in normalize(row['name_th'])]
+                if len(matches)==1:
+                    key=matches[0]
+                    if suffix:
+                        item['quantity']=int(suffix.group(1))
+                parsed=parse_order(message,records()) if key is None else None
+                if parsed and not parsed['ambiguous']:
+                    chosen=set(parsed['orders']) & set(item['candidates'])
+                    pending['orders'].update(parsed['orders'])
+                    if chosen:
+                        pending['ambiguous'].pop(0)
+                        if pending['ambiguous']:
+                            return self.extra_choice_prompt()
+                        self.pending_extra_order=None
+                        return self.set_checkout_extras(pending['orders'])
+            if key is None:
+                return self.extra_choice_prompt()
+            pending['orders'][key]=item['quantity']
+            pending['ambiguous'].pop(0)
+        if pending['ambiguous']:
+            return self.extra_choice_prompt()
+        self.pending_extra_order=None
+        return self.set_checkout_extras(pending['orders']) if pending['orders'] else self.checkout_summary()
 
     def checkout_action(self, action):
         """Ordered optional categories followed by a separate, revalidated final confirmation."""
@@ -379,6 +434,8 @@ class BudgeteerAgent:
             self.sync_checkout_extras()
             return self.checkout_summary()
         if action in {'ยืนยันรายการทั้งหมด','ยืนยัน','ตกลง','ถูกต้อง'} and self.food_choice is not None:
+            if self.pending_extra_order:
+                return self.extra_choice_prompt()
             result,error=self.compose_checkout()
             if error:
                 self.checkout_result=None
@@ -744,11 +801,17 @@ class BudgeteerAgent:
             self.state.add_message('assistant',answer)
             return answer
         if self.checkout_step:
+            if self.pending_extra_order:
+                answer=self.resolve_extra_choice(text)
+                if answer is not None:
+                    return answer
             if text in {'ไม่รับเครื่องดื่ม','ไม่รับน้ำ','ไม่รับของหวาน','เปลี่ยนเครื่องดื่ม','เปลี่ยนของหวาน','ยืนยันรายการทั้งหมด','ยืนยัน','ตกลง','ถูกต้อง'}:
                 return self.checkout_action({'ไม่รับน้ำ':'ไม่รับเครื่องดื่ม'}.get(text,text))
-            quantities=self.parse_extra_quantities(text)
-            if quantities:
-                return self.set_checkout_extras(quantities)
+            from .database import records
+            from .extra_order import parse_order
+            parsed=parse_order(text,records())
+            if parsed:
+                return self.accept_extra_order(parsed)
             if text in {'สรุป','สรุปรายการ','ยอดรวม'}:
                 return self.checkout_summary()
             if text.startswith(('ยกเลิก','ไม่เอา','ลบ')):
