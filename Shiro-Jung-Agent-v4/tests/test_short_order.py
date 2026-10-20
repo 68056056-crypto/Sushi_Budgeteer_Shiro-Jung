@@ -118,6 +118,12 @@ class ShortOrderTest(unittest.TestCase):
         self.assertFalse(agent.pending_confirmation)
         self.assertIsNone(agent.state.budget)
 
+    def test_model_echo_of_default_is_not_a_user_quantity_constraint(self):
+        agent,_=self.agent({'budget':3000,'num_people':2,'max_items':20})
+        agent.chat('งบ3000 2คน')
+        self.assertFalse(agent.state.max_items_explicit)
+        self.assertEqual(agent.item_limit(),60)
+
     def test_negation_does_not_remove_existing_allergy_without_confirmation(self):
         extracted=_sanitize_extraction({'allergens':['molluscs']},None,'ไม่ชอบปลาหมึก ไม่ได้แพ้')
         self.assertEqual(extracted['allergens'],[])

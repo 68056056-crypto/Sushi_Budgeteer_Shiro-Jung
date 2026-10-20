@@ -84,6 +84,7 @@ class BudgeteerAgent:
         self.checkout_step=None
         self.food_choice=None
         self.checkout_result=None
+        self.extras_plan={}
         self.pending_confirmation=False
         self.details_confirmed=False
         self.pending_allergy_removals=[]
@@ -119,6 +120,10 @@ class BudgeteerAgent:
         raw=json.loads(text)
         if not isinstance(raw,dict): raise ValueError('expected object')
         raw=_sanitize_extraction(raw,self.state.last_asked_field,message)
+        if self.consumer_flow and not re.search(
+                r'\d+\s*(?:รายการ|จาน)|(?:รายการ|จาน|จำนวนอาหาร).{0,12}\d+|(?:max|min|items|plates)\s*\d+',message,re.IGNORECASE):
+            # Never turn an echoed default from model context into a user-imposed hard cap.
+            raw={**raw,'max_items':None,'min_items':None}
         if (self.consumer_flow and self.state.wants_dessert is False
                 and not re.search(r'ของหวาน|ขอหวาน|dessert|โมจิ|ไอศกรีม|ขนม',message,re.IGNORECASE)):
             raw={**raw,'wants_dessert':None,'dessert_selection':[],'dessert_quantity':None}
@@ -161,6 +166,7 @@ class BudgeteerAgent:
         self.checkout_step=None
         self.food_choice=None
         self.checkout_result=None
+        self.extras_plan={}
         self.pending_confirmation=False
         self.details_confirmed=False
         self.pending_allergy_removals=[]
@@ -280,8 +286,7 @@ class BudgeteerAgent:
             return 'ยังไม่มี'+category+'ที่เลือกได้ตามข้อจำกัดของคุณครับ กรุณาตรวจส่วนผสมกับพนักงานร้านก่อน'
         return ('**เมนู'+category+' 🍵**\n\n'
                 +'\n'.join(f"- {row['name_th']} — {row['price_baht']:,.2f} บาท" for row in items)
-                +'\n\nเลือกเมนูและจำนวนด้านล่าง หรือพิมพ์ชื่อพร้อมจำนวนได้เลยครับ '
-                'ตัวเลือกนี้จะแทนรายการเดิมในหมวดเดียวกัน')
+                +'\n\nพิมพ์ชื่อพร้อมจำนวน เช่น '+('น้ำส้ม 1 แก้ว' if category=='เครื่องดื่ม' else 'วาราบิโมจิ 2 ชิ้น')+' ได้เลยครับ')
 
     def choose_extra(self, item_id, quantity):
         """Canonical item/quantity from the picker; normal confirmation and checks still apply."""
@@ -297,12 +302,7 @@ class BudgeteerAgent:
         else:
             update={'drink_selection':[row['name_th']],'drink_quantities':{row['name_th']:quantity},'drink_quantity':quantity}
         if self.food_choice is not None:
-            self.state.update_from_extraction(update)
-            self.extra_category=None
-            if row['category']=='เครื่องดื่ม':
-                self.checkout_step='desserts_offer'
-                return f"เลือก {row['name_th']} {quantity} แก้วแล้วครับ ต้องการรับของหวานไหมครับ?"
-            return self.checkout_summary()
+            return self.set_checkout_extras({item_id:quantity})
         # Feed a validated selection through the existing intake path without a model extraction.
         self._picker_update=update
         self.extra_category=None
@@ -310,6 +310,49 @@ class BudgeteerAgent:
             return self.chat(f"เลือก {row['name_th']} {quantity} รายการ")
         finally:
             self._picker_update=None
+
+    def set_checkout_extras(self, quantities):
+        """Upsert exact quantities per item; repeated messages never double-add an item."""
+        available={row['item_id']:row for category in ('เครื่องดื่ม','ของหวาน') for row in self.extra_items(category)}
+        if not quantities or any(key not in available or type(qty) is not int or not 1<=qty<=60
+                                 for key,qty in quantities.items()):
+            return 'ยังเพิ่มไม่ได้ครับ กรุณาบอกชื่อจากเมนูและจำนวน 1–60 ต่อรายการ'
+        self.extras_plan.update(quantities)
+        self.sync_checkout_extras()
+        return self.checkout_summary()
+
+    def sync_checkout_extras(self):
+        from .database import records
+        catalog={row['item_id']:row for row in records()}
+        drinks={catalog[key]['name_th']:qty for key,qty in self.extras_plan.items()
+                if key in catalog and catalog[key]['category']=='เครื่องดื่ม'}
+        desserts={catalog[key]['name_th']:qty for key,qty in self.extras_plan.items()
+                  if key in catalog and catalog[key]['category']=='ของหวาน'}
+        self.state.drink_selection=list(drinks)
+        self.state.drink_quantities=drinks
+        self.state.drink_quantity=sum(drinks.values()) if drinks else None
+        self.state.dessert_selection=list(desserts)
+        self.state.dessert_quantity=sum(desserts.values()) if desserts else None
+        self.state.wants_dessert=bool(desserts)
+
+    def parse_extra_quantities(self, message):
+        """Read displayed menu names/short aliases + quantities without calling a model."""
+        from .database import records
+        rows=[row for row in records() if row['category'] in {'เครื่องดื่ม','ของหวาน'}]
+        aliases={row['name_th']:row['item_id'] for row in rows}
+        aliases.update({'โมจิ':'D002','พุดดิ้ง':'D004','ไอศกรีมชาเขียว':'D001',
+                        'ชาเขียว':'B001','ลาเต้':'B003','ชีสเค้ก':'D003','ซอร์เบต์องุ่น':'D005'})
+        pattern='|'.join(re.escape(name) for name in sorted(aliases,key=len,reverse=True))
+        orders={}
+        def extract(match):
+            key=aliases[match.group(1)]
+            if key in orders:
+                return match.group(0)  # ambiguous duplicate; let the user clarify it
+            orders[key]=int(match.group(2))
+            return ' '
+        remaining=re.sub(r'('+pattern+r')\s*(?:x|×)?\s*(\d+)\s*(?:แก้ว|ชิ้น|จาน|รายการ)?',extract,message)
+        remaining=re.sub(r'เลือก|เพิ่ม|เอา|ขอ|รับ|ครับ|ค่ะ|และ|กับ|[,;+\s]','',remaining)
+        return orders if orders and not remaining else None
 
     def checkout_action(self, action):
         """Ordered optional categories followed by a separate, revalidated final confirmation."""
@@ -321,22 +364,21 @@ class BudgeteerAgent:
             self.checkout_step='drinks_menu'
             return self.open_extras('เครื่องดื่ม')
         if action=='ไม่รับเครื่องดื่ม':
-            self.state.drink_selection=[]
-            self.state.drink_quantities={}
-            self.state.drink_quantity=None
-            self.extra_category=None
-            self.checkout_step='desserts_offer'
-            return 'ต้องการรับของหวานไหมครับ?'
+            from .database import records
+            ids={row['item_id'] for row in records() if row['category']=='เครื่องดื่ม'}
+            self.extras_plan={key:qty for key,qty in self.extras_plan.items() if key not in ids}
+            self.sync_checkout_extras()
+            return self.checkout_summary()
         if action in {'รับของหวาน','เปลี่ยนของหวาน'}:
             self.checkout_step='desserts_menu'
             return self.open_extras('ของหวาน')
         if action=='ไม่รับของหวาน':
-            self.state.wants_dessert=False
-            self.state.dessert_selection=[]
-            self.state.dessert_quantity=None
-            self.extra_category=None
+            from .database import records
+            ids={row['item_id'] for row in records() if row['category']=='ของหวาน'}
+            self.extras_plan={key:qty for key,qty in self.extras_plan.items() if key not in ids}
+            self.sync_checkout_extras()
             return self.checkout_summary()
-        if action in {'ยืนยันรายการทั้งหมด','ยืนยัน','ตกลง','ถูกต้อง'} and self.checkout_step=='review':
+        if action in {'ยืนยันรายการทั้งหมด','ยืนยัน','ตกลง','ถูกต้อง'} and self.food_choice is not None:
             result,error=self.compose_checkout()
             if error:
                 self.checkout_result=None
@@ -378,10 +420,19 @@ class BudgeteerAgent:
             constraints['drink_quantities']=constraints['drink_quantities'] or {}
             constraints['drinks_separate_from_budget']=False
             constraints['spend_ratio']=1.0
-            drinks=_resolve_quantity_items(menu,'เครื่องดื่ม',self.state.drink_selection,
-                        self.state.drink_quantity or self.state.num_people,self.state.drink_quantities or None)
-            desserts=(_resolve_quantity_items(menu,'ของหวาน',self.state.dessert_selection,
-                        self.state.dessert_quantity or self.state.num_people) if self.state.wants_dessert else [])
+            catalog={row['item_id']:row for row in menu}
+            if any(key not in catalog for key in self.extras_plan):
+                return None,'เมนูเพิ่มเติมเปลี่ยนแล้ว กรุณาเรียกรายการใหม่ครับ'
+            drinks=[copy.deepcopy(catalog[key]) for key,qty in self.extras_plan.items()
+                    if catalog[key]['category']=='เครื่องดื่ม' for _ in range(qty)]
+            desserts=[copy.deepcopy(catalog[key]) for key,qty in self.extras_plan.items()
+                      if catalog[key]['category']=='ของหวาน' for _ in range(qty)]
+            if len(drinks)>60 or len(desserts)>60:
+                return None,'กรุณาระบุจำนวนเครื่องดื่มหรือของหวานรวมไม่เกินหมวดละ 60 ครับ'
+            constraints['checkout_extras']=copy.deepcopy(self.extras_plan)
+            if not self.state.max_items_explicit:
+                constraints['checkout_food_limit']=60
+                constraints['max_items']=180
             result=copy.deepcopy(old)
             food=[copy.deepcopy(row) for row in old['selected'] if row['category'] not in {'เครื่องดื่ม','ของหวาน'}]
             result['selected']=food+_aggregate_by_item_id(drinks+desserts)
@@ -390,6 +441,7 @@ class BudgeteerAgent:
             result['food_total_price']=sum(cents(row['subtotal_baht']) for row in food)/100
             result['total_price']=(sum(cents(row['subtotal_baht']) for row in food)
                                   +sum(cents(row['price_baht']) for row in drinks+desserts))/100
+            result['max_items_requested']=constraints['max_items']
             result['item_count']=sum(row['quantity'] for row in result['selected'])
             result['distinct_dish_count']=len(result['selected'])
             result['drinks_separate_from_budget']=False
@@ -405,7 +457,11 @@ class BudgeteerAgent:
                 return None,f'ยอดรวมเกินงบ {excess:,.2f} บาทครับ กรุณาลดจำนวนหรือเปลี่ยนเครื่องดื่ม/ของหวานก่อนยืนยัน'
             check=validate_result(result,menu,mode=self.data_mode)
             if not check['passed']:
-                return None,'ยังยืนยันรายการนี้ไม่ได้ครับ กรุณาปรับเครื่องดื่ม/ของหวาน หรือเลือกชุดอาหารใหม่ โดยคงข้อจำกัดการแพ้เดิม'
+                self.last_run['checkout_validation_issues']=check['issues']
+                LOG.warning('checkout rejected: %s',check['issues'])
+                if self.state.max_items_explicit and result['item_count']>constraints['max_items']:
+                    return None,f"จำนวนรวม {result['item_count']} รายการ เกินจำนวน {constraints['max_items']} ที่คุณระบุครับ กรุณาลดรายการเพิ่มเติมก่อนยืนยัน"
+                return None,'รายการเพิ่มเติมยังไม่ผ่านเงื่อนไข กรุณาตรวจจำนวนและรายการที่แพ้ครับ อาหารเดิมยังเก็บไว้'
             result['policy_decision']=check['policy_decision']
             result['explanation']=explain(result,menu)
             return result,None
@@ -419,7 +475,7 @@ class BudgeteerAgent:
         self.checkout_step='review_error' if error else 'review'
         if error:
             return error
-        return '**สรุปรายการทั้งหมดก่อนยืนยัน**\n\n'+self.render_result(result)+'\n\nตรวจยอดรวมและเงินคงเหลือ แล้วกด «ยืนยันรายการทั้งหมด» ได้เลยครับ'
+        return '**สรุปรายการทั้งหมดก่อนยืนยัน**\n\n'+self.render_result(result)+'\n\nกด «ยืนยันรายการทั้งหมด» เพื่อจบรายการ หรือพิมพ์ เครื่องดื่ม / ของหวาน เพื่อดูเมนูเพิ่มเติมได้ครับ'
 
     def select_option(self, index):
         """Confirm a simulated selection, rechecking current catalog and session constraints."""
@@ -449,10 +505,10 @@ class BudgeteerAgent:
         if self.consumer_flow:
             self.food_choice=copy.deepcopy(selected)
             self.checkout_result=None
-            self.checkout_step='drinks_offer'
+            self.extras_plan={row['item_id']:row['quantity'] for row in selected['selected'] if row['category'] in {'เครื่องดื่ม','ของหวาน'}}
             self.extra_category=None
             self.pending_confirmation=False
-            return f'เลือกชุดที่ {index+1} แล้วครับ 🍣 ต้องการรับเครื่องดื่มไหมครับ?'
+            return self.checkout_summary()
         return (f'เลือกชุดที่ {index+1} แล้วครับ ✅ นี่เป็นสรุปชุดสำหรับนำไปแจ้งร้าน ยังไม่ได้ส่งคำสั่งซื้อ\n\n'
                 +self.render_result(selected)
                 +'\n\n'+(CLOSING_MESSAGE if self.consumer_flow else 'อยากเปลี่ยนเมนูหรือปรับจำนวน บอกต่อได้เลยครับ ผมจะใช้ข้อมูลเดิมให้'))
@@ -679,40 +735,34 @@ class BudgeteerAgent:
     def _chat(self,user_message):
         if self.order_closed:
             return CLOSING_MESSAGE
+        text=re.sub(r'\s*(?:ครับ|ค่ะ|คะ)[!? ]*$','',user_message.strip())
+        desserts={'ของหวาน','ขนม','เมนูของหวาน','ขอดูเมนูของหวาน','รับของหวาน','เอาของหวาน','เพิ่มของหวาน','เมนูขนม','ขนมมีอะไรบ้าง'}
+        drinks={'เครื่องดื่ม','น้ำ','เมนูน้ำ','เมนูเครื่องดื่ม','ขอดูเมนูน้ำ','ขอดูเมนูเครื่องดื่ม','รับน้ำ','รับเครื่องดื่ม','เพิ่มน้ำ','น้ำมีอะไรบ้าง','เครื่องดื่มมีอะไรบ้าง'}
+        if self.consumer_flow and text in desserts|drinks:
+            answer=self.open_extras('ของหวาน' if text in desserts else 'เครื่องดื่ม')
+            self.state.add_message('user',user_message)
+            self.state.add_message('assistant',answer)
+            return answer
         if self.checkout_step:
-            text=re.sub(r'\s*(?:ครับ|ค่ะ|คะ)[!? ]*$','',user_message.strip())
-            if text in {'รับเครื่องดื่ม','รับน้ำ','ไม่รับเครื่องดื่ม','ไม่รับน้ำ','รับของหวาน',
-                        'ไม่รับของหวาน','เปลี่ยนเครื่องดื่ม','เปลี่ยนของหวาน','ยืนยันรายการทั้งหมด','ยืนยัน','ตกลง','ถูกต้อง'}:
-                text={'รับน้ำ':'รับเครื่องดื่ม','ไม่รับน้ำ':'ไม่รับเครื่องดื่ม'}.get(text,text)
-                return self.checkout_action(text)
-            if self.extra_category:
-                extracted=self._extract_intent(user_message)
-                if any(extracted.get(key) for key in ('allergens','dislikes','hard_exclude_keywords','preferred_keywords',
-                        'budget','budget_delta','num_people','must_include_keywords')):
-                    self.food_choice=None
-                    self.checkout_step=None
-                    self.checkout_result=None
-                else:
-                    names=extracted.get('drink_selection' if self.extra_category=='เครื่องดื่ม' else 'dessert_selection') or []
-                    quantity=extracted.get('drink_quantity' if self.extra_category=='เครื่องดื่ม' else 'dessert_quantity')
-                    if self.extra_category=='เครื่องดื่ม' and quantity is None and len(extracted.get('drink_quantities') or {})==1:
-                        quantity=next(iter(extracted['drink_quantities'].values()))
-                    if len(names)==1 and quantity:
-                        from .optimizer import matches_any_keyword
-                        hit=next((row for row in self.extra_items(self.extra_category) if matches_any_keyword(row,names)),None)
-                        if hit:
-                            return self.choose_extra(hit['item_id'],quantity)
-                    return self.open_extras(self.extra_category)
-        if self.consumer_flow:
-            text=re.sub(r'\s*(?:ครับ|ค่ะ|คะ)[!? ]*$','',user_message.strip())
-            dessert_requests={'เมนูของหวาน','ขอดูเมนูของหวาน','รับของหวาน','เอาของหวาน','เพิ่มของหวาน','เมนูขนม','ขนมมีอะไรบ้าง'}
-            drink_requests={'เมนูน้ำ','เมนูเครื่องดื่ม','ขอดูเมนูน้ำ','ขอดูเมนูเครื่องดื่ม','รับน้ำ','เพิ่มน้ำ','น้ำมีอะไรบ้าง','เครื่องดื่มมีอะไรบ้าง'}
-            category='ของหวาน' if text in dessert_requests else 'เครื่องดื่ม' if text in drink_requests else None
-            if category:
-                answer=self.open_extras(category)
-                self.state.add_message('user',user_message)
-                self.state.add_message('assistant',answer)
-                return answer
+            if text in {'ไม่รับเครื่องดื่ม','ไม่รับน้ำ','ไม่รับของหวาน','เปลี่ยนเครื่องดื่ม','เปลี่ยนของหวาน','ยืนยันรายการทั้งหมด','ยืนยัน','ตกลง','ถูกต้อง'}:
+                return self.checkout_action({'ไม่รับน้ำ':'ไม่รับเครื่องดื่ม'}.get(text,text))
+            quantities=self.parse_extra_quantities(text)
+            if quantities:
+                return self.set_checkout_extras(quantities)
+            if text in {'สรุป','สรุปรายการ','ยอดรวม'}:
+                return self.checkout_summary()
+            if text.startswith(('ยกเลิก','ไม่เอา','ลบ')):
+                from .database import records
+                name=re.sub(r'^(?:ยกเลิก|ไม่เอา|ลบ)\s*','',text)
+                from .optimizer import matches_any_keyword
+                ids={row['item_id'] for row in records() if row['item_id'] in self.extras_plan and matches_any_keyword(row,[name])}
+                if ids:
+                    self.extras_plan={key:qty for key,qty in self.extras_plan.items() if key not in ids}
+                    self.sync_checkout_extras()
+                    return self.checkout_summary()
+            if not any(word in text for word in ('งบ','แพ้','ไม่ชอบ','ชอบ','เปลี่ยนอาหาร','เปลี่ยนชุด','จัดใหม่')):
+                return 'พิมพ์ชื่อเมนูและจำนวน เช่น น้ำส้ม 1 แก้ว หรือ ยกเลิกน้ำส้ม ได้เลยครับ อาหารที่เลือกไว้ยังอยู่ หากครบแล้วพิมพ์ ยืนยันรายการทั้งหมด'
+
         if self.consumer_flow and self.pending_confirmation:
             if user_message.strip() in {'ยืนยัน','ยืนยันข้อมูล','ใช่','ใช่ครับ','ถูกต้อง','ถูกต้องครับ','ตกลง','โอเค','ได้เลย','ยืนยันข้อมูลและจัดชุด','ยืนยันว่าไม่แพ้และจัดชุด'}:
                 answer=self._confirm_order()

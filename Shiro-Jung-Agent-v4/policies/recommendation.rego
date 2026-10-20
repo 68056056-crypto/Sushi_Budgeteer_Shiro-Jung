@@ -6,6 +6,7 @@ default allow := false
 
 valid_input if {
     input.schema_version == 1
+    valid_checkout_shape
     is_array(input.lines)
     count(input.lines) > 0
     every line in input.lines { valid_line(line) }
@@ -22,6 +23,13 @@ valid_input if {
     is_boolean(input.allergy_requested)
     is_string(input.catalog_revision)
     is_string(input.result_catalog_revision)
+}
+
+valid_checkout_shape if { object.get(input, "checkout", false) == false }
+valid_checkout_shape if {
+    input.checkout == true
+    is_number(input.drinks_count)
+    is_number(input.desserts_count)
 }
 
 valid_line(line) if {
@@ -47,7 +55,12 @@ deny contains "too_many_items" if { input.count > input.max_items }
 deny contains "invalid_budget" if { input.budget_cents <= 0 }
 deny contains "invalid_budget" if { input.budget_cents > 10000000 }
 deny contains "invalid_count_limits" if { input.min_items < 1 }
-deny contains "invalid_count_limits" if { input.max_items > 60 }
+default allowed_max_items := 60
+allowed_max_items := 180 if { object.get(input, "checkout", false) == true }
+deny contains "invalid_count_limits" if { input.max_items > allowed_max_items }
+deny contains "checkout_food_limit" if { object.get(input, "checkout", false) == true; input.food_count > 60 }
+deny contains "checkout_drinks_limit" if { object.get(input, "checkout", false) == true; input.drinks_count > 60 }
+deny contains "checkout_desserts_limit" if { object.get(input, "checkout", false) == true; input.desserts_count > 60 }
 deny contains "invalid_count_limits" if { input.min_items > input.max_items }
 deny contains "over_budget" if { not input.separate_budget; input.total_cents > input.budget_cents }
 deny contains "over_food_budget" if { input.separate_budget; input.food_cents > input.budget_cents }

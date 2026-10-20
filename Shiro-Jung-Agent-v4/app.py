@@ -219,51 +219,12 @@ if "agent" in st.session_state:
                     st.session_state["pending_message"] = label
                     st.rerun()
 
-    if current_agent.checkout_step in {"drinks_offer","desserts_offer"}:
-        category="เครื่องดื่ม" if current_agent.checkout_step=="drinks_offer" else "ของหวาน"
-        for column, action in zip(st.columns(2), ["รับ"+category,"ไม่รับ"+category]):
-            with column:
-                if st.button(action,key="checkout_"+action):
-                    answer=current_agent.checkout_action(action)
-                    st.session_state.setdefault("chat_history",[]).extend([
-                        {"role":"user","content":action},{"role":"assistant","content":answer}])
-                    st.rerun()
-    if current_agent.checkout_step in {"drinks_menu","desserts_menu"}:
-        action="ไม่รับเครื่องดื่ม" if current_agent.checkout_step=="drinks_menu" else "ไม่รับของหวาน"
-        if st.button(action,key="skip_extra_category"):
-            answer=current_agent.checkout_action(action)
-            st.session_state.setdefault("chat_history",[]).append({"role":"assistant","content":answer})
-            st.rerun()
-    if current_agent.checkout_step=="review":
+    if current_agent.food_choice is not None and current_agent.checkout_result is not None and not current_agent.order_closed:
         if st.button("ยืนยันรายการทั้งหมด",key="final_confirm"):
             answer=current_agent.checkout_action("ยืนยันรายการทั้งหมด")
             st.session_state.setdefault("chat_history",[]).append({"role":"assistant","content":answer})
             st.rerun()
-    if not current_agent.order_closed:
-        if (not current_agent.checkout_step and (current_agent.last_options or current_agent.extra_category)) or current_agent.checkout_step in {"review","review_error"}:
-            for category, column in zip(["เครื่องดื่ม", "ของหวาน"], st.columns(2)):
-                with column:
-                    if st.button("🍵 เลือก" + category, key="browse_" + category):
-                        answer=current_agent.open_extras(category)
-                        st.session_state.setdefault("chat_history", []).append({"role":"assistant","content":answer})
-                        st.rerun()
-        if current_agent.extra_category:
-            category=current_agent.extra_category
-            items=current_agent.extra_items(category)
-            if items:
-                with st.form("extra_picker_" + category):
-                    item_id=st.selectbox("เลือก" + category, [row['item_id'] for row in items],
-                        format_func=lambda key: next(f"{r['name_th']} · {r['price_baht']:,.2f} บาท" for r in items if r['item_id']==key))
-                    quantity=st.number_input("จำนวน",min_value=1,max_value=60,value=1,step=1)
-                    st.caption("แทนรายการเดิมในหมวดนี้ ราคาจะรวมในชุดตามเงื่อนไขที่คุณยืนยันไว้")
-                    if st.form_submit_button("เลือกเมนูนี้"):
-                        name=next(r['name_th'] for r in items if r['item_id']==item_id)
-                        answer=current_agent.choose_extra(item_id,int(quantity))
-                        st.session_state.setdefault("chat_history", []).extend([
-                            {"role":"user","content":f"เลือก {name} {quantity} รายการ"},
-                            {"role":"assistant","content":answer}])
-                        st.rerun()
-    elif st.button("รีเซ็ตคำถามเพื่อเริ่มใหม่",key="new_order"):
+    if current_agent.order_closed and st.button("รีเซ็ตคำถามเพื่อเริ่มใหม่",key="new_order"):
         current_agent.reset_order()
         st.session_state.pop("pending_message",None)
         st.session_state["chat_history"]=[{"role":"assistant","content":GREETING_MESSAGE}]

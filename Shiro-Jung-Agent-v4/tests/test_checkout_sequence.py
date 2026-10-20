@@ -23,15 +23,15 @@ class CheckoutSequenceTest(unittest.TestCase):
 
     def test_extras_spend_reserved_budget_without_changing_chosen_food(self):
         agent=self.ready()
-        self.assertEqual(agent.checkout_step,'drinks_offer')
+        self.assertEqual(agent.checkout_step,'review')
         self.assertFalse(agent.order_closed)
         food=[(x['item_id'],x['quantity']) for x in agent.food_choice['selected'] if x['category'] not in {'เครื่องดื่ม','ของหวาน'}]
         drink_menu=agent.checkout_action('รับเครื่องดื่ม')
         self.assertIn('โค้ก',drink_menu)
         self.assertEqual(agent.checkout_step,'drinks_menu')
         answer=agent.choose_extra('B002',1)
-        self.assertIn('รับของหวาน',answer)
-        self.assertEqual(agent.checkout_step,'desserts_offer')
+        self.assertIn('สรุปรายการทั้งหมด',answer)
+        self.assertEqual(agent.checkout_step,'review')
         self.assertIn('วาราบิโมจิ',agent.checkout_action('รับของหวาน'))
         summary=agent.choose_extra('D002',1)
         self.assertEqual(agent.checkout_step,'review')
@@ -49,7 +49,7 @@ class CheckoutSequenceTest(unittest.TestCase):
 
     def test_skipping_both_categories_still_requires_final_confirmation(self):
         agent=self.ready()
-        self.assertIn('รับของหวาน',agent.checkout_action('ไม่รับเครื่องดื่ม'))
+        self.assertIn('สรุปรายการทั้งหมด',agent.checkout_action('ไม่รับเครื่องดื่ม'))
         summary=agent.checkout_action('ไม่รับของหวาน')
         self.assertIn('สรุปรายการทั้งหมด',summary)
         self.assertEqual(agent.checkout_step,'review')
@@ -93,10 +93,42 @@ class CheckoutSequenceTest(unittest.TestCase):
         agent.checkout_action('รับเครื่องดื่ม')
         agent.llm.extraction={'drink_selection':['โค้ก'],'drink_quantities':{'โค้ก':1}}
         answer=agent.chat('โค้ก1แก้ว')
-        self.assertIn('รับของหวาน',answer)
-        self.assertEqual(agent.checkout_step,'desserts_offer')
+        self.assertIn('สรุปรายการทั้งหมด',answer)
+        self.assertEqual(agent.checkout_step,'review')
         self.assertEqual(agent.state.drink_quantity,1)
         self.assertEqual(agent.state.drink_quantities,{'โค้ก':1})
+
+    def test_multiple_extras_are_summed_exactly_and_repeating_updates_quantity(self):
+        agent=self.ready()
+        food=agent.food_choice['food_total_price']
+        agent.chat('เครื่องดื่ม')
+        agent.chat('น้ำส้ม 1 แก้ว โค้ก 1 แก้ว')
+        self.assertEqual(agent.checkout_result['total_price'],food+80)
+        agent.chat('น้ำส้ม 1 แก้ว')
+        self.assertEqual(agent.checkout_result['total_price'],food+80)
+        agent.chat('ยกเลิกโค้ก')
+        self.assertEqual(agent.checkout_result['total_price'],food+45)
+        agent.chat('ของหวาน')
+        agent.chat('โมจิ 1 พุดดิ้ง 1')
+        self.assertEqual(agent.checkout_step,'review_error')  # 125 extra > 100 reserve
+        agent.chat('ยกเลิกพุดดิ้ง')
+        self.assertEqual(agent.checkout_result['total_price'],food+85)
+        agent.chat('ยืนยันรายการทั้งหมด')
+        self.assertTrue(agent.order_closed)
+
+    def test_full_60_food_items_can_add_drink_without_reoptimizing(self):
+        agent=BudgeteerAgent(llm=ScriptedModel([],{'budget':5000,'num_people':2}),consumer_flow=True)
+        agent.chat('5000บาท 2คน')
+        agent.chat('ยืนยันว่าไม่แพ้และจัดชุด')
+        agent.select_option(0)
+        food=agent.food_choice['food_total_price']
+        count=sum(row['quantity'] for row in agent.food_choice['selected'] if row['category'] not in {'เครื่องดื่ม','ของหวาน'})
+        self.assertEqual(count,60)
+        answer=agent.chat('น้ำส้ม 1 แก้ว')
+        self.assertIn('สรุปรายการทั้งหมด',answer)
+        self.assertEqual(agent.checkout_result['item_count'],61)
+        self.assertEqual(agent.checkout_result['total_price'],food+45)
+        self.assertTrue(agent.checkout_result['policy_decision']['allow'])
 
     def test_ui_navigates_categories_then_combined_summary(self):
         agent=self.ready()
@@ -107,13 +139,12 @@ class CheckoutSequenceTest(unittest.TestCase):
             page.session_state['chat_history']=[]
             page.run(timeout=30)
             self.assertFalse(any(b.key=='choose_0' for b in page.button))
-            page.button(key='checkout_รับเครื่องดื่ม').click().run()
-            page.selectbox[0].select('B002')
-            next(b for b in page.button if b.label=='เลือกเมนูนี้').click().run()
-            self.assertEqual(agent.checkout_step,'desserts_offer')
-            page.button(key='checkout_รับของหวาน').click().run()
-            page.selectbox[0].select('D002')
-            next(b for b in page.button if b.label=='เลือกเมนูนี้').click().run()
+            page.chat_input[0].set_value('เครื่องดื่ม').run()
+            self.assertEqual(len(page.selectbox),0)
+            self.assertEqual(len(page.number_input),0)
+            page.chat_input[0].set_value('โค้ก 1 แก้ว').run()
+            page.chat_input[0].set_value('ของหวาน').run()
+            page.chat_input[0].set_value('วาราบิโมจิ 1 ชิ้น').run()
             self.assertEqual(agent.checkout_step,'review')
             self.assertFalse(page.exception)
             self.assertFalse(agent.order_closed)

@@ -79,7 +79,8 @@ class BudgetMealTest(unittest.TestCase):
             self.assertTrue(all(x['quantity']<=3 for x in option['selected'] if x['category'] not in {'เครื่องดื่ม','ของหวาน'}))
         self.assertIn('เหลือ',answer)
         self.assertIn('ใช้ ',answer)
-        self.assertIn('เลือกชุดที่ 2',agent.select_option(1))
+        self.assertIn('สรุปรายการทั้งหมด',agent.select_option(1))
+        self.assertEqual(agent.food_choice['result_id'],agent.last_options[1]['result_id'])
 
     def test_explicit_item_cap_survives_budget_increase(self):
         model=ScriptedModel([],{'budget':3000,'num_people':2,'max_items':20})

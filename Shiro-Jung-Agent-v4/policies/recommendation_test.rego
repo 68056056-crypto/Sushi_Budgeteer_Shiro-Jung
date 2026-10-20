@@ -68,3 +68,28 @@ test_deny_python_issues if {
     altered := object.union(facts,{"python_issues":["fixed choice mismatch"]})
     not shiro.allow with input as altered
 }
+
+test_checkout_expanded_count_bound if {
+    altered := object.union(facts,{"checkout":true,"max_items":180,"drinks_count":0,"desserts_count":0})
+    shiro.allow with input as altered
+}
+test_normal_flow_cannot_expand_count_bound if {
+    altered := object.union(facts,{"max_items":180})
+    result := shiro.decision with input as altered
+    "invalid_count_limits" in result.deny_reasons
+}
+test_checkout_keeps_food_cap if {
+    altered := object.union(facts,{"checkout":true,"max_items":180,"food_count":61})
+    result := shiro.decision with input as altered
+    "checkout_food_limit" in result.deny_reasons
+}
+test_checkout_keeps_extra_category_cap if {
+    altered := object.union(facts,{"checkout":true,"max_items":180,"drinks_count":61,"desserts_count":0})
+    result := shiro.decision with input as altered
+    "checkout_drinks_limit" in result.deny_reasons
+}
+
+test_checkout_requires_category_counts if {
+    altered := object.union(facts,{"checkout":true,"max_items":180})
+    not shiro.allow with input as altered
+}

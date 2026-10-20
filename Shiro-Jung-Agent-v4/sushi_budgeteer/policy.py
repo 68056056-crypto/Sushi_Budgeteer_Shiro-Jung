@@ -67,6 +67,9 @@ def validate_result(result, menu, constraints=None, mode=None):
     if not constraints['min_items']<=count<=constraints['max_items']:
         issues.append('จำนวนรายการไม่อยู่ในช่วงที่ขอ')
     if food_count<1: issues.append('ไม่มีอาหารหลักที่จัดได้ตามข้อจำกัด')
+    if constraints.get('checkout_food_limit') is not None:
+        if constraints['checkout_food_limit']!=60 or food_count>60 or drinks>60 or desserts>60:
+            issues.append('จำนวนอาหารหรือรายการเพิ่มเติมเกินขอบเขต')
     if (food if constraints.get('drinks_separate_from_budget') else total)>cents(constraints['budget']):
         issues.append('ยอดเกินงบ')
     target_limit=budget_target_cents(constraints['budget'],constraints.get('spend_ratio',1.0))
@@ -85,9 +88,16 @@ def validate_result(result, menu, constraints=None, mode=None):
     for category, selection, quantity, per_item in [
         ('เครื่องดื่ม', constraints.get('drink_selection') or [], constraints.get('drink_quantity'), constraints.get('drink_quantities') or None),
         ('ของหวาน', (constraints.get('dessert_selection') or []) if constraints.get('include_dessert') else [], constraints.get('dessert_quantity'), None)]:
-        expected_items=_resolve_quantity_items(menu,category,selection,
-            quantity if quantity is not None else constraints.get('num_people',1), per_item)
-        expected_ids=Counter(x['item_id'] for x in expected_items)
+        if 'checkout_extras' in constraints:
+            plan=constraints['checkout_extras']
+            if any(key not in catalog or catalog[key]['category'] not in {'เครื่องดื่ม','ของหวาน'}
+                   or type(qty) is not int or not 1<=qty<=60 for key,qty in plan.items()):
+                issues.append('รายการเพิ่มเติมที่ยืนยันไม่ถูกต้อง')
+            expected_ids=Counter({key:qty for key,qty in plan.items() if key in catalog and catalog[key]['category']==category})
+        else:
+            expected_items=_resolve_quantity_items(menu,category,selection,
+                quantity if quantity is not None else constraints.get('num_people',1), per_item)
+            expected_ids=Counter(x['item_id'] for x in expected_items)
         actual_ids=Counter({x['item_id']:x['quantity'] for x in selected
             if x.get('item_id') in catalog and catalog[x['item_id']]['category']==category})
         if actual_ids != expected_ids: issues.append('รายการเครื่องดื่ม/ของหวานไม่ตรงตัวเลือกที่ยืนยัน')
@@ -131,6 +141,9 @@ def policy_facts(result, menu, constraints, issues, mode=None):
             'hard_excluded':matches_any_keyword(item,constraints.get('hard_exclude_keywords',[])),
             'only_allowed':not only or matches_any_keyword(item,only)})
     return {'schema_version':1,'lines':lines,'python_issues':list(issues),
+        'checkout':constraints.get('checkout_food_limit')==60,
+        'drinks_count':sum(line['quantity'] for line in selected_lines(result,menu,'เครื่องดื่ม')),
+        'desserts_count':sum(line['quantity'] for line in selected_lines(result,menu,'ของหวาน')),
         'budget_cents':cents(constraints['budget']),
         'total_cents':cents(result.get('total_price',0)),
         'food_cents':cents(result.get('food_total_price',0)),
@@ -140,3 +153,8 @@ def policy_facts(result, menu, constraints, issues, mode=None):
         'allergy_requested':bool(allergens),'data_mode':data_mode() if mode is None else mode,
         'separate_budget':bool(constraints.get('drinks_separate_from_budget')),
         'catalog_revision':catalog_revision(menu),'result_catalog_revision':result.get('catalog_revision','')}
+
+
+def selected_lines(result, menu, category):
+    ids={row['item_id'] for row in menu if row['category']==category}
+    return [row for row in result.get('selected',[]) if row.get('item_id') in ids]
