@@ -1,4 +1,4 @@
-# 🍣 Shiro-Jung 4.1 — AI Agent + MCP + SQLite + OPA
+# 🍣 Shiro-Jung 4.0 — AI Agent + MCP + SQLite + OPA
 
 ผู้ช่วยจัดชุดซูชิจาก **ฐานข้อมูล SQLite ที่นำเข้าจาก CSV จริง** มีเว็บ Streamlit และ CLI โดย Agent เลือก MCP tools อ่านผล แล้วเลือกทำต่อภายในวงจรที่จำกัดจำนวนรอบ คำแนะนำชุดอาหารจะถูกแสดงเฉพาะหลังผ่าน Python policy validator และตรวจฐานข้อมูลซ้ำก่อนตอบ
 
