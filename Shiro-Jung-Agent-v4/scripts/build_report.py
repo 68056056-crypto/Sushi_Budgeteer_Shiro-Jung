@@ -6,8 +6,8 @@ ROOT=Path(__file__).resolve().parents[1]
 def read(name):
     p=ROOT/'artifacts'/name
     return json.loads(p.read_text()) if p.exists() else {'status':'not_run'}
-data={key:read(name) for key,name in {'validation':'review-live-confirmed-checks/validation-report.json','offline':'review-round2-followup/offline-evaluation.json',
-    'live':'live-evaluation.json','sessions':'live-confirmed-39799552734/live-sessions.json','benchmark':'review-round2-followup/benchmark-production.json'}.items()}
+data={'validation':read('checks.json').get('validation',{}),'offline':read('offline-evaluation.json'),
+      'sessions':read('live-sessions.json'),'benchmark':read('benchmark.json')}
 parser=argparse.ArgumentParser(description=__doc__)
 parser.add_argument('--live-report',type=Path,help='Override imported verified live report with a newer run')
 args=parser.parse_args()
@@ -22,15 +22,15 @@ body{font:16px/1.6 system-ui,sans-serif;max-width:1150px;margin:36px auto;paddin
 <div id="cards" class="cards"></div><h2>สถานะ LLM จริง</h2><p id="live"></p>
 <h2>Evaluation 40 กรณี</h2><label>กรองผล <select id="filter"><option value="all">ทั้งหมด</option><option value="pass">ผ่าน</option><option value="fail">ไม่ผ่าน</option></select></label><div id="evaluation"></div>
 <h2>Benchmark ภายใต้ข้อจำกัดเดียวกัน</h2><p>DP, greedy และ random ใช้ objective=budget / diversity=true / spend_ratio=.8 / repeat cap 3 / สูงสุด 60 รายการเหมือนกัน คะแนนเป็น objective ของระบบ ไม่ใช่ความพึงพอใจหรือโภชนาการจริง</p><label>สถานการณ์ <select id="scenario"></select></label><div id="chart"></div>
-<h2>ไฟล์หลักฐาน</h2><p>review-live-confirmed-checks/validation-report.json · review-live-confirmed-checks/opa-tests.json · review-round2-followup/offline-evaluation.json · live-confirmed-39799552734/live-sessions.json · review-round2-followup/benchmark-production.json</p><small>หน้า HTML นี้แสดงค่าจาก artifact ขณะสร้าง report; รัน scripts/build_report.py ใหม่หลังการประเมินครั้งใหม่</small>
+<h2>ไฟล์หลักฐาน</h2><p>checks.json · offline-evaluation.json · benchmark.json · live-sessions.json · live-trace.md · catalog-audit.json · evidence-summary.json</p><small>รายงานแสดง snapshot ที่อ่านขณะสร้าง; ผล live ต้องตรวจ source_commit และวันที่ของรอบนั้น</small>
 <script>const data=DATA;
 function node(tag,text){const n=document.createElement(tag);n.textContent=text;return n}
 function card(label,value){const c=node('div','');c.className='card';c.append(node('div',label));const v=node('div',value);v.className='value';c.append(v);document.querySelector('#cards').append(c)}
 card('Regression tests',data.validation.regression?.run??'ยังไม่รัน');card('Rego tests',data.validation.opa?.rego_tests??'ยังไม่รัน');card('Offline cases',data.offline.executed_cases??0);card('Offline success',data.offline.metrics?((data.offline.metrics.success_rate*100).toFixed(1)+'%'):'ยังไม่รัน');
-document.querySelector('#live').textContent='Single-turn: '+data.live.status+' ('+(data.live.executed_cases??0)+' cases); Multi-turn: '+data.sessions.status+' ('+(data.sessions.executed_turns??0)+' turns); Live: '+data.sessions.live_llm_tested+'; Gold success: '+data.sessions.success_rate+'; model-selected recommendations: '+data.sessions.model_selected_recommendations+'; Source: '+data.sessions.source_commit;
+document.querySelector('#live').textContent='Live consumer sessions: '+data.sessions.status+' ('+(data.sessions.executed_turns??0)+' turns); Live: '+data.sessions.live_llm_tested+'; Gold success: '+data.sessions.success_rate+'; model-selected recommendations: '+data.sessions.model_selected_recommendations+'; Source: '+data.sessions.source_commit;
 function evaluations(){const target=document.querySelector('#evaluation');target.replaceChildren();const t=node('table','');const head=node('tr','');for(const label of ['กรณี','คาดหวัง','ผลจริง','ผ่าน','เวลา ms'])head.append(node('th',label));t.append(head);for(const row of data.offline.cases??[]){const f=document.querySelector('#filter').value;if(f==='pass'&&!row.success||f==='fail'&&row.success)continue;const tr=node('tr','');for(const value of [row.id,row.expected,row.actual,row.success?'ผ่าน':'ไม่ผ่าน',row.elapsed_ms])tr.append(node('td',String(value)));t.append(tr)}target.append(t)}
 document.querySelector('#filter').onchange=evaluations;evaluations();
 const cases=data.benchmark.cases??[];const select=document.querySelector('#scenario');cases.forEach((c,i)=>{const o=node('option',c.full_budget+' บาท / ชอบ '+(c.preferences.join(',')||'ไม่ระบุ')+' / ห้าม '+(c.hard_exclusions.join(',')||'ไม่มี'));o.value=i;select.append(o)});
 function chart(){const c=cases[Number(select.value)];if(!c)return;const target=document.querySelector('#chart');target.replaceChildren();const a=c.algorithms;const values=[['DP',a.dp.diminishing_score,'bar'],['Greedy density',a.greedy_density.diminishing_score,'bar greedy'],['Greedy score',a.greedy_score.diminishing_score,'bar greedy'],['Random mean',a.random.means.diminishing_score,'bar random']];const max=Math.max(...values.map(x=>x[1]),1);for(const [label,value,cls]of values){target.append(node('p',label+': '+value.toFixed(3)));const b=node('div','');b.className=cls;b.style.width=(100*value/max)+'%';target.append(b)}target.append(node('small','Random: 100 seeds; DP ใช้งบเต็ม '+(a.dp.share_of_full_budget*100).toFixed(2)+'% / วงเงินอาหาร '+(a.dp.share_of_food_target*100).toFixed(2)+'%, '+a.dp.distinct_dishes+' เมนูไม่ซ้ำ'))}
 select.onchange=chart;chart();</script></html>'''.replace('DATA',encoded)
-path=ROOT/'artifacts'/'review-round2-followup-report.html';path.write_text(html);print(path)
+path=ROOT/'artifacts'/'report.html';path.write_text(html);print(path)

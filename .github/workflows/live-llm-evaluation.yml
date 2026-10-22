@@ -32,7 +32,7 @@ jobs:
           SUSHI_DATA_MODE: strict
         run: >-
           python scripts/live_sessions.py
-          --scenarios evaluation/round2_sessions.json
+          --scenarios evaluation/sessions.json
           --output artifacts/live-actions/live-sessions.json
           --require-model-selected
       - name: Write evidence summary

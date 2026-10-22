@@ -456,7 +456,7 @@ def verify_result(
     budget: Optional[float] = None,
     allergens: Optional[List[str]] = None,
 ) -> str:
-    """ตรวจสอบผลลัพธ์ล่าสุดจาก build_optimal_set (หรือ rag_augmented_build)
+    """ตรวจสอบผลลัพธ์ล่าสุดจาก build_optimal_set
     ก่อนตอบผู้ใช้เสมอ ทุกครั้งไม่มีข้อยกเว้น.
 
     ตรวจ 5 เรื่อง: (1) ยอดรวมไม่เกินงบประมาณ, (2) ไม่มีเมนูที่มีสารก่อภูมิแพ้

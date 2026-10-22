@@ -20,7 +20,7 @@ from sushi_budgeteer.dietary import requested_tags
 def main():
     parser=argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--scenarios',type=Path,default=ROOT/'evaluation'/'sessions.json')
-    parser.add_argument('--output',type=Path,default=ROOT/'artifacts'/'live-consumer-sessions.json')
+    parser.add_argument('--output',type=Path,default=ROOT/'artifacts'/'generated'/'live-sessions.json')
     parser.add_argument('--require-model-selected',action='store_true',help='Fail unless real model-selected build and verify evidence exists')
     args=parser.parse_args()
     report={'created_at':datetime.now(timezone.utc).isoformat(),'consumer_flow':True,

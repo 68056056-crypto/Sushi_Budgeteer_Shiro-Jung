@@ -244,7 +244,7 @@ def aggregate_by_item_id(
     item_id more than once, up to max_repeat_per_item) into one entry with a
     `quantity` + `subtotal_baht`, so a response reads "ซูชิแซลมอน x2 - 80 บาท"
     instead of listing the same dish twice. `brief_fn` lets callers (tools.py,
-    rag.py) control which fields end up in each entry; defaults to a shallow
+    other adapters) control which fields end up in each entry; defaults to a shallow
     copy of the full item dict.
     """
     brief_fn = brief_fn or (lambda item: dict(item))

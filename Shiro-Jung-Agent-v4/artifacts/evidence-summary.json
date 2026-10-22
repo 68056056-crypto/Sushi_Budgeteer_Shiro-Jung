@@ -71,7 +71,39 @@
   "original_trace_sha256": "9306122ff4d1f0f844cf5865074f9f0c3f0bf34297ad4e366aa4c641a679eaf2",
   "limitations": [
     "Gold success is the runner assessment, not a human preference study or restaurant certification.",
-    "Original per-turn state list snapshots share mutable references. Use same-run build_set arguments for historical constraints; original report/trace are preserved.",
+    "Original live report per-turn state lists can reflect later turns. Use matching build_set arguments. Raw live report remains byte-for-byte; original trace is archived at commit3af6b28.",
     "Live result applies to source_commit 426b48a; subsequent snapshot/parser/exporter fixes are offline-tested, not a new live run."
-  ]
+  ],
+  "submission_layout": {
+    "evidence_files": 7,
+    "main_file_path": "Shiro-Jung-Agent-v4/app.py",
+    "current_live_corpus": "evaluation/sessions.json",
+    "live_corpus_content_unchanged": true,
+    "archive_commit": "3af6b28",
+    "archived_original_trace_url": "https://github.com/68056056-crypto/Sushi_Budgeteer_Shiro-Jung/blob/3af6b28/Shiro-Jung-Agent-v4/artifacts/live-confirmed-39799552734/original-live-trace.md",
+    "runtime_files_verified_unchanged": {
+      "app.py": "6e2f32d0dfc8ea6e55efa0a7fbd1a2336c831899ac0888e5220523369f1a533a",
+      "mcp_server.py": "32530b9eee1ebc43bb6859dd9a20383ffda6c82358ce9793d1d06c37392fba92",
+      "sushiro_menu_dataset.csv": "dbda6c24f9db3bfd90d20010a9e29a6b23f25080e976c3bce2096dc0f910ec7c",
+      "requirements.txt": "5f85fc15acc03179643432038f5fe50d9a6b7ade2e877bf96ebde56f03eaba7f",
+      "requirements.lock": "4e6c1c93bb843a49bce29d86d02a357de4ae157af75b3bb4adb2cc32889e9194",
+      "tools/opa/opa": "6d81be862e412af910eacfad489e3d77afbfcf4b958ea4e839b7f38c9eec4d87",
+      "tools/opa/opa.sha256": "f4aac99f98bd02ba0dd6c1787ccf0a99182d4391b35443bb36957fccda464558"
+    },
+    "local_streamlit_http_status": {
+      "/": 200,
+      "/_stcore/health": 200
+    },
+    "public_url": "https://shiro-jung.streamlit.app/",
+    "public_url_verification": "Not verified from this execution network; outbound proxy blocks access. Local startup/AppTest and runtime file hashes were checked.",
+    "checks_created_at": "2026-10-22T15:34:51.019745+00:00"
+  },
+  "current_file_sha256": {
+    "benchmark.json": "faabd489ce6a3081eab3401ac9e77d4d6ab9d29d05cf2c1626b49f1d1f867a8a",
+    "offline-evaluation.json": "9e97539f781912548282eb2f3d4a8069c7b559a78a86a4759d84ee6b0e087cd6",
+    "checks.json": "bac6ac98e52981db86acefa49da115490b050b2f5295c5ce1c3eb7ea319e1930",
+    "catalog-audit.json": "586726ce3c4bc29cada32ce4c0aa68180ebc420cdccdbd5d6aef7e516a441c69",
+    "live-sessions.json": "cfb28e2a536178de17be43dc081da9f1217e5309d81ca7b2666c6aae72ae2bca",
+    "live-trace.md": "133e240f555be8da67e778d92996b883a5f17ee98208a1d820338f1a17268abd"
+  }
 }

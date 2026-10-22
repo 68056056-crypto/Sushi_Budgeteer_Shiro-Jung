@@ -1,6 +1,6 @@
 {
-  "created_at": "2026-10-22T11:26:31.149230+00:00",
-  "catalog_revision": "e1dfadc29f67f8f24c51de054d6d2e89b143d5362e1913316acd7f5dc4245dac",
+  "created_at": "2026-10-22T15:35:04.320505+00:00",
+  "catalog_revision": "7b4edf529cbaa96d99ba8e78f4c283ce9ae3873b26ea35233f7f44777c0e4581",
   "row_count": 42,
   "unknown_allergens": 42,
   "unverified_prices": 42,
@@ -19,6 +19,12 @@
       "allergen_source_url": "",
       "checked_at": "",
       "missing_evidence": "source_url;allergen_source_url;checked_at",
+      "allergen_review_reason": "",
+      "allergen_reviewed_by": "",
+      "branch": "",
+      "evidence_file": "",
+      "contact_date": "",
+      "response_status": "not_contacted",
       "reviewer_notes": ""
     },
     {
@@ -32,6 +38,12 @@
       "allergen_source_url": "",
       "checked_at": "",
       "missing_evidence": "source_url;allergen_source_url;checked_at",
+      "allergen_review_reason": "",
+      "allergen_reviewed_by": "",
+      "branch": "",
+      "evidence_file": "",
+      "contact_date": "",
+      "response_status": "not_contacted",
       "reviewer_notes": ""
     },
     {
@@ -45,6 +57,12 @@
       "allergen_source_url": "",
       "checked_at": "",
       "missing_evidence": "source_url;allergen_source_url;checked_at",
+      "allergen_review_reason": "",
+      "allergen_reviewed_by": "",
+      "branch": "",
+      "evidence_file": "",
+      "contact_date": "",
+      "response_status": "not_contacted",
       "reviewer_notes": ""
     },
     {
@@ -58,6 +76,12 @@
       "allergen_source_url": "",
       "checked_at": "",
       "missing_evidence": "source_url;allergen_source_url;checked_at",
+      "allergen_review_reason": "",
+      "allergen_reviewed_by": "",
+      "branch": "",
+      "evidence_file": "",
+      "contact_date": "",
+      "response_status": "not_contacted",
       "reviewer_notes": ""
     },
     {
@@ -71,6 +95,12 @@
       "allergen_source_url": "",
       "checked_at": "",
       "missing_evidence": "source_url;allergen_source_url;checked_at",
+      "allergen_review_reason": "",
+      "allergen_reviewed_by": "",
+      "branch": "",
+      "evidence_file": "",
+      "contact_date": "",
+      "response_status": "not_contacted",
       "reviewer_notes": ""
     },
     {
@@ -84,6 +114,12 @@
       "allergen_source_url": "",
       "checked_at": "",
       "missing_evidence": "source_url;allergen_source_url;checked_at",
+      "allergen_review_reason": "",
+      "allergen_reviewed_by": "",
+      "branch": "",
+      "evidence_file": "",
+      "contact_date": "",
+      "response_status": "not_contacted",
       "reviewer_notes": ""
     },
     {
@@ -97,6 +133,12 @@
       "allergen_source_url": "",
       "checked_at": "",
       "missing_evidence": "source_url;allergen_source_url;checked_at",
+      "allergen_review_reason": "",
+      "allergen_reviewed_by": "",
+      "branch": "",
+      "evidence_file": "",
+      "contact_date": "",
+      "response_status": "not_contacted",
       "reviewer_notes": ""
     },
     {
@@ -110,6 +152,12 @@
       "allergen_source_url": "",
       "checked_at": "",
       "missing_evidence": "source_url;allergen_source_url;checked_at",
+      "allergen_review_reason": "",
+      "allergen_reviewed_by": "",
+      "branch": "",
+      "evidence_file": "",
+      "contact_date": "",
+      "response_status": "not_contacted",
       "reviewer_notes": ""
     },
     {
@@ -123,6 +171,12 @@
       "allergen_source_url": "",
       "checked_at": "",
       "missing_evidence": "source_url;allergen_source_url;checked_at",
+      "allergen_review_reason": "",
+      "allergen_reviewed_by": "",
+      "branch": "",
+      "evidence_file": "",
+      "contact_date": "",
+      "response_status": "not_contacted",
       "reviewer_notes": ""
     },
     {
@@ -136,6 +190,12 @@
       "allergen_source_url": "",
       "checked_at": "",
       "missing_evidence": "source_url;allergen_source_url;checked_at",
+      "allergen_review_reason": "",
+      "allergen_reviewed_by": "",
+      "branch": "",
+      "evidence_file": "",
+      "contact_date": "",
+      "response_status": "not_contacted",
       "reviewer_notes": ""
     },
     {
@@ -149,6 +209,12 @@
       "allergen_source_url": "",
       "checked_at": "",
       "missing_evidence": "source_url;allergen_source_url;checked_at",
+      "allergen_review_reason": "",
+      "allergen_reviewed_by": "",
+      "branch": "",
+      "evidence_file": "",
+      "contact_date": "",
+      "response_status": "not_contacted",
       "reviewer_notes": ""
     },
     {
@@ -162,6 +228,12 @@
       "allergen_source_url": "",
       "checked_at": "",
       "missing_evidence": "source_url;allergen_source_url;checked_at",
+      "allergen_review_reason": "",
+      "allergen_reviewed_by": "",
+      "branch": "",
+      "evidence_file": "",
+      "contact_date": "",
+      "response_status": "not_contacted",
       "reviewer_notes": ""
     },
     {
@@ -175,6 +247,12 @@
       "allergen_source_url": "",
       "checked_at": "",
       "missing_evidence": "source_url;allergen_source_url;checked_at",
+      "allergen_review_reason": "",
+      "allergen_reviewed_by": "",
+      "branch": "",
+      "evidence_file": "",
+      "contact_date": "",
+      "response_status": "not_contacted",
       "reviewer_notes": ""
     },
     {
@@ -188,6 +266,12 @@
       "allergen_source_url": "",
       "checked_at": "",
       "missing_evidence": "source_url;allergen_source_url;checked_at",
+      "allergen_review_reason": "",
+      "allergen_reviewed_by": "",
+      "branch": "",
+      "evidence_file": "",
+      "contact_date": "",
+      "response_status": "not_contacted",
       "reviewer_notes": ""
     },
     {
@@ -201,6 +285,12 @@
       "allergen_source_url": "",
       "checked_at": "",
       "missing_evidence": "source_url;allergen_source_url;checked_at",
+      "allergen_review_reason": "",
+      "allergen_reviewed_by": "",
+      "branch": "",
+      "evidence_file": "",
+      "contact_date": "",
+      "response_status": "not_contacted",
       "reviewer_notes": ""
     },
     {
@@ -214,6 +304,12 @@
       "allergen_source_url": "",
       "checked_at": "",
       "missing_evidence": "source_url;allergen_source_url;checked_at",
+      "allergen_review_reason": "",
+      "allergen_reviewed_by": "",
+      "branch": "",
+      "evidence_file": "",
+      "contact_date": "",
+      "response_status": "not_contacted",
       "reviewer_notes": ""
     },
     {
@@ -227,6 +323,12 @@
       "allergen_source_url": "",
       "checked_at": "",
       "missing_evidence": "source_url;allergen_source_url;checked_at",
+      "allergen_review_reason": "",
+      "allergen_reviewed_by": "",
+      "branch": "",
+      "evidence_file": "",
+      "contact_date": "",
+      "response_status": "not_contacted",
       "reviewer_notes": ""
     },
     {
@@ -240,6 +342,12 @@
       "allergen_source_url": "",
       "checked_at": "",
       "missing_evidence": "source_url;allergen_source_url;checked_at",
+      "allergen_review_reason": "",
+      "allergen_reviewed_by": "",
+      "branch": "",
+      "evidence_file": "",
+      "contact_date": "",
+      "response_status": "not_contacted",
       "reviewer_notes": ""
     },
     {
@@ -253,6 +361,12 @@
       "allergen_source_url": "",
       "checked_at": "",
       "missing_evidence": "source_url;allergen_source_url;checked_at",
+      "allergen_review_reason": "",
+      "allergen_reviewed_by": "",
+      "branch": "",
+      "evidence_file": "",
+      "contact_date": "",
+      "response_status": "not_contacted",
       "reviewer_notes": ""
     },
     {
@@ -266,6 +380,12 @@
       "allergen_source_url": "",
       "checked_at": "",
       "missing_evidence": "source_url;allergen_source_url;checked_at",
+      "allergen_review_reason": "",
+      "allergen_reviewed_by": "",
+      "branch": "",
+      "evidence_file": "",
+      "contact_date": "",
+      "response_status": "not_contacted",
       "reviewer_notes": ""
     },
     {
@@ -279,6 +399,12 @@
       "allergen_source_url": "",
       "checked_at": "",
       "missing_evidence": "source_url;allergen_source_url;checked_at",
+      "allergen_review_reason": "",
+      "allergen_reviewed_by": "",
+      "branch": "",
+      "evidence_file": "",
+      "contact_date": "",
+      "response_status": "not_contacted",
       "reviewer_notes": ""
     },
     {
@@ -292,6 +418,12 @@
       "allergen_source_url": "",
       "checked_at": "",
       "missing_evidence": "source_url;allergen_source_url;checked_at",
+      "allergen_review_reason": "",
+      "allergen_reviewed_by": "",
+      "branch": "",
+      "evidence_file": "",
+      "contact_date": "",
+      "response_status": "not_contacted",
       "reviewer_notes": ""
     },
     {
@@ -305,6 +437,12 @@
       "allergen_source_url": "",
       "checked_at": "",
       "missing_evidence": "source_url;allergen_source_url;checked_at",
+      "allergen_review_reason": "",
+      "allergen_reviewed_by": "",
+      "branch": "",
+      "evidence_file": "",
+      "contact_date": "",
+      "response_status": "not_contacted",
       "reviewer_notes": ""
     },
     {
@@ -318,6 +456,12 @@
       "allergen_source_url": "",
       "checked_at": "",
       "missing_evidence": "source_url;allergen_source_url;checked_at",
+      "allergen_review_reason": "",
+      "allergen_reviewed_by": "",
+      "branch": "",
+      "evidence_file": "",
+      "contact_date": "",
+      "response_status": "not_contacted",
       "reviewer_notes": ""
     },
     {
@@ -331,6 +475,12 @@
       "allergen_source_url": "",
       "checked_at": "",
       "missing_evidence": "source_url;allergen_source_url;checked_at",
+      "allergen_review_reason": "",
+      "allergen_reviewed_by": "",
+      "branch": "",
+      "evidence_file": "",
+      "contact_date": "",
+      "response_status": "not_contacted",
       "reviewer_notes": ""
     },
     {
@@ -344,6 +494,12 @@
       "allergen_source_url": "",
       "checked_at": "",
       "missing_evidence": "source_url;allergen_source_url;checked_at",
+      "allergen_review_reason": "",
+      "allergen_reviewed_by": "",
+      "branch": "",
+      "evidence_file": "",
+      "contact_date": "",
+      "response_status": "not_contacted",
       "reviewer_notes": ""
     },
     {
@@ -357,6 +513,12 @@
       "allergen_source_url": "",
       "checked_at": "",
       "missing_evidence": "source_url;allergen_source_url;checked_at",
+      "allergen_review_reason": "",
+      "allergen_reviewed_by": "",
+      "branch": "",
+      "evidence_file": "",
+      "contact_date": "",
+      "response_status": "not_contacted",
       "reviewer_notes": ""
     },
     {
@@ -370,6 +532,12 @@
       "allergen_source_url": "",
       "checked_at": "",
       "missing_evidence": "source_url;allergen_source_url;checked_at",
+      "allergen_review_reason": "",
+      "allergen_reviewed_by": "",
+      "branch": "",
+      "evidence_file": "",
+      "contact_date": "",
+      "response_status": "not_contacted",
       "reviewer_notes": ""
     },
     {
@@ -383,6 +551,12 @@
       "allergen_source_url": "",
       "checked_at": "",
       "missing_evidence": "source_url;allergen_source_url;checked_at",
+      "allergen_review_reason": "",
+      "allergen_reviewed_by": "",
+      "branch": "",
+      "evidence_file": "",
+      "contact_date": "",
+      "response_status": "not_contacted",
       "reviewer_notes": ""
     },
     {
@@ -396,6 +570,12 @@
       "allergen_source_url": "",
       "checked_at": "",
       "missing_evidence": "source_url;allergen_source_url;checked_at",
+      "allergen_review_reason": "",
+      "allergen_reviewed_by": "",
+      "branch": "",
+      "evidence_file": "",
+      "contact_date": "",
+      "response_status": "not_contacted",
       "reviewer_notes": ""
     },
     {
@@ -409,6 +589,12 @@
       "allergen_source_url": "",
       "checked_at": "",
       "missing_evidence": "source_url;allergen_source_url;checked_at",
+      "allergen_review_reason": "",
+      "allergen_reviewed_by": "",
+      "branch": "",
+      "evidence_file": "",
+      "contact_date": "",
+      "response_status": "not_contacted",
       "reviewer_notes": ""
     },
     {
@@ -422,6 +608,12 @@
       "allergen_source_url": "",
       "checked_at": "",
       "missing_evidence": "source_url;allergen_source_url;checked_at",
+      "allergen_review_reason": "",
+      "allergen_reviewed_by": "",
+      "branch": "",
+      "evidence_file": "",
+      "contact_date": "",
+      "response_status": "not_contacted",
       "reviewer_notes": ""
     },
     {
@@ -435,6 +627,12 @@
       "allergen_source_url": "",
       "checked_at": "",
       "missing_evidence": "source_url;allergen_source_url;checked_at",
+      "allergen_review_reason": "",
+      "allergen_reviewed_by": "",
+      "branch": "",
+      "evidence_file": "",
+      "contact_date": "",
+      "response_status": "not_contacted",
       "reviewer_notes": ""
     },
     {
@@ -448,6 +646,12 @@
       "allergen_source_url": "",
       "checked_at": "",
       "missing_evidence": "source_url;allergen_source_url;checked_at",
+      "allergen_review_reason": "",
+      "allergen_reviewed_by": "",
+      "branch": "",
+      "evidence_file": "",
+      "contact_date": "",
+      "response_status": "not_contacted",
       "reviewer_notes": ""
     },
     {
@@ -461,6 +665,12 @@
       "allergen_source_url": "",
       "checked_at": "",
       "missing_evidence": "source_url;allergen_source_url;checked_at",
+      "allergen_review_reason": "",
+      "allergen_reviewed_by": "",
+      "branch": "",
+      "evidence_file": "",
+      "contact_date": "",
+      "response_status": "not_contacted",
       "reviewer_notes": ""
     },
     {
@@ -474,6 +684,12 @@
       "allergen_source_url": "",
       "checked_at": "",
       "missing_evidence": "source_url;allergen_source_url;checked_at",
+      "allergen_review_reason": "",
+      "allergen_reviewed_by": "",
+      "branch": "",
+      "evidence_file": "",
+      "contact_date": "",
+      "response_status": "not_contacted",
       "reviewer_notes": ""
     },
     {
@@ -487,6 +703,12 @@
       "allergen_source_url": "",
       "checked_at": "",
       "missing_evidence": "source_url;allergen_source_url;checked_at",
+      "allergen_review_reason": "",
+      "allergen_reviewed_by": "",
+      "branch": "",
+      "evidence_file": "",
+      "contact_date": "",
+      "response_status": "not_contacted",
       "reviewer_notes": ""
     },
     {
@@ -500,6 +722,12 @@
       "allergen_source_url": "",
       "checked_at": "",
       "missing_evidence": "source_url;allergen_source_url;checked_at",
+      "allergen_review_reason": "",
+      "allergen_reviewed_by": "",
+      "branch": "",
+      "evidence_file": "",
+      "contact_date": "",
+      "response_status": "not_contacted",
       "reviewer_notes": ""
     },
     {
@@ -513,6 +741,12 @@
       "allergen_source_url": "",
       "checked_at": "",
       "missing_evidence": "source_url;allergen_source_url;checked_at",
+      "allergen_review_reason": "",
+      "allergen_reviewed_by": "",
+      "branch": "",
+      "evidence_file": "",
+      "contact_date": "",
+      "response_status": "not_contacted",
       "reviewer_notes": ""
     },
     {
@@ -526,6 +760,12 @@
       "allergen_source_url": "",
       "checked_at": "",
       "missing_evidence": "source_url;allergen_source_url;checked_at",
+      "allergen_review_reason": "",
+      "allergen_reviewed_by": "",
+      "branch": "",
+      "evidence_file": "",
+      "contact_date": "",
+      "response_status": "not_contacted",
       "reviewer_notes": ""
     },
     {
@@ -539,6 +779,12 @@
       "allergen_source_url": "",
       "checked_at": "",
       "missing_evidence": "source_url;allergen_source_url;checked_at",
+      "allergen_review_reason": "",
+      "allergen_reviewed_by": "",
+      "branch": "",
+      "evidence_file": "",
+      "contact_date": "",
+      "response_status": "not_contacted",
       "reviewer_notes": ""
     },
     {
@@ -552,6 +798,12 @@
       "allergen_source_url": "",
       "checked_at": "",
       "missing_evidence": "source_url;allergen_source_url;checked_at",
+      "allergen_review_reason": "",
+      "allergen_reviewed_by": "",
+      "branch": "",
+      "evidence_file": "",
+      "contact_date": "",
+      "response_status": "not_contacted",
       "reviewer_notes": ""
     }
   ]

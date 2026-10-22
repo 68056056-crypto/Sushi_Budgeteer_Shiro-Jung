@@ -1,7 +1,6 @@
 .env
 __pycache__/
 *.pyc
-faiss_index/
 .venv/
 .env.*
 !.env.example
@@ -21,3 +20,9 @@ docs/
 *.pptx
 /presentation-report*.html
 update_repo_v4.ps1
+
+# Generated outputs and local Streamlit credentials
+.streamlit/secrets.toml
+artifacts/generated/
+artifacts/report.html
+*.pdf

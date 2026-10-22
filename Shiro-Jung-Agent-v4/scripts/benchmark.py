@@ -134,7 +134,7 @@ def run_benchmark(random_seeds=100):
 
 def main():
     parser=argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--output',type=Path,default=ROOT/'artifacts'/'benchmark-production.json')
+    parser.add_argument('--output',type=Path,default=ROOT/'artifacts'/'benchmark.json')
     parser.add_argument('--seeds',type=int,default=100,choices=range(1,1001))
     args=parser.parse_args()
     report=run_benchmark(args.seeds)

@@ -1,0 +1,11 @@
+# Secrets and generated local files; never publish presentation deliverables.
+.env
+.env.*
+!.env.example
+.streamlit/secrets.toml
+__pycache__/
+*.pyc
+*.pptx
+*.docx
+*.pdf
+*.zip

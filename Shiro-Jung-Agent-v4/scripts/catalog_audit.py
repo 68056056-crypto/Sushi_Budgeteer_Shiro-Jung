@@ -13,7 +13,7 @@ from sushi_budgeteer.database import records, catalog_revision
 
 def main():
     parser=argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--output',type=Path,default=ROOT/'artifacts'/'review-round2-followup'/'catalog-audit.json')
+    parser.add_argument('--output',type=Path,default=ROOT/'artifacts'/'catalog-audit.json')
     parser.add_argument('--checklist',type=Path)
     args=parser.parse_args()
     rows=records()
