@@ -1,8 +1,36 @@
-# 🍣 Shiro-Jung 4.0 — AI Agent + MCP + SQLite + OPA
+# 🍣 Shiro-Jung 4.1 — AI Agent + MCP + SQLite + OPA
 
 ผู้ช่วยจัดชุดซูชิจาก **ฐานข้อมูล SQLite ที่นำเข้าจาก CSV จริง** มีเว็บ Streamlit และ CLI โดย Agent เลือก MCP tools อ่านผล แล้วเลือกทำต่อภายในวงจรที่จำกัดจำนวนรอบ คำแนะนำชุดอาหารจะถูกแสดงเฉพาะหลังผ่าน Python policy validator และตรวจฐานข้อมูลซ้ำก่อนตอบ
 
 > **ข้อมูลเพื่อการศึกษา:** 42 เมนูที่แนบ (รวมน้ำเปล่า 20 บาท ราคาจากผู้ใช้) ยังไม่ได้ตรวจยืนยันราคาปัจจุบันหรือ allergen รายเมนูกับร้าน ไม่รับประกันส่วนผสมและการปนเปื้อนจริง ผู้แพ้อาหารต้องตรวจสอบกับพนักงานร้านโดยตรง
+
+## แก้ไขตามผลประเมินรอบ 1 — 22 ตุลาคม 2569
+
+| ข้อเสนอแนะ | สิ่งที่แก้และหลักฐาน |
+|---|---|
+| เส้นทางจัดชุดบนเว็บข้าม LLM | เอาทางลัด `_replan → build_set` ออก; หลังยืนยันและเมื่อปรับชุดใช้ `bind_tools` จริง โดย state ยังล็อกงบ/แพ้/ข้อห้าม; trace แสดง `route=model_selected` หรือ `fallback=after_stall` แยกกัน |
+| สูตรคะแนนสไลด์ไม่ตรงโค้ด | อธิบายคะแนนรายเมนูกับ objective ของทั้งชุดแยกกัน; ราคาเป็นช่วงราคา และ +2 ของหมวดที่ไม่ใช่ปลาดิบเป็น heuristic เดิม ไม่ใช่ category coverage |
+| “ไม่กินหมู/ดิบ” จับ fuzzy ผิด | เพิ่ม `dietary_tags` / `dietary_status`; ข้อห้ามที่รู้จักใช้ exact tag ส่วนชื่อเมนูอื่นใช้ literal match; ไม่ใช้ edit distance ใน hard exclusion |
+| ชื่อคอลัมน์ชวนเข้าใจผิด / S007 ผิดกลุ่ม | เปลี่ยนเป็น `allergen_tags` พร้อมรองรับ CSV/SQLite เดิม; อูนิเป็น echinoderm; ปลาไหลย่าง/หมึกต้มอยู่หมวดปรุงสุก |
+| OPA อาศัย boolean จาก Python | input schema 2 ส่ง raw tag arrays และสถานะให้ Rego เทียบเอง ทดสอบ conflict แม้ flags จาก Python เป็น false; ยัง deny เมื่อ Python แจ้งปัญหาด้วย |
+| Benchmark ใช้คนละ config | `optimization_config.py` ใช้ร่วมกับ production; รายงาน objective=budget, diversity=true, spend_ratio=0.8, max60, repeat3 ใน `artifacts/benchmark-production.json` |
+
+หลักฐานล่าสุด: [ผลตรวจ](artifacts/review-round1/validation-report.json), [offline 40 กรณี](artifacts/review-round1-offline-evaluation.json), [benchmark production](artifacts/benchmark-production.json), [สถานะ live](artifacts/review-round1-live-status.json) ส่วน artifact ชื่อเดิมนอกกลุ่มนี้เป็นหลักฐานรุ่นก่อน อย่านำตัวเลขมารวมกับรายงานรอบนี้
+
+**สิ่งที่ยังไม่เสร็จและไม่อ้างว่าผ่าน:** ข้อมูลร้าน 42 เมนูยัง unknown/unverified; ไม่มี API key จึงยังไม่ได้รัน live LLM 3 sessions; ยังไม่มี persistence ข้าม session, การรับประกันปริมาณต่อคน, ภาษี/ค่าบริการ หรือการ reuse MCP subprocess ขั้นตอน 80/20 เป็นความต้องการผลิตภัณฑ์จากผู้ใช้ ไม่ใช่ทฤษฎีว่าคุ้มที่สุดและไม่ใช้แทนการประเมินความพึงพอใจ
+
+ไฟล์นำเสนอ v8 และเอกสารตอบข้อประเมินส่งให้ผู้ใช้แยกจาก repository **ไม่ขึ้น GitHub**
+
+## Dataset ตามทะเบียนสารก่อภูมิแพ้ 10 กลุ่ม
+
+นำ CSV พร้อม mapping audit ที่ผู้ใช้ส่งวันที่22ตุลาคม2569มารวมกับชุดข้อมูลเดิม เก็บบันทึกและคำแนะนำเดิมไว้ตรวจย้อนหลัง และเพิ่มคอลัมน์กลุ่มครบ10: **ธัญพืชมีกลูเตน, สัตว์น้ำเปลือกแข็ง, ไข่, ปลา, ถั่วลิสง, ถั่วเหลือง, นมรวมแลคโตส, ถั่วเปลือกแข็ง, ซัลไฟต์ตั้งแต่10มก./กก., หอยและหมึก** ดู [`artifacts/thai-allergen-groups.json`](artifacts/thai-allergen-groups.json) และ `sushi_budgeteer/regulatory_allergens.py`
+
+- คอลัมน์ `thai_allergen_<tag>` ทั้ง10กลุ่มเป็น `possible` หากแท็กเดิมรายงานไว้ หรือ `unknown` เมื่อยังไม่มีข้อมูล **ไม่มีค่า absent และช่องว่างไม่หมายถึงปลอดสาร**
+- `thai_allergen_10_unverified` เป็นชื่อกลุ่มไทยที่คำนวณจาก `allergen_tags`; งา/หมู/seafood/echinoderm เป็นข้อจำกัดเพิ่มเติมนอกทะเบียน10กลุ่ม ไม่ตัดออกจากระบบเพียงเพราะไม่อยู่ในทะเบียน
+- เก็บ `mapping_audit_note` และ `recommended_thai_allergen_10_unverified` จากไฟล์ผู้ใช้เพื่อ audit เท่านั้น ไม่ใช้คำแนะนำจากชื่อเมนูลบแท็กซอสหรือเครื่องปรุง เช่น soy/gluten ของปลาไหล และ soy ของวาราบิโมจิ
+- เพิ่ม milk แบบ possible ให้ S014 ที่ชื่อระบุเนย และ fish ให้ R001 ที่ระบุปูอัด โดยยังคงแท็กเดิม ทั้งสองกรณี **ยังไม่ยืนยันสูตรจากร้าน**
+- อ้างประกาศกระทรวงสาธารณสุข450พ.ศ.2567ข้อ5(6)ตามไฟล์ผู้ใช้ เป็นเกณฑ์จัดกลุ่มฉลากอาหารบรรจุภัณฑ์ ไม่ใช่หลักฐานส่วนผสมรายเมนูของร้าน
+- ทะเบียนสำหรับอาหารบรรจุภัณฑ์ไม่ใช่หลักฐานส่วนผสมรายเมนูของร้าน โดยเฉพาะซัลไฟต์ยังไม่มีค่าความเข้มข้น ข้อมูลทุกเมนูจึงยังมี `allergen_status=unknown` และ strict ไม่ลดมาตรฐานเอง
 
 ## เงื่อนไขการจัดชุดปัจจุบันสำหรับการประเมิน
 
@@ -169,7 +197,7 @@ Agent เรียก tools เหล่านี้ผ่าน MCP จริ�
 
 **ข้อกำหนดที่ Python บังคับ:** build ต้องมีข้อมูลครบ, ใช้ constraints จาก state ที่สกัดจากผู้ใช้แทน argument ที่ model อาจเปลี่ยนเอง, verify ต้องอ้าง candidate ของ turn นี้ และต้อง verify ซ้ำตอนจะส่งผลออก หากไม่ผ่านจะไม่แสดงชุดอาหาร ไม่ปล่อยข้อความคาดเดาของ LLM เป็นคำแนะนำ และไม่ stream ข้อความก่อนตรวจเสร็จ
 
-วงจรจำกัด 10 model rounds และไม่เกิน 8 tool calls ต่อ round มี timeout ต่อการเรียก MCP และขอบเขต DP หากเกิดข้อผิดพลาดจะหยุด/ถามเพิ่ม การสกัดภาษาธรรมชาติยังขึ้นกับความถูกต้องของ LLM จึงแสดง state ใน sidebar ให้ผู้ใช้ตรวจ และยังต้องทดสอบ provider จริงก่อนใช้จริง
+วงจรจำกัด 10 model rounds และไม่เกิน 8 tool calls ต่อ round มี timeout ต่อการเรียก MCP และขอบเขต DP หากเกิดข้อผิดพลาดจะหยุด/ถามเพิ่ม การสกัดภาษาธรรมชาติยังขึ้นกับความถูกต้องของ LLM จึงสรุปข้อมูลและให้ผู้ใช้ยืนยันก่อนจัดชุด และยังต้องทดสอบ provider จริงก่อนใช้จริง
 
 ## เงื่อนไขและตัวอย่างการใช้งาน
 
@@ -214,7 +242,7 @@ State เก็บงบและข้อจำกัดข้าม turn พ�
 score = preference + price_score + category_bonus - dislike_penalty (ต่ำสุด 0)
 preference: 2.5 ต่อ preferred keyword ที่ตรง สูงสุด 5
 price_score: ราคา 35–80 = 3, ราคาอื่น <=100 = 2, ราคา >100 = 1
-category_bonus: ไม่ใช่หมวดปลาดิบ = 2, ปลาดิบ = 0
+category_weight (legacy, ไม่ใช่ category coverage): ไม่ใช่หมวดปลาดิบ = 2, ปลาดิบ = 0
 penalty: ตรง dislike = 3
 ```
 
@@ -224,7 +252,11 @@ Validator คำนวณราคา × จำนวนจาก catalog จร
 
 การเรียก library `dp_knapsack` แบบเดิมยังมี `objective="score"` เป็นค่าเริ่มต้นเพื่อคง baseline สำหรับการวิเคราะห์ ส่วน `build_optimal_set` ใช้ `objective="budget", diversity=True` และหน้าเว็บส่ง `spend_ratio=0.8` ทุกครั้ง MCP/direct tools มีค่าเริ่มต้น `spend_ratio=1.0` สำหรับผู้เรียกเดิม จึงต้องระบุ 0.8 เมื่อต้องการจำลองเงื่อนไขเว็บ
 
-Benchmark ที่บันทึกไว้เป็น **baseline เดิมแบบ score-first ไม่ใช่ผลประเมินเงื่อนไขสำรองงบ 80% เวอร์ชันนี้** เปรียบเทียบ **DP, greedy density, greedy score, random** บนข้อจำกัดเดียวกัน 12 สถานการณ์ และ random 100 seeds ต่อสถานการณ์ รวม 1,200 runs รายงาน score, spend, budget utilization, diversity และ runtime แยกกัน ค่าเฉลี่ย DP score = **33.333** และ random mean = **21.4825** ในชุดนี้ ไม่ใช่ผลคุณภาพ LLM ความพึงพอใจ หรือข้อพิสูจน์กับข้อมูลร้านจริง ดู `python scripts/benchmark.py` และ artifact รายกรณี
+Benchmark ล่าสุดใช้ค่าเดียวกับ production: **objective=budget, diversity=true, spend_ratio=0.8, max_items=60, repeat_cap=3** เปรียบเทียบ DP, greedy density, greedy score และ Random บน safe pool เดียวกัน 12 สถานการณ์ (งบ 300/1,000/3,000/6,000 × 3 เงื่อนไข) และ Random 100 seeds ต่อสถานการณ์ รวม 1,200 runs รายงานใน `artifacts/benchmark-production.json`
+
+DP ใช้งบเฉลี่ย **76.25% ของงบเต็ม / 95.3125% ของวงเงินอาหาร**, เมนูไม่ซ้ำเฉลี่ย 16.5 และ 7.42 หมวด คะแนนลดซ้ำเฉลี่ย 110.77; greedy density ได้คะแนน 117.44 และ 7.92 หมวด แต่ใช้งบเต็ม 72.06% จึง **ไม่อ้างว่า DP ชนะทุกตัวชี้วัด** ตรวจ dominance ตาม objective แบบ lexicographic เดียวกับ production ไม่ใช่ raw score; ไม่มี dominance failure และ feasibility failure ในชุดนี้ การใช้เงินอาจต่ำกว่าเป้าเมื่อเพดานจำนวน/ข้อจำกัดทำให้ทำไม่ได้ เวลา benchmark เป็น algorithm time ไม่ใช่เวลาตอบแชต
+
+`artifacts/benchmark.json` และตัวเลข DP 33.333 / Random 21.4825 เป็น **baseline รุ่นก่อนแบบ score-first** เท่านั้น ไม่ใช่ผล production รอบนี้ และไม่ใช่หลักฐานคุณภาพ LLM ความพึงพอใจหรือข้อมูลร้าน
 
 ## ทดสอบและ artifacts
 
@@ -242,15 +274,15 @@ python scripts/build_report.py
 
 ผลตรวจในชุดนี้:
 
-- Regression/integration **101 tests** รวม DP เทียบ exhaustive search 35 fixtures, ทศนิยม, tampering, session isolation, unknown allergen, strict/simulation, DB เปลี่ยน, Agent gate และ Streamlit page
-- OPA/Rego **20 tests** ตรวจ allow/deny แยกจาก Python
+- Regression/integration **121 tests** รวม DP เทียบ exhaustive search 35 fixtures, ทศนิยม, tampering, session isolation, unknown allergen, strict/simulation, DB เปลี่ยน, Agent gate และ Streamlit page
+- OPA/Rego **24 tests** ตรวจ allow/deny แยกจาก Python
 - Evaluation **40 กรณี** ผ่าน MCP/SQLite/OPA จริง โดยไม่เรียก LLM; แยกจาก regression tests
-- Legacy smoke **61 checks** ใน simulation mode
+- Smoke **61 checks ต่อโหมด** ผ่านทั้ง strict และ simulation
 - MCP ทดสอบ subprocess จริง และเปลี่ยนราคาใน SQLite แล้วอ่านผ่าน MCP เพื่อพิสูจน์การดึงข้อมูลจริง
 - ติดตั้งจาก lockfile พร้อมตรวจ hashes ใน venv ใหม่บน Linux/Python 3.12 ผ่าน
 - Agent tests ใช้ **scripted fake model + MCP/SQLite จริง** ยังไม่ได้เรียก OpenAI จริงเพราะไม่มี API key
 
-Artifacts: `artifacts/validation-report.json`, `artifacts/opa-tests.json`, `artifacts/offline-evaluation.json`, `artifacts/live-evaluation.json`, `artifacts/live-sessions.json`, `artifacts/demo-traces.json`, `artifacts/benchmark.json` และ `artifacts/presentation-report.html` ซึ่งเปิดเป็นไฟล์ HTML บนเครื่องเพื่อดูตาราง/กราฟและกรองผลได้
+Artifacts: `artifacts/validation-report.json`, `artifacts/opa-tests.json`, `artifacts/offline-evaluation.json`, `artifacts/live-evaluation.json`, `artifacts/live-sessions.json`, `artifacts/demo-traces.json`, `artifacts/benchmark.json` และ `artifacts/review-round1-report.html` ซึ่งเปิดเป็นไฟล์ HTML บนเครื่องเพื่อดูตาราง/กราฟและกรองผลได้
 
 Trace ระบุ model source, session/turn ID, tools ที่เลือก, arguments, observation status, OPA decision, latency และ token counts จาก provider โดยไม่บันทึก prompt/chain-of-thought/API key ผล `scripted` ไม่ใช่หลักฐาน LLM จริง หาก provider ไม่รายงาน usage จะระบุว่าไม่ครบและไม่ตีค่าใช้จ่ายเป็นศูนย์ Cost ใน live evaluation คำนวณเมื่อผู้ใช้ระบุ rate ที่ต้องการเองเท่านั้น เป็นประมาณการที่ยังไม่แยก cached token discounts
 
@@ -278,7 +310,7 @@ Trace ระบุ model source, session/turn ID, tools ที่เลือก
 
 - [เอกสาร P450.pdf จากกองอาหาร อย.](https://food.fda.moph.go.th/media.php?id=654869394207416320&name=P450.pdf) — แหล่งที่ผู้ใช้ให้สำหรับตรวจเกณฑ์ allergen; ไม่ใช่หลักฐานส่วนผสมของเมนูร้าน
 
-การเข้าถึง PDF จาก cloud ได้ HTTP 403 ในการตรวจครั้งก่อน จึงยังไม่รับรองเนื้อหา PDF ส่วนราคาใน dataset ยังไม่ยืนยันกับร้าน และไม่มีการสร้าง tag จากการเดาชื่ออาหาร แยก **เอกสารเกณฑ์ → vocabulary** จาก **หลักฐานร้านรายเมนู → allergen_status** อย่างชัดเจน ควรอ่านฉบับเต็มพร้อมฉบับแก้ไขก่อนอ้างขอบเขตกฎหมาย
+ราคาและสูตรใน dataset ยังไม่ยืนยันกับร้าน แยก **เอกสารเกณฑ์ → vocabulary** จาก **หลักฐานร้านรายเมนู → allergen_status** อย่างชัดเจน
 
 ## Harness, OPA และงานนำเสนอ
 

@@ -24,6 +24,8 @@ from .extraction import EXTRACT_PROMPT, _sanitize_extraction, contextual_answer,
 from .state import BudgeteerState
 from .presentation import render_menu, ALLERGY_WARNING, MENU_NOTICE, CLOSING_MESSAGE
 from .database import cents
+from .dietary import hard_excluded
+from .optimization_config import INITIAL_SPEND_RATIO
 from .telemetry import redact
 
 ROOT=Path(__file__).resolve().parents[1]
@@ -132,6 +134,8 @@ class BudgeteerAgent:
 
     def _record_usage(self,response,phase):
         self.last_run['model_calls']=self.last_run.get('model_calls',0)+1
+        phases=self.last_run.setdefault('model_calls_by_phase',{})
+        phases[phase]=phases.get(phase,0)+1
         usage=getattr(response,'usage_metadata',None)
         self.last_run.setdefault('usage',{'input_tokens':0,'output_tokens':0,'total_tokens':0})
         if usage:
@@ -247,7 +251,7 @@ class BudgeteerAgent:
           drink_quantities=s.drink_quantities or None,
           drinks_separate_from_budget=s.drinks_budget_mode=='separate',include_dessert=s.wants_dessert,
           dessert_selection=s.dessert_selection,dessert_quantity=s.dessert_quantity,
-          spend_ratio=0.8 if self.consumer_flow else 1.0)
+          spend_ratio=INITIAL_SPEND_RATIO if self.consumer_flow else 1.0)
 
     @staticmethod
     def render_result(result):
@@ -270,10 +274,10 @@ class BudgeteerAgent:
         if allergens-KNOWN_ALLERGENS:
             return []
         if 'seafood' in allergens:
-            allergens|={'fish','crustacean','molluscs'}
+            allergens|={'fish','crustacean','molluscs','echinoderm'}
         return [row for row in records() if row['category']==category
-                and not allergens & parse_allergen_tags(row['allergens_verified'])
-                and not matches_any_keyword(row,self.state.hard_exclude_keywords)
+                and not allergens & parse_allergen_tags(row['allergen_tags'])
+                and not hard_excluded(row,self.state.hard_exclude_keywords)
                 and not (allergens and self.data_mode=='strict' and row.get('allergen_status')!='confirmed')]
 
     def open_extras(self, category):
@@ -632,6 +636,8 @@ class BudgeteerAgent:
         messages=[SystemMessage(content=SYSTEM_PROMPT+'\nstate='+json.dumps(state,ensure_ascii=False)),
                   *[HumanMessage(content=x['content']) if x['role']=='user' else AIMessage(content=x['content'])
                     for x in self.state.conversation[-12:]]]
+        if self._replan:
+            messages.append(SystemMessage(content='ผู้ใช้ยืนยันข้อมูลหรือขอปรับชุดแล้ว เลือกเครื่องมือที่เหมาะสมจาก state ปัจจุบัน หากค้นหาก่อนให้จัดชุดต่อด้วย build_set และ verify_set ห้ามถามข้อมูลที่มีแล้วซ้ำ'))
         env={k:v for k,v in os.environ.items() if k in {'SUSHI_DB_PATH','SUSHI_MENU_CSV_PATH','SUSHI_DATA_MODE','SUSHI_OPA_BINARY'}}
         env['SUSHI_DATA_MODE']=self.data_mode
         params=StdioServerParameters(command=sys.executable,args=[str(ROOT/'mcp_server.py')],cwd=str(ROOT),env=env)
@@ -640,13 +646,6 @@ class BudgeteerAgent:
             async with ClientSession(r,w) as session:
                 await session.initialize()
                 available=[t for t in (await session.list_tools()).tools if t.name!='alternative_set']
-                if self._replan and not self.missing_fields() and not unclear:
-                    built=await session.call_tool('build_set',self.build_arguments())
-                    payload=json.loads(built.content[0].text)
-                    self.last_trace.append({'tool':'build_set','status':payload.get('status'),'route':'followup'})
-                    if built.isError or payload.get('status')!='candidate':
-                        return self._friendly_issues(payload.get('issues',[]))
-                    return await self._finish_options(session,payload['result_id'])
                 names={t.name for t in available}
                 schemas=[{'type':'function','function':{'name':t.name,'description':t.description or '',
                           'parameters':t.inputSchema}} for t in available]
@@ -660,7 +659,7 @@ class BudgeteerAgent:
                         # Never release unverified model-generated menu/price prose.
                         if verified:
                             return await self._finish_options(session,candidate)
-                        if last_display: return last_display
+                        if last_display and not self._replan: return last_display
                         if issues: return self._friendly_issues(issues)
                         missing=self.missing_fields()
                         if nudged and not missing and not unclear and not attempted_build:
@@ -735,7 +734,7 @@ class BudgeteerAgent:
                             elif name=='get_menu_item':
                                 x=payload.get('item')
                                 last_display=(f"{x['name_th']} — {x['price_baht']:.2f} บาท\n"+MENU_NOTICE) if x else 'ยังไม่พบเมนูนี้ครับ ลองระบุชื่อเมนูอีกครั้งได้เลย'
-                            self.last_trace.append({'step':step,'tool':name,'arguments':args,
+                            self.last_trace.append({'step':step,'tool':name,'arguments':args,'route':'model_selected',
                                   'status':payload.get('status'),'passed':payload.get('passed'),
                                   'result_id':payload.get('result_id'),'issues':payload.get('issues',[]),
                                   'policy_decision':payload.get('policy_decision'),
@@ -769,8 +768,8 @@ class BudgeteerAgent:
             except ValueError: unknown.append(str(name))
         return unknown,available
 
-    _ALLERGEN_TH={'fish':'ปลา','crustacean':'สัตว์น้ำมีเปลือก (กุ้ง/ปู)','molluscs':'หอย/ปลาหมึก','egg':'ไข่',
-                  'milk':'นม','gluten':'กลูเตน/แป้งสาลี','soy':'ถั่วเหลือง','sesame':'งา','pork':'หมู'}
+    _ALLERGEN_TH={'echinoderm':'หอยเม่น/อูนิ','fish':'ปลา','crustacean':'สัตว์น้ำมีเปลือก (กุ้ง/ปู)','molluscs':'หอย/ปลาหมึก','egg':'ไข่',
+                  'milk':'นม','peanut':'ถั่วลิสง','tree_nuts':'ถั่วเปลือกแข็ง','sulphites':'ซัลไฟต์','gluten':'กลูเตน/แป้งสาลี','soy':'ถั่วเหลือง','sesame':'งา','pork':'หมู'}
 
     def _friendly_issues(self, issues):
         issues=[str(i) for i in (issues or [])]

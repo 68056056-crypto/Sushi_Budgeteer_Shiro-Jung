@@ -1,11 +1,15 @@
 package shiro
 import rego.v1
 
-policy_version := "shiro-4.0"
+policy_version := "shiro-4.1"
 default allow := false
 
 valid_input if {
-    input.schema_version == 1
+    input.schema_version == 2
+    is_array(input.user_allergens)
+    every tag in input.user_allergens { is_string(tag) }
+    is_array(input.excluded_dietary_tags)
+    every tag in input.excluded_dietary_tags { is_string(tag) }
     valid_checkout_shape
     is_array(input.lines)
     count(input.lines) > 0
@@ -33,6 +37,12 @@ valid_checkout_shape if {
 }
 
 valid_line(line) if {
+    is_array(line.allergen_tags)
+    every tag in line.allergen_tags { is_string(tag) }
+    is_string(line.allergen_status)
+    is_array(line.dietary_tags)
+    every tag in line.dietary_tags { is_string(tag) }
+    is_string(line.dietary_status)
     is_number(line.quantity)
     is_number(line.unit_cents)
     is_number(line.reported_unit_cents)
@@ -73,9 +83,9 @@ deny contains "hard_exclusion" if { some line in input.lines; line.hard_excluded
 deny contains "only_food_constraint" if { some line in input.lines; line.food; not line.only_allowed }
 deny contains "unknown_allergen_evidence" if {
     input.data_mode == "strict"
-    input.allergy_requested
+    count(input.user_allergens) > 0
     some line in input.lines
-    not line.evidence_confirmed
+    line.allergen_status != "confirmed"
 }
 deny contains "subtotal_mismatch" if {
     some line in input.lines
@@ -96,3 +106,25 @@ deny contains "count_mismatch" if {
 }
 allow if { valid_input; count(deny) == 0 }
 decision := {"allow": allow, "deny_reasons": sort(deny), "policy_version": policy_version}
+
+# Independent intersection of catalog tags and user constraints, even if Python flags are false.
+requested_allergens contains tag if { tag := input.user_allergens[_] }
+requested_allergens contains tag if {
+    "seafood" in input.user_allergens
+    tag := {"fish", "crustacean", "molluscs", "echinoderm"}[_]
+}
+deny contains "allergen_conflict" if {
+    some line in input.lines
+    some tag in line.allergen_tags
+    tag in requested_allergens
+}
+deny contains "hard_exclusion" if {
+    some line in input.lines
+    some tag in line.dietary_tags
+    tag in input.excluded_dietary_tags
+}
+deny contains "unknown_dietary_evidence" if {
+    count(input.excluded_dietary_tags) > 0
+    some line in input.lines
+    line.dietary_status != "reviewed_dataset"
+}

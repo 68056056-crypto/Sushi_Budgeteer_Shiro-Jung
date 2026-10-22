@@ -12,6 +12,8 @@ item list as arguments.
 """
 
 from __future__ import annotations
+from .dietary import hard_excluded
+from .optimization_config import FOOD_OBJECTIVE, DIVERSITY, MAX_REPEAT
 
 import json
 from uuid import uuid4
@@ -47,7 +49,7 @@ def _run_filter(
     """Split the menu into safe_items / removed_items / dislike_items.
 
     Hard constraints — never enter scoring or DP:
-    - allergens: medical allergy tags, matched ONLY against allergens_verified.
+    - allergens: medical allergy tags, matched ONLY against allergen_tags.
     - hard_exclude_keywords: free-text dietary exclusions that are NOT medical
       allergens (e.g. "ของดิบ" raw food, "หมู" pork if not wanted at all) —
       matched against name/keywords/category, same as dislikes but hard.
@@ -61,7 +63,7 @@ def _run_filter(
     """
     allergens_norm = {str(a).strip().lower() for a in (allergens or []) if str(a).strip()}
     if 'seafood' in allergens_norm:
-        allergens_norm |= {'fish','crustacean','molluscs'}
+        allergens_norm |= {'fish','crustacean','molluscs','echinoderm'}
     dislikes = dislikes or []
     hard_exclude_keywords = hard_exclude_keywords or []
     must_include_keywords = must_include_keywords or []
@@ -71,14 +73,14 @@ def _run_filter(
     dislike_items: List[Dict[str, Any]] = []
 
     for row in menu:
-        row_allergens = parse_allergen_tags(row.get("allergens_verified"))
+        row_allergens = parse_allergen_tags(row.get("allergen_tags"))
         if allergens_norm and data_mode() == 'strict' and row.get('allergen_status') != 'confirmed':
             removed_items.append(row)
             continue
         if allergens_norm & row_allergens:
             removed_items.append(row)
             continue
-        if hard_exclude_keywords and matches_any_keyword(row, hard_exclude_keywords):
+        if hard_exclude_keywords and hard_excluded(row, hard_exclude_keywords):
             removed_items.append(row)
             continue
         if must_include_keywords and not matches_any_keyword(row, must_include_keywords):
@@ -98,7 +100,7 @@ def _item_brief(item: Dict[str, Any]) -> Dict[str, Any]:
         "name_en": item.get("name_en"),
         "category": item.get("category"),
         "price_baht": item.get("price_baht"),
-        "allergens_verified": item.get("allergens_verified"),
+        "allergen_tags": item.get("allergen_tags"),
         "score": item.get("score"),
         "allergen_status": item.get("allergen_status", "unknown"),
         "price_status": item.get("price_status", "unverified"),
@@ -236,7 +238,7 @@ def filter_constraints(
     """กรองเมนูตามสารก่อภูมิแพ้ (allergens) และสิ่งที่ผู้ใช้ไม่ชอบ (dislikes).
 
     allergens ที่รู้จัก: fish, crustacean, molluscs, egg, milk, gluten, soy,
-    sesame, pork — เมนูที่มีสารเหล่านี้ (จากคอลัมน์ allergens_verified เท่านั้น)
+    sesame, pork — เมนูที่มีสารเหล่านี้ (จากคอลัมน์ allergen_tags เท่านั้น)
     จะถูกตัดออกโดยเด็ดขาด (hard block) ไม่ต้องอาศัยการเดาจากคำอธิบาย.
     dislikes เป็นคำสำคัญอิสระ (เช่น "หอย") ที่จะไม่ถูกตัดออก แต่คะแนนจะถูกหักภายหลัง.
     ใช้ก่อนขั้นตอน optimize เพื่อดูภาพรวมว่าเมนูใดถูกกรองออกไปบ้าง.
@@ -281,7 +283,7 @@ def build_optimal_set(
     """จัดชุดเมนูที่คุ้มค่าที่สุดภายในงบประมาณด้วย 0/1 Knapsack Dynamic Programming.
 
     พารามิเตอร์มี 4 ระดับ ห้ามใช้สลับกัน:
-    - allergens: แพ้อาหารจริง (การแพทย์) — hard block, ตรวจจาก allergens_verified เท่านั้น
+    - allergens: แพ้อาหารจริง (การแพทย์) — hard block, ตรวจจาก allergen_tags เท่านั้น
     - hard_exclude_keywords: ข้อจำกัดด้านอาหารที่ไม่ใช่การแพ้ แต่ต้อง "ตัดออกเด็ดขาด"
       เช่น "ไม่กินของดิบเลย", "ไม่แตะเนื้อหมู" — ใช้เมื่อผู้ใช้พูดชัดเจนว่าห้ามมีเลย
     - preferred_keywords: ชอบ/อยากได้ — แค่บวกคะแนน ไม่ตัดรายการอื่นออก
@@ -382,7 +384,8 @@ def build_optimal_set(
 
     food_min_items = max(1, min_items - len(fixed_items))
     food_selected = (dp_knapsack(scored_items, round(food_budget,2), max_items=food_max_items,
-                                min_items=food_min_items, objective="budget", diversity=True)
+                                min_items=food_min_items, objective=FOOD_OBJECTIVE, diversity=DIVERSITY,
+                                max_repeat_per_item=MAX_REPEAT)
                      if food_min_items <= food_max_items else [])
     selected = food_selected + fixed_items
     food_total_price = round(sum(float(it["price_baht"]) for it in food_selected), 2)

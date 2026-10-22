@@ -65,7 +65,7 @@ EXTRACT_PROMPT = """คุณคือระบบสกัดข้อมูล
   "budget_change_unclear": <true เมื่อผู้ใช้พูดถึงการเพิ่ม/ลด/เปลี่ยนงบประมาณ
     ชัดเจนแต่ "ไม่ได้บอกจำนวนเป็นตัวเลขเลย" เช่น "เพิ่มงบอีกหน่อย", "ลดงบลงหน่อย"
     (ทั้ง budget และ budget_delta จะเป็น null ในกรณีนี้) มิฉะนั้นเป็น false>,
-  "allergens": [<string จากกลุ่มนี้เท่านั้น: fish, crustacean, molluscs, egg, milk, gluten, soy, sesame, pork — ใช้เฉพาะการแพ้อาหารจริงทางการแพทย์>],
+  "allergens": [<string จากกลุ่มนี้เท่านั้น: fish, crustacean, molluscs, echinoderm, egg, milk, gluten, soy, peanut, tree_nuts, sulphites, sesame, pork, seafood — ใช้เฉพาะการแพ้อาหารจริงทางการแพทย์>],
   "dislikes": [<string keyword ที่ผู้ใช้บอกว่าไม่ค่อยชอบ/เฉยๆ — แค่ลดคะแนน ไม่ตัดออก>],
   "preferred_keywords": [<string keyword ที่ผู้ใช้บอกว่าชอบ/อยากได้ — บวกคะแนนเท่านั้น>],
   "hard_exclude_keywords": [<string คำหลักที่ "สั้นและกระชับที่สุด" ที่น่าจะปรากฏอยู่จริงในชื่อ/หมวดหมู่เมนู เมื่อผู้ใช้บอกว่า "ห้ามมีเลย"/"ไม่กินเด็ดขาด"/"งด" แบบเด็ดขาด แต่ไม่ใช่การแพ้อาหารทางการแพทย์ — ตัดคำฟุ่มเฟือยออก เช่น "ของดิบ" ให้ใช้ "ดิบ", "เนื้อหมู" ให้ใช้ "หมู", "อาหารทะเล" ให้แยกเป็น "กุ้ง","ปู","หอย","ปลา" — ตัดออกทั้งหมดเหมือน allergen>],
@@ -199,6 +199,7 @@ def contextual_answer(last_asked_field, message):
 
 
 ALLERGEN_ALIASES={
+    'echinoderm':('หอยเม่น','อูนิ'),
     'molluscs':('ปลาหมึก','หมึก','หอย'), 'crustacean':('กุ้ง','ปู'),
     'fish':('ปลา','แซลมอน'), 'egg':('ไข่',), 'milk':('นม',),
     'soy':('ถั่วเหลือง','ซีอิ๊ว'), 'gluten':('กลูเตน','แป้งสาลี'),

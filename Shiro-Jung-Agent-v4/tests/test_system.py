@@ -36,7 +36,7 @@ class CatalogTest(unittest.TestCase):
 
     def test_import_rejects_duplicate_without_losing_database(self):
         source=Path(self.tmp.name)/'bad.csv'
-        source.write_text('item_id,name_th,category,price_baht,allergens_verified\nx,a,c,1,\nx,b,c,2,\n')
+        source.write_text('item_id,name_th,category,price_baht,allergen_tags\nx,a,c,1,\nx,b,c,2,\n')
         with self.assertRaises(ValueError): import_csv(source)
         self.assertEqual(len(records()),42)
 
@@ -56,7 +56,7 @@ class CatalogTest(unittest.TestCase):
             c.execute("UPDATE menu SET allergen_status='confirmed', allergen_source_url='https://example.org/test-fixture', checked_at='2026-01-01'")
         s=MenuService();r=s.build(budget=300,allergens=['egg'])
         self.assertEqual(r['status'],'candidate')
-        self.assertFalse(any('egg' in x['allergens_verified'].split(';') for x in r['result']['selected']))
+        self.assertFalse(any('egg' in x['allergen_tags'].split(';') for x in r['result']['selected']))
         self.assertTrue(s.verify(r['result_id'])['passed'])
 
     def test_unknown_allergen_blocks_even_confirmed_catalog(self):
@@ -69,7 +69,7 @@ class CatalogTest(unittest.TestCase):
             c.execute("UPDATE menu SET allergen_status='confirmed'")
         s=MenuService();r=s.build(budget=300,allergens=['seafood'])
         self.assertEqual(r['status'],'candidate')
-        self.assertFalse(any(set(x['allergens_verified'].split(';')) & {'fish','crustacean','molluscs','seafood'} for x in r['result']['selected']))
+        self.assertFalse(any(set(x['allergen_tags'].split(';')) & {'fish','crustacean','molluscs','seafood'} for x in r['result']['selected']))
 
     def test_fixed_selection_tampering_rejected(self):
         s=MenuService();r=s.build(budget=300,drink_selection=['ชาเขียวร้อน'],drink_quantity=1)

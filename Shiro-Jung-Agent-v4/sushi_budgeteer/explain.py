@@ -14,7 +14,7 @@ def explain(result, menu):
             'selection_method':'DP: ใกล้วงเงินจัดชุดและลดคะแนนเมนูซ้ำเพื่อความหลากหลาย' if food else 'ตัวเลือกและจำนวนที่ผู้ใช้ระบุ',
             'score_components':components,'source_url':item.get('source_url',''),
             'price_status':item['price_status'],'allergen_status':item['allergen_status'],
-            'allergen_tags':item['allergens_verified'],'allergen_source_url':item.get('allergen_source_url',''),
+            'allergen_tags':item['allergen_tags'],'allergen_source_url':item.get('allergen_source_url',''),
             'checked_at':item.get('checked_at','')})
     return {'objective':'target 95–100% of usable food budget then maximize diminishing-repeat preference score and spend; otherwise maximize spend then score',
         'budget':constraints['budget'],'budget_mode':'food_only' if constraints['drinks_separate_from_budget'] else 'all_items',

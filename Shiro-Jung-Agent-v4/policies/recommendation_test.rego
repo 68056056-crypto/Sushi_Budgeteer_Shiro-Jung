@@ -2,10 +2,10 @@ package shiro_test
 import rego.v1
 import data.shiro
 
-line := {"quantity":1,"catalog_item":true,"food":true,"unit_cents":4000,
+line := {"allergen_tags":[],"allergen_status":"unknown","dietary_tags":[],"dietary_status":"reviewed_dataset","quantity":1,"catalog_item":true,"food":true,"unit_cents":4000,
     "reported_unit_cents":4000,"reported_subtotal_cents":4000,
     "allergen_blocked":false,"hard_excluded":false,"only_allowed":true,"evidence_confirmed":false}
-facts := {"schema_version":1,"lines":[line],"python_issues":[],"total_cents":4000,"food_cents":4000,
+facts := {"schema_version":2,"user_allergens":[],"excluded_dietary_tags":[],"lines":[line],"python_issues":[],"total_cents":4000,"food_cents":4000,
     "budget_cents":10000,"count":1,"food_count":1,"min_items":1,"max_items":20,
     "data_mode":"strict","separate_budget":false,"allergy_requested":false,
     "catalog_revision":"abc","result_catalog_revision":"abc"}
@@ -28,7 +28,7 @@ test_deny_allergen_independently if {
     "allergen_conflict" in result.deny_reasons
 }
 test_deny_strict_unknown_evidence if {
-    altered := object.union(facts,{"allergy_requested":true})
+    altered := object.union(facts,{"allergy_requested":true,"user_allergens":["egg"]})
     not shiro.allow with input as altered
 }
 test_simulation_still_enforces_allergen if {
@@ -92,4 +92,29 @@ test_checkout_keeps_extra_category_cap if {
 test_checkout_requires_category_counts if {
     altered := object.union(facts,{"checkout":true,"max_items":180})
     not shiro.allow with input as altered
+}
+
+test_raw_allergen_denied_when_python_flags_false if {
+    altered := object.union(facts,{"user_allergens":["egg"],"data_mode":"simulation",
+        "lines":[object.union(line,{"allergen_tags":["egg"],"allergen_blocked":false})]})
+    result := shiro.decision with input as altered
+    "allergen_conflict" in result.deny_reasons
+}
+test_seafood_expands_in_rego_to_echinoderm if {
+    altered := object.union(facts,{"user_allergens":["seafood"],"data_mode":"simulation",
+        "lines":[object.union(line,{"allergen_tags":["echinoderm"]})]})
+    result := shiro.decision with input as altered
+    "allergen_conflict" in result.deny_reasons
+}
+test_raw_dietary_denied_when_python_flags_false if {
+    altered := object.union(facts,{"excluded_dietary_tags":["raw"],
+        "lines":[object.union(line,{"dietary_tags":["raw"],"hard_excluded":false})]})
+    result := shiro.decision with input as altered
+    "hard_exclusion" in result.deny_reasons
+}
+test_raw_unknown_evidence_denied_when_boolean_claims_confirmed if {
+    altered := object.union(facts,{"user_allergens":["egg"],
+        "lines":[object.union(line,{"evidence_confirmed":true})]})
+    result := shiro.decision with input as altered
+    "unknown_allergen_evidence" in result.deny_reasons
 }

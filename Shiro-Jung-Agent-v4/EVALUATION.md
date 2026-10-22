@@ -27,7 +27,7 @@ python scripts/capture_demo.py
 python scripts/build_report.py
 ```
 
-เปิด `artifacts/presentation-report.html` ใน browser บนเครื่องได้โดยไม่พึ่ง CDN มีตารางผล 40 กรณีที่กรองผ่าน/ไม่ผ่านได้ และเลือกดูกราฟ baseline แต่ละสถานการณ์ การรัน build_report อ่านไฟล์ผลที่มีอยู่ ไม่ได้รันทดสอบเอง และไม่เติมผลที่ยังไม่มี
+เปิด `artifacts/review-round1-report.html` ใน browser บนเครื่องได้โดยไม่พึ่ง CDN มีตารางผล 40 กรณีที่กรองผ่าน/ไม่ผ่านได้ และเลือกดูกราฟ baseline แต่ละสถานการณ์ การรัน build_report อ่านไฟล์ผลที่มีอยู่ ไม่ได้รันทดสอบเอง และไม่เติมผลที่ยังไม่มี
 
 `evaluation/cases.json` เป็น gold corpus ของ seed catalog นี้ มีกรณีงบต่างกัน ความชอบ ข้อห้าม only-food จำนวนขั้นต่ำ/สูงสุด เครื่องดื่ม ของหวาน strict/simulation การแพ้ที่ไม่ทราบหลักฐาน และ invalid inputs หากเปลี่ยน catalog ต้องทบทวน gold expectations และบันทึก revision ใหม่ ห้ามเปลี่ยน expected outcome เพียงเพื่อซ่อนข้อบกพร่อง
 
@@ -88,9 +88,26 @@ OPAไม่รับรองความถูกต้องของหล�
 
 ## Benchmark ที่เทียบได้
 
-ทุก algorithm ใช้ safe candidate pool เดียวกัน ราคาเดียวกัน จำกัด20รายการ อาหารซ้ำได้3ครั้ง ไม่มีเครื่องดื่ม/ของหวานและไม่มี allergy constraint ใน benchmarkนี้ ใช้ budget100/180/300/500 × 3เงื่อนไขความชอบ/ข้อห้าม =12สถานการณ์
+ใช้ `optimization_config.py` ร่วมกับ production: objective=budget, diversity=true, initial spend_ratio=.8, max_items=60, repeat_cap=3 งบเต็ม300/1000/3000/6000 × 3 เงื่อนไข =12สถานการณ์ Random100seeds รวม1200runs ไม่มี allergy หรือน้ำ/ของหวานใน benchmark นี้ อ่าน `artifacts/benchmark-production.json` ไม่ใช้ `benchmark.json` รุ่นก่อน
 
-รายงานคะแนนตาม objective การใช้เงิน จำนวนเมนู/หมวดไม่ซ้ำ จำนวนจาน เวลา random mean/sample SD/standard error และผลตรวจ feasibility ทุก run DP exact ภายใต้ objectiveที่ระบุ ไม่ได้พิสูจน์ว่าเมนูอร่อยกว่า อิ่มกว่า หรือหลากหลายที่สุด และผล random seeds ไม่ใช่ confidence interval ของความพึงพอใจผู้ใช้
+รายงาน diminishing score ที่คำนวณใหม่ตามจำนวนซ้ำของทุกวิธี การใช้เงินจริงต่อทั้งงบเต็มและวงเงินอาหาร จำนวนเมนู/หมวด จำนวนจานตรง preference เวลา และ feasibility ไม่อ้าง raw score dominance เพราะ objective production ให้ความสำคัญกับช่วงงบก่อน หากมีชุดใช้วงเงินอาหาร≥95% จะ maximize score แล้ว spend; หากไม่มี maximize spend แล้ว score
+
+ผลเฉลี่ย DP 76.25% ของงบเต็ม /95.3125% ของวงเงินอาหาร; Greedy density มีคะแนนและความหลากหลายเฉลี่ยสูงกว่า แต่ใช้งบน้อยกว่า จึงต้องนำเสนอ tradeoff แทนการเลือกเฉพาะตัวเลขที่ DP ชนะ
+
+## หลักฐานรอบแก้ไข 1 และคำสั่งรันซ้ำ
+
+```bash
+python scripts/run_checks.py --output-dir artifacts/review-round1
+python scripts/evaluate.py --mode offline --output artifacts/review-round1-offline-evaluation.json
+python scripts/benchmark.py
+python scripts/live_sessions.py --output artifacts/review-round1-live-status.json
+```
+
+คำสั่งสุดท้ายเรียก provider จริงเมื่อมี key ที่ตั้งไว้อย่างปลอดภัย ถ้าไม่มีจะออกด้วยรหัส2และสถานะblocked_missing_credentials ไม่แทนที่ด้วยผลจำลอง สคริปต์ใช้ consumer_flow=True และยืนยัน intake ก่อนจัดชุด ครอบคลุม3sessionsใน evaluation/sessions.json เก็บทั้ง intake/confirmation run, route=model_selected และmodel_calls_by_phase เพื่อแยกการเรียกตัวสกัดออกจากการเลือก tool
+
+Regression **121 tests**, Rego **24 tests**, smoke strict **61** และsimulation **61**, offline gold **40/40** ยังไม่ใช่ผล live LLM; ดู `artifacts/review-round1/validation-report.json` การต่อวงจร consumer ที่โมเดลเลือกfilter/build/verifyและreplanทดสอบด้วยscripted modelใน test_review_round1.py พร้อม realMCP/SQLite/OPA โดยไม่อ้างว่าเป็นคุณภาพการตัดสินใจของโมเดลจริง
+
+OPA input schema2ส่งrawallergen_tags, user_allergens, dietary_tagsและstatusให้Regoเทียบเอง ตรวจขัดแย้งได้แม้Pythonflagsเป็นfalse แต่Pythonยังเป็นผู้สร้างfactsและpolicyยังdenyเมื่อpython_issuesไม่ว่าง ไม่อ้างว่าเป็นระบบอิสระโดยสมบูรณ์
 
 ## แผนสาธิตประมาณ 3 นาที
 
@@ -101,3 +118,6 @@ OPAไม่รับรองความถูกต้องของหล�
 5. **15 วินาที:** แสดง provenance unknown และข้อจำกัดที่ยังเหลืออย่างตรงไปตรงมา
 
 แนบ source code, policy+tests, corpus, measured reports และ traces ที่ระบุแหล่ง model ให้ครบตามสิ่งที่ present ไม่ควรใช้เพียงสไลด์ที่บอกว่า “มี Agent/OPA” โดยไม่มีการรันหรือผลตรวจประกอบ
+
+
+ชุดทดสอบ `test_thai_allergen_groups.py` ตรวจทะเบียน10กลุ่ม, การแยกข้อจำกัดอื่น, ไม่มีการตีunknownเป็นabsent, ไม่ลบแท็กซอสจากคำแนะนำที่อิงชื่อ, เพิ่มpossiblemilk/fishตามaudit, S007ไม่ใช่mollusc, strictบล็อกเมื่อไม่มีหลักฐานทั้ง10กลุ่ม และmigrationที่คงราคาเดิม ไฟล์อ้างอิงกฎหมายไม่ใช่ข้อมูลยืนยันร้าน

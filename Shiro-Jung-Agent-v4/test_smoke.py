@@ -37,8 +37,8 @@ def main() -> None:
     menu = optimizer.menu_records()
     check("menu has at least 40 items", len(menu) >= 40)
     check(
-        "every row has price_baht, category, allergens_verified",
-        all({"price_baht", "category", "allergens_verified"} <= row.keys() for row in menu),
+        "every row has price_baht, category, allergen_tags",
+        all({"price_baht", "category", "allergen_tags"} <= row.keys() for row in menu),
     )
 
     print("\n=== 3. score_item() ===")
@@ -117,12 +117,13 @@ def main() -> None:
     safe_items, blocked, dislike_items = tools._run_filter(menu, allergens=["crustacean"], dislikes=["หอย"])
     check("some items are blocked for crustacean allergy", len(blocked) > 0)
     check(
-        "no blocked item is missing the crustacean tag",
-        all("crustacean" in optimizer.parse_allergen_tags(row["allergens_verified"]) for row in blocked),
+        "every blocked item has allergen conflict or lacks strict evidence",
+        all("crustacean" in optimizer.parse_allergen_tags(row["allergen_tags"])
+            or (tools.data_mode()=="strict" and row["allergen_status"]!="confirmed") for row in blocked),
     )
     check(
         "no crustacean-tagged item leaks into safe_items",
-        all("crustacean" not in optimizer.parse_allergen_tags(row["allergens_verified"]) for row in safe_items),
+        all("crustacean" not in optimizer.parse_allergen_tags(row["allergen_tags"]) for row in safe_items),
     )
 
     print("\n=== 7. BudgeteerState memory ===")
@@ -170,11 +171,12 @@ def main() -> None:
     )
     build_result = json.loads(build_payload)
     check("build_optimal_set stays within budget", build_result["total_price"] <= 300)
-    check("build_optimal_set selects at least 1 item", build_result["item_count"] >= 1)
+    can_build=any(row["category"] not in {"เครื่องดื่ม","ของหวาน"} for row in safe_items)
+    check("allergy build matches availability of eligible evidence", (build_result["item_count"] >= 1)==can_build)
 
     verify_payload = tools.verify_result.invoke({"budget": 300, "allergens": ["crustacean"]})
     verify_result_data = json.loads(verify_payload)
-    check("verify_result passes for a valid build", verify_result_data["passed"] is True)
+    check("verify_result respects evidence availability", verify_result_data["passed"]==can_build)
 
     print("\n=== 8b. Drinks/dessert as a fixed allocation, not DP-optimized ===")
     group_payload = json.loads(
@@ -324,7 +326,7 @@ def main() -> None:
     check("hard_exclude selects at least 1 item", no_raw["item_count"] >= 1)
     check(
         "no selected item matches 'ดิบ' (raw) despite it being budget-efficient",
-        all(not optimizer.matches_any_keyword(item, ["ดิบ"]) for item in no_raw["selected"]),
+        all(not tools.hard_excluded(next(row for row in menu if row["item_id"]==item["item_id"]), ["ดิบ"]) for item in no_raw["selected"]),
     )
 
     print("\n=== 10b. hard_exclude_keywords — natural compound phrase 'ของดิบ' (raw food) ===")
@@ -337,14 +339,14 @@ def main() -> None:
         "'ของดิบ' (as a user would actually phrase it, not the simplified 'ดิบ') "
         "still excludes every raw item — regression test for the reported Salmon Sushi leak",
         no_raw_compound["item_count"] >= 1
-        and all(not optimizer.matches_any_keyword(item, ["ของดิบ"]) for item in no_raw_compound["selected"]),
+        and all(not tools.hard_excluded(next(row for row in menu if row["item_id"]==item["item_id"]), ["ของดิบ"]) for item in no_raw_compound["selected"]),
     )
 
     print("\n=== 11. verify_result catches a must_include/hard_exclude violation ===")
     tools.set_last_result(
         {
             "selected": [
-                {"item_id": "BAD", "name_th": "ของดิบปลอม", "allergens_verified": "", "category": "ปลาดิบ"}
+                {"item_id": "BAD", "name_th": "ของดิบปลอม", "allergen_tags": "", "category": "ปลาดิบ"}
             ],
             "total_price": 40,
             "budget": 300,

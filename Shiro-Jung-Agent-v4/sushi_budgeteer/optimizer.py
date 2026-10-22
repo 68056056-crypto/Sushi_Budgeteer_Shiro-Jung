@@ -10,9 +10,10 @@ import json
 import os
 import random
 from threading import local
-from math import gcd
+from math import gcd, isfinite
 from functools import reduce
 from .database import records, cents
+from .optimization_config import NEAR_BUDGET_PERCENT
 from typing import Any, Callable, Dict, Iterable, List, Optional, Set
 
 import pandas as pd
@@ -46,7 +47,7 @@ def menu_records(force_reload: bool = False) -> List[Dict[str, Any]]:
 # Small text-matching helpers shared by scoring / filtering / RAG
 # ----------------------------------------------------------------------
 def parse_allergen_tags(cell: Any) -> Set[str]:
-    """Split the `allergens_verified` cell ("fish;soy") into a tag set."""
+    """Split the `allergen_tags` cell ("fish;soy") into a tag set."""
     if not cell:
         return set()
     return {tag.strip().lower() for tag in str(cell).split(";") if tag.strip()}
@@ -133,12 +134,12 @@ def score_components(
     budget: Optional[float] = None,  # reserved for future budget-relative scoring
     is_disliked: bool = False,
 ) -> dict:
-    """Combine 3 dimensions: preference + price efficiency + diversity.
+    """Combine item heuristics; budget proximity is a separate set-level objective.
 
     - Preference Score (0-5): 2.5 points per matching preferred keyword.
     - Price Efficiency Score (0-3): sweet spot 35-80 THB = 3, <=100 THB = 2,
       otherwise 1.
-    - Category Diversity Bonus (0-2): +2 for any category other than raw fish
+    - Legacy category weight (0-2, NOT set-level category coverage): +2 for any category other than raw fish
       ("ปลาดิบ"), to encourage a varied set instead of an all-sashimi plate.
     - Dislike Penalty (-3): applied last, floored at 0.
     """
@@ -176,7 +177,7 @@ def score_item(row, preferred_keywords=None, budget=None, is_disliked=False):
 
 
 # ----------------------------------------------------------------------
-# 4.2.2  dp_knapsack() — 0/1 Knapsack via Dynamic Programming
+# 4.2.2  dp_knapsack() — bounded Knapsack via Dynamic Programming
 # ----------------------------------------------------------------------
 def dp_knapsack(items, budget, max_items=20, max_repeat_per_item=3, min_items=0, objective="score", diversity=False):
     """Exact bounded knapsack: score first, actual spend second; count is a DP dimension."""
@@ -207,7 +208,7 @@ def _dp_knapsack_01(items, budget, max_items=20, min_items=0, objective="score")
     states = {(0, 0): (0.0, ())}
     for i, item in enumerate(items):
         price, score = prices[i] // scale, float(item['score'])
-        if not __import__('math').isfinite(score):
+        if not isfinite(score):
             raise ValueError("score ต้องเป็นจำนวนจำกัด")
         for (count, cost), (value, path) in list(states.items()):
             if count >= max_items or cost + price > capacity:
@@ -225,7 +226,7 @@ def _dp_knapsack_01(items, budget, max_items=20, min_items=0, objective="score")
     if objective == "budget":
         # Meet a useful budget band first, then retain the original preference objective.
         # Compare integer satang against the actual budget, never a rounded/scaled target.
-        near=[entry for entry in feasible if entry[1]*scale*100 >= cap*95]
+        near=[entry for entry in feasible if entry[1]*scale*100 >= cap*NEAR_BUDGET_PERCENT]
         if near:
             _, _, path=max(near,key=lambda x:(x[0],x[1]))
         else:

@@ -111,11 +111,12 @@ def main():
     p=argparse.ArgumentParser(description=__doc__)
     p.add_argument('--mode',choices=['offline','live'],default='offline')
     p.add_argument('--limit',type=int,default=40)
+    p.add_argument('--output',type=Path)
     p.add_argument('--input-usd-per-million',type=float)
     p.add_argument('--output-usd-per-million',type=float)
     args=p.parse_args()
     if not 1<=args.limit<=40:p.error('--limit must be 1–40')
-    destination=ROOT/'artifacts'/f'{args.mode}-evaluation.json';destination.parent.mkdir(exist_ok=True)
+    destination=args.output or ROOT/'artifacts'/f'{args.mode}-evaluation.json';destination.parent.mkdir(parents=True,exist_ok=True)
     base={'created_at':datetime.now(timezone.utc).isoformat(),'mode':args.mode,'catalog_revision':catalog_revision(),
         'model_source':'live OpenAI' if args.mode=='live' else 'no model; real MCP/SQLite/OPA',
         'scope':'single-turn gold scenarios; multi-turn behavior is covered separately by regression tests'}

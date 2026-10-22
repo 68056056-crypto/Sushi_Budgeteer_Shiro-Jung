@@ -1,5 +1,6 @@
 """Deterministic policy enforcement independent of the LLM."""
 from __future__ import annotations
+from .dietary import hard_excluded, requested_tags
 import os
 from .database import cents, catalog_revision, budget_target_cents
 
@@ -51,15 +52,15 @@ def validate_result(result, menu, constraints=None, mode=None):
         else: desserts+=qty
         if cents(line.get('price_baht',-1))!=price or cents(line.get('subtotal_baht',-1))!=subtotal:
             issues.append('ราคา/ยอดต่อเมนูไม่ตรงฐานข้อมูล')
-        if line.get('name_th')!=item['name_th'] or line.get('allergens_verified')!=item['allergens_verified']:
+        if line.get('name_th')!=item['name_th'] or line.get('allergen_tags')!=item['allergen_tags']:
             issues.append('รายละเอียดเมนูไม่ตรงฐานข้อมูล')
         allergens=set(requested)
-        if 'seafood' in allergens: allergens |= {'fish','crustacean','molluscs'}
-        if allergens & parse_allergen_tags(item['allergens_verified']):
+        if 'seafood' in allergens: allergens |= {'fish','crustacean','molluscs','echinoderm'}
+        if allergens & parse_allergen_tags(item['allergen_tags']):
             issues.append(f"เมนู {item['name_th']} ขัดกับ allergen")
         if allergens and mode=='strict' and item.get('allergen_status')!='confirmed':
             issues.append(f"เมนู {item['name_th']} ยังไม่มีหลักฐาน allergen รายเมนู")
-        if matches_any_keyword(item,constraints.get('hard_exclude_keywords') or []):
+        if hard_excluded(item,constraints.get('hard_exclude_keywords') or []):
             issues.append(f"เมนู {item['name_th']} ขัดข้อห้าม")
         only=constraints.get('must_include_keywords') or []
         if is_food and only and not matches_any_keyword(item,only):
@@ -126,7 +127,7 @@ def policy_facts(result, menu, constraints, issues, mode=None):
     from .optimizer import matches_any_keyword, parse_allergen_tags
     catalog={x['item_id']:x for x in menu}
     allergens={str(x).lower().strip() for x in constraints.get('allergens',[])}
-    if 'seafood' in allergens: allergens |= {'fish','crustacean','molluscs'}
+    if 'seafood' in allergens: allergens |= {'fish','crustacean','molluscs','echinoderm'}
     lines=[]
     for line in result.get('selected',[]):
         item=catalog.get(line.get('item_id'),{})
@@ -136,11 +137,16 @@ def policy_facts(result, menu, constraints, issues, mode=None):
             'catalog_item':bool(item),'food':food,'unit_cents':cents(item.get('price_baht',0)),
             'reported_unit_cents':cents(line.get('price_baht',0)),
             'reported_subtotal_cents':cents(line.get('subtotal_baht',0)),
-            'allergen_blocked':bool(allergens & parse_allergen_tags(item.get('allergens_verified'))),
+            'allergen_tags':sorted(parse_allergen_tags(item.get('allergen_tags'))),
+            'allergen_status':item.get('allergen_status','unknown'),
+            'dietary_tags':sorted(parse_allergen_tags(item.get('dietary_tags'))),
+            'dietary_status':item.get('dietary_status','unknown'),
+            'allergen_blocked':bool(allergens & parse_allergen_tags(item.get('allergen_tags'))),
             'evidence_confirmed':item.get('allergen_status')=='confirmed',
-            'hard_excluded':matches_any_keyword(item,constraints.get('hard_exclude_keywords',[])),
+            'hard_excluded':hard_excluded(item,constraints.get('hard_exclude_keywords',[])),
             'only_allowed':not only or matches_any_keyword(item,only)})
-    return {'schema_version':1,'lines':lines,'python_issues':list(issues),
+    return {'schema_version':2,'user_allergens':sorted(set(constraints.get('allergens',[]))),
+        'excluded_dietary_tags':requested_tags(constraints.get('hard_exclude_keywords',[])),'lines':lines,'python_issues':list(issues),
         'checkout':constraints.get('checkout_food_limit')==60,
         'drinks_count':sum(line['quantity'] for line in selected_lines(result,menu,'เครื่องดื่ม')),
         'desserts_count':sum(line['quantity'] for line in selected_lines(result,menu,'ของหวาน')),

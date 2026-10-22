@@ -23,7 +23,7 @@ class OPATest(unittest.TestCase):
     def test_rego_suite(self):
         completed=subprocess.run([str(binary_path()),'test',str(ROOT/'policies')],capture_output=True,text=True)
         self.assertEqual(completed.returncode,0,completed.stderr)
-        self.assertIn('20/20',completed.stdout)
+        self.assertIn('24/24',completed.stdout)
     def test_opa_allow_is_required(self):
         s=MenuService();r=s.build(budget=300)
         self.assertTrue(s.verify(r['result_id'])['policy_decision']['allow'])

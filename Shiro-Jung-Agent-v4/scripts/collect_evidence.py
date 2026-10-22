@@ -59,9 +59,9 @@ def main() -> int:
     (ROOT / 'artifacts').mkdir(exist_ok=True)
     results['database_import'] = run('Import CSV -> SQLite', '-m', 'sushi_budgeteer.database', 'import', log='database-import.json')
     results['database_status'] = run('Database status', '-m', 'sushi_budgeteer.database', 'status', log='database-status.json')
-    results['checks'] = run('Regression + smoke + OPA tests', 'scripts/run_checks.py')
+    results['checks'] = run('Regression + smoke + OPA tests', 'scripts/run_checks.py', '--output-dir', 'artifacts/review-round1')
     results['mcp_demo'] = run('MCP client demo', 'mcp_client_demo.py', log='mcp-demo.log')
-    results['offline_eval'] = run('Offline evaluation (40 cases)', 'scripts/evaluate.py', '--mode', 'offline')
+    results['offline_eval'] = run('Offline evaluation (40 cases)', 'scripts/evaluate.py', '--mode', 'offline', '--output', 'artifacts/review-round1-offline-evaluation.json')
     results['benchmark'] = run('Benchmark DP vs greedy vs random', 'scripts/benchmark.py')
     results['demo_traces'] = run('Demo traces', 'scripts/capture_demo.py')
     has_key = bool(os.getenv('SUSHI_OPENAI_API_KEY') or os.getenv('OPENAI_API_KEY'))
@@ -73,10 +73,10 @@ def main() -> int:
         limit = '40' if args.full else '3'
         results['live_eval'] = run(f'Live evaluation (limit {limit})', 'scripts/evaluate.py', '--mode', 'live', '--limit', limit)
         if args.full:
-            results['live_sessions'] = run('Live multi-turn sessions', 'scripts/live_sessions.py')
-    results['report'] = run('Build presentation-report.html', 'scripts/build_report.py')
+            results['live_sessions'] = run('Live multi-turn sessions', 'scripts/live_sessions.py', '--output', 'artifacts/review-round1-live-status.json')
+    results['report'] = run('Build review-round1-report.html', 'scripts/build_report.py')
     print('\n' + json.dumps(results, indent=2))
-    print('\nOpen artifacts/presentation-report.html in a browser to review the evidence.')
+    print('\nOpen artifacts/review-round1-report.html in a browser to review the evidence.')
     hard_fail = any(isinstance(v, int) and v not in (0,) for k, v in results.items() if not k.startswith('live'))
     return 1 if hard_fail else 0
 

@@ -42,10 +42,10 @@ class ConsumerFlowTest(unittest.TestCase):
             self.assertNotIn(internal,answer)
         self.assertIn('\n\n**รวม ',answer)
 
-    def test_followup_salmon_keeps_memory_and_skips_model_tool_loop(self):
+    def test_followup_salmon_keeps_memory_and_uses_model_tool_loop(self):
         agent,model,_=self.recommend(dislikes=['หมึก'])
         model.extraction={'preferred_keywords':['แซลมอน'],'intent':'search'}
-        model.steps=[('search_menu',{'keyword':'เซลมอน'})]
+        model.steps=[('search_menu',{'keyword':'เซลมอน'}),('build_set',{}),('verify_current',{})]
         answer=agent.chat('อยากกินเซลมอน')
         self.assertIn('แซลมอน',answer)
         self.assertEqual(agent.state.budget,READY['budget'])
@@ -53,8 +53,9 @@ class ConsumerFlowTest(unittest.TestCase):
         self.assertEqual(agent.state.dislikes,['หมึก'])
         self.assertEqual(agent.state.drink_selection,READY['drink_selection'])
         self.assertEqual(agent.missing_fields(),[])
-        self.assertEqual(agent.last_run['model_calls'],1)
-        self.assertEqual(model.steps,[('search_menu',{'keyword':'เซลมอน'})])
+        self.assertEqual(agent.last_run['model_calls_by_phase']['tool_selection'],3)
+        self.assertEqual(model.steps,[])
+        self.assertTrue(any(step.get('route')=='model_selected' and step['tool']=='build_set' for step in agent.last_trace))
 
     def test_simulated_allergy_filters_both_options_and_survives_replan(self):
         with patch.dict(os.environ,{'SUSHI_DATA_MODE':'simulation'}):
@@ -67,7 +68,7 @@ class ConsumerFlowTest(unittest.TestCase):
             self.assertIn(ALLERGY_WARNING,answer)
             for option in agent.last_options:
                 for row in option['selected']:
-                    self.assertNotIn('crustacean',parse_allergen_tags(row['allergens_verified']))
+                    self.assertNotIn('crustacean',parse_allergen_tags(row['allergen_tags']))
 
     def test_strict_allergy_does_not_recommend_unknown_ingredients(self):
         agent,_,answer=self.recommend(allergens=['crustacean'])

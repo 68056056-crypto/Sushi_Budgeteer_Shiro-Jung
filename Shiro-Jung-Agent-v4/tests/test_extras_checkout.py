@@ -41,7 +41,7 @@ class ExtrasCheckoutTest(unittest.TestCase):
         self.assertEqual(agent.state.dessert_quantity,2)
         self.assertEqual(agent.state.budget,500)
         self.assertTrue(agent.last_options)
-        self.assertEqual(agent.last_run['model_calls'],0)
+        self.assertEqual(agent.last_run['model_calls_by_phase']['tool_selection'],2)
         agent.open_extras('เครื่องดื่ม')
         answer=agent.choose_extra('B002',1)
         self.assertIn('โค้ก',answer)
@@ -73,7 +73,7 @@ class ExtrasCheckoutTest(unittest.TestCase):
         agent.data_mode='simulation'
         safe=agent.extra_items('ของหวาน')
         self.assertTrue(safe)
-        self.assertTrue(all('milk' not in r['allergens_verified'].split(';') for r in safe))
+        self.assertTrue(all('milk' not in r['allergen_tags'].split(';') for r in safe))
         agent.extra_category='ของหวาน'
         agent.data_mode='strict'
         self.assertIn('เลือกไม่ได้',agent.choose_extra(safe[0]['item_id'],1))

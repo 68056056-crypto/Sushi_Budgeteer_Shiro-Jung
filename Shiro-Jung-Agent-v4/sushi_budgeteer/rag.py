@@ -114,7 +114,7 @@ def semantic_search_menu(
             continue
         if allergens_norm and data_mode() == 'strict' and row.get('allergen_status') != 'confirmed':
             continue
-        if allergens_norm & parse_allergen_tags(row.get("allergens_verified")):
+        if allergens_norm & parse_allergen_tags(row.get("allergen_tags")):
             continue
         item = dict(row)
         item["similarity"] = round(1.0 / (1.0 + max(0.0, float(distance))), 4)
@@ -180,7 +180,7 @@ def semantic_search_menu_tool(
                 "name_en": r.get("name_en"),
                 "category": r.get("category"),
                 "price_baht": r.get("price_baht"),
-                "allergens_verified": r.get("allergens_verified"),
+                "allergen_tags": r.get("allergen_tags"),
                 "similarity": r.get("similarity"),
             }
             for r in results
