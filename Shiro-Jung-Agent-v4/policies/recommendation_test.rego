@@ -118,3 +118,10 @@ test_raw_unknown_evidence_denied_when_boolean_claims_confirmed if {
     result := shiro.decision with input as altered
     "unknown_allergen_evidence" in result.deny_reasons
 }
+
+test_land_meat_allergy_from_raw_dietary_tags if {
+    altered := object.union(facts,{"user_allergens":["chicken"],"data_mode":"simulation",
+        "lines":[object.union(line,{"allergen_tags":[],"dietary_tags":["chicken"],"allergen_blocked":false})]})
+    result := shiro.decision with input as altered
+    "allergen_conflict" in result.deny_reasons
+}

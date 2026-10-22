@@ -12,7 +12,7 @@ item list as arguments.
 """
 
 from __future__ import annotations
-from .dietary import hard_excluded
+from .dietary import ingredient_allergens, soft_disliked, hard_excluded
 from .optimization_config import FOOD_OBJECTIVE, DIVERSITY, MAX_REPEAT
 
 import json
@@ -73,7 +73,7 @@ def _run_filter(
     dislike_items: List[Dict[str, Any]] = []
 
     for row in menu:
-        row_allergens = parse_allergen_tags(row.get("allergen_tags"))
+        row_allergens = ingredient_allergens(row)
         if allergens_norm and data_mode() == 'strict' and row.get('allergen_status') != 'confirmed':
             removed_items.append(row)
             continue
@@ -87,7 +87,7 @@ def _run_filter(
             removed_items.append(row)
             continue
         safe_items.append(row)
-        if matches_any_keyword(row, dislikes):
+        if soft_disliked(row, dislikes):
             dislike_items.append(row)
 
     return safe_items, removed_items, dislike_items

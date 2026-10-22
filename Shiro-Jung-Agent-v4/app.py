@@ -220,6 +220,13 @@ if "agent" in st.session_state:
                         {"role": "assistant", "content": answer})
                     st.rerun()
         st.caption("การเลือกชุดเป็นเพียงสรุปสำหรับแจ้งร้าน ยังไม่มีการส่งคำสั่งซื้อหรือชำระเงิน")
+    if current_agent.pending_meat_scope and not current_agent.order_closed:
+        for column,label in zip(st.columns(4),("หมู","เนื้อวัว","ไก่","สัตว์บกทั้งหมด")):
+            with column:
+                if st.button(label,key="meat_"+label):
+                    st.session_state["pending_message"]=label
+                    st.rerun()
+
     if current_agent.allergy_simulation_available and not current_agent.order_closed:
         if st.button("ดูชุดจำลองจากข้อมูลเมนู",key="allergy_simulation"):
             st.session_state["pending_message"]="ดูชุดจำลองจากข้อมูลเมนู"

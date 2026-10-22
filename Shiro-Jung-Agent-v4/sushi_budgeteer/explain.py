@@ -1,5 +1,6 @@
 """Deterministic recommendation evidence derived from the same scoring and SQLite rows."""
-from .optimizer import score_components, matches_any_keyword
+from .optimizer import score_components
+from .dietary import soft_disliked
 
 def explain(result, menu):
     constraints=result['constraints'];catalog={x['item_id']:x for x in menu}
@@ -8,7 +9,7 @@ def explain(result, menu):
         item=catalog[selected['item_id']]
         food=item['category'] not in {'เครื่องดื่ม','ของหวาน'}
         components=score_components(item,constraints.get('preferred_keywords'),
-            is_disliked=matches_any_keyword(item,constraints.get('dislikes',[]))) if food else None
+            is_disliked=soft_disliked(item,constraints.get('dislikes',[]))) if food else None
         lines.append({'item_id':item['item_id'],'name':item['name_th'],'quantity':selected['quantity'],
             'unit_price':item['price_baht'],'subtotal':selected['subtotal_baht'],
             'selection_method':'DP: ใกล้วงเงินจัดชุดและลดคะแนนเมนูซ้ำเพื่อความหลากหลาย' if food else 'ตัวเลือกและจำนวนที่ผู้ใช้ระบุ',

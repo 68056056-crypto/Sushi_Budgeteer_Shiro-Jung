@@ -1,6 +1,6 @@
-# Evaluation — Shiro-Jung 4.1.0
+# Evaluation — Shiro-Jung 4.2.0
 
-อ้างอิง implementation `6b420b7` และ artifacts ล่าสุดที่ระบุด้านล่าง ตรวจความสอดคล้องเอกสารวันที่ 22 ตุลาคม 2569 ไม่มีการสร้างผล live หรือ rerun benchmark เพื่อปรับตัวเลขในรอบเอกสารนี้
+อ้างอิง implementation รอบแก้ไข 2 และ artifacts ล่าสุดที่ระบุด้านล่าง ตรวจความสอดคล้องเอกสารวันที่ 22 ตุลาคม 2569 รัน regression, offline evaluation และ benchmark ใหม่หลังแก้โค้ด โดยไม่สร้างผล live แทนการเรียก provider
 
 ## โมเดลและวิธีทดสอบ
 
@@ -8,30 +8,30 @@
 
 | ชั้นการประเมิน | สิ่งที่รัน / ผลล่าสุด | ขอบเขต |
 |---|---|---|
-| Regression / integration | 127 tests ผ่าน | scripted model + real MCP subprocess, SQLite, OPA และ Streamlit AppTest |
-| OPA / Rego | 24/24 | ตรวจกฎแยก รวม raw-tag conflicts และ fail closed |
+| Regression / integration | 139 tests ผ่าน | scripted model + real MCP subprocess, SQLite, OPA และ Streamlit AppTest |
+| OPA / Rego | 25/25 | ตรวจกฎแยก รวม raw-tag conflicts และ fail closed |
 | Smoke | strict 61/61, simulation 61/61 | โหมด strict ต้องปฏิเสธการแพ้เมื่อ evidence ไม่พอ ไม่ลดโหมดเพื่อให้ผ่าน |
 | Offline gold | 40/40 | ไม่มีโมเดล; ทดสอบ tools/constraints บน seed catalog |
 | Production benchmark | 12 กรณี, Random 1,200 ครั้ง | objective/config เดียวกับอาหารเริ่มต้นบนเว็บ |
 | Live single-turn | ยังไม่มีผลรัน | runner ใช้ legacy Agent readiness ไม่ใช่ consumer opt-in flow |
-| Live consumer sessions | `blocked_missing_credentials`, 0 turns | runner พร้อม 3 sessions / 7 gold turns; intake อาจเพิ่ม confirmation calls |
+| Live consumer sessions | `blocked_missing_credentials`, 0 turns | runner พร้อม 5 sessions / 12 gold turns; intake อาจเพิ่ม confirmation calls |
 | Consumer allergy opt-in | 6 regression tests ผ่าน | ยังไม่มีผล live opt-in session |
 
-ผล regression ที่บันทึกไว้วันที่ 22 ตุลาคม 2569 เวลา 17:40 น. ประเทศไทย อยู่ใน `artifacts/review-round1/validation-report.json` จำนวน tests และผล scripted ไม่รับรองคุณภาพภาษาไทยของ live model หรือความปลอดภัยของสูตรร้าน
+ผล regression รอบแก้ไข 2 ดูวันเวลา `checked_at` จาก JSON (UTC; เวลาไทย UTC+7) อยู่ใน `artifacts/review-round2/validation-report.json` จำนวน tests และผล scripted ไม่รับรองคุณภาพภาษาไทยของ live model หรือความปลอดภัยของสูตรร้าน
 
 ## แหล่งหลักฐานที่ใช้
 
 | ไฟล์ | หน้าที่ |
 |---|---|
-| `artifacts/review-round1/validation-report.json` | จำนวน tests, failures/errors, Python/platform, smoke modes และสถานะ live |
-| `artifacts/review-round1/opa-tests.json` | ผล Rego 24 กรณี |
-| `artifacts/review-round1/smoke-strict.log`, `smoke-simulation.log` | ผล smoke รายโหมด |
-| `artifacts/review-round1-offline-evaluation.json` | 40 gold outcomes, catalog revision และ offline metrics |
-| `artifacts/benchmark-production.json` | config, ผลทุกวิธี, Random seeds และตัวชี้วัดรายกรณี |
-| `artifacts/review-round1-scripted-consumer-trace.json` | หลักฐานต่อวงจร consumer planning/replan ด้วย scripted model; ไม่ใช่ live |
-| `artifacts/review-round1-live-status.json` | สถานะ live consumer sessions |
+| `artifacts/review-round2/validation-report.json` | จำนวน tests, failures/errors, Python/platform, smoke modes และสถานะ live |
+| `artifacts/review-round2/opa-tests.json` | ผล Rego 25 กรณี |
+| `artifacts/review-round2/smoke-strict.log`, `smoke-simulation.log` | ผล smoke รายโหมด |
+| `artifacts/review-round2/offline-evaluation.json` | 40 gold outcomes, catalog revision และ offline metrics |
+| `artifacts/review-round2/benchmark-production.json` | config, ผลทุกวิธี, Random seeds และตัวชี้วัดรายกรณี |
+| `artifacts/review-round2/scripted-consumer-trace.json` | หลักฐานต่อวงจร consumer planning/replan ด้วย scripted model; ไม่ใช่ live |
+| `artifacts/review-round2/live-status.json` | สถานะ live consumer sessions |
 | `artifacts/live-evaluation.json` | สถานะ/ผลของ single-turn live runner เมื่อรันจริง |
-| `artifacts/review-round1-report.html` | รายงานที่สร้างจาก JSON ข้างต้น; ไม่รันทดสอบเอง |
+| `artifacts/review-round2-report.html` | รายงานที่สร้างจาก JSON ข้างต้น; ไม่รันทดสอบเอง |
 
 `artifacts/validation-report.json`, `opa-tests.json`, `offline-evaluation.json`, `live-sessions.json` และ `benchmark.json` ชื่อเดิมเป็น snapshot รุ่นก่อน อย่านำตัวเลขมารวมกับผลล่าสุดโดยไม่ตรวจวันที่ ขอบเขต และ revision หน้าแชตไม่แสดงตาราง technical evidence หรือปุ่มดาวน์โหลด trace; ใช้ backend `agent.run_report()` และสคริปต์รายงาน
 
@@ -41,13 +41,13 @@
 
 ```bash
 python scripts/install_opa.py
-python scripts/run_checks.py --output-dir artifacts/review-round1
-python scripts/evaluate.py --mode offline --output artifacts/review-round1-offline-evaluation.json
-python scripts/benchmark.py
+python scripts/run_checks.py --output-dir artifacts/review-round2
+python scripts/evaluate.py --mode offline --output artifacts/review-round2/offline-evaluation.json
+python scripts/benchmark.py --output artifacts/review-round2/benchmark-production.json
 python scripts/build_report.py
 ```
 
-เปิด `artifacts/review-round1-report.html` ใน browser เพื่อดูผลและเลือก benchmark รายสถานการณ์ การสร้าง HTML อ่าน artifacts ที่มีอยู่ ไม่อัปเดตผลทดสอบหรือเติมผลที่ยังไม่มี
+เปิด `artifacts/review-round2-report.html` ใน browser เพื่อดูผลและเลือก benchmark รายสถานการณ์ การสร้าง HTML อ่าน artifacts ที่มีอยู่ ไม่อัปเดตผลทดสอบหรือเติมผลที่ยังไม่มี
 
 อีกทางคือ `python scripts/collect_evidence.py --offline` ซึ่งรวมหลายขั้น **แต่จะ import CSV ทับ runtime catalog ด้วย** Import เป็น replace ไม่ใช่ merge หากฐานข้อมูลมีราคา/หลักฐานร้านที่ปรับเอง ให้สำรองและใช้คำสั่งแยกข้างต้นแทนเมื่อไม่ต้องการ replace catalog
 
@@ -73,7 +73,7 @@ python scripts/build_report.py
 ```bash
 python scripts/evaluate.py --mode live --limit 3
 python scripts/evaluate.py --mode live --limit 40
-python scripts/live_sessions.py --output artifacts/review-round1-live-status.json
+python scripts/live_sessions.py --scenarios evaluation/round2_sessions.json --output artifacts/review-round2/live-status.json
 python scripts/build_report.py
 ```
 
@@ -83,7 +83,9 @@ Single-turn runner ใช้ `BudgeteerAgent()` แบบ legacy และเว
 - งบ 1 บาทจัดไม่ได้ → ผู้ใช้เปลี่ยนงบเป็น 300 บาท → จัดใหม่
 - แพ้ปลาใน strict/unknown → ขอข้าม verify → ยังไม่เสนอชุด
 
-Runner 3 sessions นี้ยังไม่ได้ทดสอบการกด allergy simulation opt-in แบบ live ต้องประเมินเพิ่มแยกต่างหากก่อนอ้างว่าครอบคลุมกรณีดังกล่าว การรัน `collect_evidence.py --full` ใช้ live runners ชุดเดียวกัน ไม่เพิ่ม coverage ของ opt-in เอง
+Corpus รอบ 2 เพิ่มอีก 2 sessions: “ไม่กินเนื้อ” → เลือกสัตว์บกทั้งหมด และ “แพ้เนื้อ” → เลือกไก่ → strict block → explicit simulation opt-in รวม 5 sessions / 12 gold turns สคริปต์ยืนยัน intake อัตโนมัติเมื่อพร้อม จึงอาจมี model turns มากกว่า gold turns ตรวจ expected mode และ consent เพิ่มเพื่อจับการลด strict โดยไม่ได้เลือก
+
+`--scenarios` มีค่าเริ่มต้นเป็น `evaluation/sessions.json` รุ่นก่อน (3 sessions) ต้องระบุ `evaluation/round2_sessions.json` เพื่อครอบคลุมกรณีใหม่ ยังไม่มีผล live ของ corpus ใดใน environment นี้ มี `test_live_session_harness.py` ตรวจ orchestration ด้วย scripted Agent + real MCP และบังคับไม่ตี scripted เป็น live แม้ harness ได้ success_rate=1
 
 เมื่อไม่มี key สคริปต์เขียน `blocked_missing_credentials`, executed=0 และ exit code 2 ไม่ใช้ fake result แทน Provider/transport error ไม่นับเป็นการจัดการข้อจำกัดสำเร็จ
 
@@ -113,10 +115,17 @@ Live evaluator ตรวจผลกับ gold constraints เพื่อจ�
 
 ## OPA trust boundary และข้อจำกัด
 
-`package shiro`, policy `shiro-4.1`, input schema 2 รับ trusted catalog facts และ user constraints จาก Python แล้วเทียบ raw allergen/dietary sets เอง แม้ Python flags เป็น false ก็ตรวจ conflict ได้ แต่ Python ยังเป็นผู้สร้าง facts และ OPA ยัง deny เมื่อ `python_issues` ไม่ว่าง จึงไม่อ้างว่าทั้งสองด่านเป็นระบบอิสระโดยสมบูรณ์ OPA หาย/timeout/output ผิดจะ fail closed
+`package shiro`, policy `shiro-4.2`, input schema 2 รับ trusted catalog facts และ user constraints จาก Python แล้วเทียบ raw allergen/dietary sets เอง แม้ Python flags เป็น false ก็ตรวจ conflict ได้ แต่ Python ยังเป็นผู้สร้าง facts และ OPA ยัง deny เมื่อ `python_issues` ไม่ว่าง จึงไม่อ้างว่าทั้งสองด่านเป็นระบบอิสระโดยสมบูรณ์ OPA หาย/timeout/output ผิดจะ fail closed
 
 ข้อมูลร้าน 42 เมนูยังไม่ยืนยันราคาและส่วนผสม ไม่มี persistence/authentication, portion model, ภาษีหรือ service charge และยังเปิด MCP subprocess ต่อ turn Tests และ policy ไม่แก้ข้อมูลต้นทางที่ไม่ครบหรือรับประกันว่าการสกัดภาษาถูกทุกข้อความ
 
 ## แนวสาธิต
 
 เริ่มจาก consumer flow สั้นและเลือกชุด → เพิ่มน้ำ/ขนม → ยืนยันจบ จากนั้นสาธิต strict block และ explicit simulation opt-in พร้อมเตือนอย่างตรงไปตรงมา แสดง backend trace ที่ติดป้าย scripted/live ตามจริง และปิดด้วย benchmark ที่แสดงตัวหารงบทั้งสองแบบ หน้าแชตไม่มี OPA, คะแนน หรือ source table ดู findings และงานค้างใน [CODE_REVIEW.md](CODE_REVIEW.md)
+
+
+## ขอบเขตข้อประเมินรอบ 2
+
+`test_round2_meat_scope.py` เพิ่ม 10 กรณีสำหรับคำกว้าง/คำเฉพาะ/ปฏิเสธการแพ้, soft dislike, hard exclusion, medical meat filtering และ raw Rego conflict, รักษาการแพ้ปลาเดิม, เปลี่ยนเงื่อนไขหลังเลือกอาหาร และ UI ที่ไม่ถามงบใหม่ `test_live_session_harness.py` เพิ่ม 2 กรณี offline สำหรับสถานะไม่มี credentials และการรัน scenario meat/opt-in โดยไม่อ้าง scripted เป็น live
+
+Audit ข้อมูลจาก `scripts/catalog_audit.py` พบ allergen unknown42/42 และราคาunverified42/42 พร้อมสร้าง checklist 42 เมนูสำหรับผู้ตรวจจริง ไม่ใช่การรับรองสถานะ ข้อประเมินที่อ้าง offline40ว่าเป็น scripted ให้แยกตามโค้ด: gold40เรียกtoolsโดยไม่มี LLM ขณะที่ regressionของAgent/harnessใช้scripted model ทั้งสองประเภทไม่ใช่หลักฐาน live

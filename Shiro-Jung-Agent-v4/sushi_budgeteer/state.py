@@ -15,6 +15,7 @@ from typing import Any, Dict, List, Optional
 # Allergen tags recognised by the system. These must match the values found
 # in the `allergen_tags` column of sushiro_menu_dataset.csv.
 KNOWN_ALLERGENS = {
+    "beef", "chicken",
     "echinoderm",
     "fish",
     "crustacean",

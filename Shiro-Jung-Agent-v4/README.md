@@ -4,14 +4,26 @@
 
 > **ข้อมูลเพื่อการศึกษา:** 42 เมนูที่แนบ (รวมน้ำเปล่า 20 บาท ราคาจากผู้ใช้) ยังไม่ได้ตรวจยืนยันราคาปัจจุบันหรือ allergen รายเมนูกับร้าน ไม่รับประกันส่วนผสมและการปนเปื้อนจริง ผู้แพ้อาหารต้องตรวจสอบกับพนักงานร้านโดยตรง
 
+## สถานะระบบปัจจุบัน (package 4.2.0)
+
+| ประเด็น | สถานะและหลักฐานปัจจุบัน |
+|---|---|
+| ไม่ชอบ/ไม่กิน/แพ้ “เนื้อ” | ให้เลือกหมู วัว ไก่ หรือสัตว์บกทั้งหมดก่อน ไม่รวมปลา/ทะเลโดยอัตโนมัติ; คงความหมาย soft/hard/allergy และจำข้อมูลมื้อเดิม; `test_round2_meat_scope.py` |
+| Agent คลาสใหญ่ | แยก `intake.py`, `planning.py`, `checkout.py`; `agent.py` คุม lifecycle/routing เป็น mixins ที่ใช้ session state เดียวกัน ไม่เปลี่ยน public API |
+| คะแนน Greedy สูงกว่า DP | DP 110.77 เทียบ Greedy density 117.44; DP เหมาะที่สุดตามลำดับ objective ช่วงงบก่อนคะแนน ไม่อ้างชนะทุกตัวชี้วัด |
+| ใช้งบจริง | เฉลี่ย 76.25% ของงบเต็ม หรือ 95.3125% ของวงเงินอาหารเริ่มต้น 80%; ส่วนเพิ่มใช้เงินที่เหลือภายใต้งบเต็ม |
+| Live LLM | ยัง `live_llm_tested=false`: ไม่มี credentials ใน environment นี้; เพิ่ม corpus 5 consumer sessions รวมเลือกเนื้อ/opt-in และตรวจ runner แบบ offline โดยไม่อ้างเป็นผล live |
+| หลักฐานร้าน | allergen unknown 42/42, ราคา unverified 42/42; `scripts/catalog_audit.py` ส่งออก checklist ให้เติมหลักฐานจริง ไม่ตั้ง confirmed เอง |
+
+หลักฐานรอบนี้เก็บแยกใน `artifacts/review-round2/` ผลรอบ 1 เก็บเป็นประวัติ ไม่แก้ผลเก่าให้ดูเหมือนผลใหม่ ดู [คำตอบข้อประเมินรอบ 2](ROUND2_RESPONSE.md) สำหรับสถานะรายข้อและงานที่ต้องใช้หลักฐานภายนอก
+
 ## โมเดลและขอบเขตรุ่นปัจจุบัน
 
-เอกสารนี้ตรงกับ implementation `6b420b7`, package **4.1.0** ตรวจวันที่ 22 ตุลาคม 2569 โมเดล default คือ OpenAI **`gpt-4o-mini`** ผ่าน LangChain `ChatOpenAI` ตั้ง `temperature=0`, timeout 30 วินาที และ `max_retries=1` เปลี่ยนได้ด้วย `OPENAI_MODEL` หรือ Streamlit secrets ตาม logic ใน `app.py` ให้ตรวจชื่อที่เรียกจริงจาก `agent.run_report()['model']` ไม่อนุมานจากค่า default ว่า deployment ใช้โมเดลนั้นเสมอ
+ชื่อโครงงานคงเป็น Shiro-Jung Agent 4.0 ส่วนเอกสารนี้ตรงกับ implementation รอบแก้ไข 2, package **4.2.0** ตรวจวันที่ 22 ตุลาคม 2569 โมเดล default คือ OpenAI **`gpt-4o-mini`** ผ่าน LangChain `ChatOpenAI` ตั้ง `temperature=0`, timeout 30 วินาที และ `max_retries=1` เปลี่ยนได้ด้วย `OPENAI_MODEL` หรือ Streamlit secrets ตาม logic ใน `app.py` ให้ตรวจชื่อที่เรียกจริงจาก `agent.run_report()['model']` ไม่อนุมานจากค่า default ว่า deployment ใช้โมเดลนั้นเสมอ
 
 หน้าเว็บใช้ `consumer_flow=True`: ข้อมูลมื้อ → สรุปยืนยัน → LLM เลือก MCP tools → ตรวจผล → เลือกอาหาร → เพิ่มรายการตามต้องการ → ยืนยันจบ คำตอบสั้น การเลือกชุด และการอ่านชื่อย่อพร้อมจำนวนใช้โค้ดโดยตรง การสร้างทางเลือกที่สองและตรวจซ้ำอยู่ใน orchestration โมเดลมีหน้าที่สกัดข้อมูลและเลือก tool ส่วน DP คำนวณชุดและ validator/OPA บังคับข้อจำกัด ไม่มีการฝึกหรือ fine-tune weights ของโมเดลในโครงการนี้
 
-หลักฐานล่าสุดเป็น **127 regression tests, 24 Rego tests, smoke 61 ต่อโหมด และ offline gold 40/40** โดย Agent tests ใช้ scripted model ไม่ใช่ผล live OpenAI ดูขอบเขตที่ [CODE_REVIEW.md](CODE_REVIEW.md) และ [EVALUATION.md](EVALUATION.md)
-
+หลักฐานล่าสุดเป็น **139 regression tests, 25 Rego tests, smoke 61 ต่อโหมด และ offline gold 40/40** โดย Agent tests ใช้ scripted model ไม่ใช่ผล live OpenAI ดูขอบเขตที่ [CODE_REVIEW.md](CODE_REVIEW.md) และ [EVALUATION.md](EVALUATION.md)
 
 ## ไปต่อหลังแจ้งแพ้อาหารโดยไม่ลบการแพ้
 
@@ -23,10 +35,10 @@
 
 ## Dataset ตามทะเบียนสารก่อภูมิแพ้ 10 กลุ่ม
 
-นำ CSV พร้อม mapping audit ที่ผู้ใช้ส่งวันที่22ตุลาคม2569มารวมกับชุดข้อมูลเดิม เก็บบันทึกและคำแนะนำเดิมไว้ตรวจย้อนหลัง และเพิ่มคอลัมน์กลุ่มครบ10: **ธัญพืชมีกลูเตน, สัตว์น้ำเปลือกแข็ง, ไข่, ปลา, ถั่วลิสง, ถั่วเหลือง, นมรวมแลคโตส, ถั่วเปลือกแข็ง, ซัลไฟต์ตั้งแต่10มก./กก., หอยและหมึก** ดู [`artifacts/thai-allergen-groups.json`](artifacts/thai-allergen-groups.json) และ `sushi_budgeteer/regulatory_allergens.py`
+นำ CSV พร้อม mapping audit ที่ผู้ใช้ส่งวันที่22ตุลาคม2569มารวมกับชุดข้อมูลเดิม เก็บบันทึกและคำแนะนำเดิมไว้ตรวจย้อนหลัง และเพิ่มคอลัมน์กลุ่มครบ10: **ธัญพืชมีกลูเตน, สัตว์น้ำเปลือกแข็ง, ไข่, ปลา, ถั่วลิสง, ถั่วเหลือง, นมรวมแลคโตส, ถั่วเปลือกแข็ง, ซัลไฟต์ตั้งแต่10มก./กก., หอยและหมึก** ดู [`artifacts/review-round2/thai-allergen-groups.json`](artifacts/review-round2/thai-allergen-groups.json) และ `sushi_budgeteer/regulatory_allergens.py`
 
 - คอลัมน์ `thai_allergen_<tag>` ทั้ง10กลุ่มเป็น `possible` หากแท็กเดิมรายงานไว้ หรือ `unknown` เมื่อยังไม่มีข้อมูล **ไม่มีค่า absent และช่องว่างไม่หมายถึงปลอดสาร**
-- `thai_allergen_10_unverified` เป็นชื่อกลุ่มไทยที่คำนวณจาก `allergen_tags`; งา/หมู/seafood/echinoderm เป็นข้อจำกัดเพิ่มเติมนอกทะเบียน10กลุ่ม ไม่ตัดออกจากระบบเพียงเพราะไม่อยู่ในทะเบียน
+- `thai_allergen_10_unverified` เป็นชื่อกลุ่มไทยที่คำนวณจาก `allergen_tags`; งา/หมู/วัว/ไก่/seafood/echinoderm เป็นข้อจำกัดเพิ่มเติมนอกทะเบียน10กลุ่ม ไม่ตัดออกจากระบบเพียงเพราะไม่อยู่ในทะเบียน
 - เก็บ `mapping_audit_note` และ `recommended_thai_allergen_10_unverified` จากไฟล์ผู้ใช้เพื่อ audit เท่านั้น ไม่ใช้คำแนะนำจากชื่อเมนูลบแท็กซอสหรือเครื่องปรุง เช่น soy/gluten ของปลาไหล และ soy ของวาราบิโมจิ
 - เพิ่ม milk แบบ possible ให้ S014 ที่ชื่อระบุเนย และ fish ให้ R001 ที่ระบุปูอัด โดยยังคงแท็กเดิม ทั้งสองกรณี **ยังไม่ยืนยันสูตรจากร้าน**
 - อ้างประกาศกระทรวงสาธารณสุข450พ.ศ.2567ข้อ5(6)ตามไฟล์ผู้ใช้ เป็นเกณฑ์จัดกลุ่มฉลากอาหารบรรจุภัณฑ์ ไม่ใช่หลักฐานส่วนผสมรายเมนูของร้าน
@@ -59,7 +71,10 @@
 ## ไฟล์พร้อมใช้และขอบเขต
 
 - `app.py`: เว็บแชต แยก Agent ต่อ Streamlit session ไม่มี cache แชร์บทสนทนา
-- `sushi_budgeteer/agent.py`: model → MCP tool → observation loop พร้อม output gate
+- `sushi_budgeteer/agent.py`: lifecycle, session state และ message routing
+- `sushi_budgeteer/intake.py`: สกัดและยืนยันข้อมูล รวมการเลือกชนิดเนื้อ
+- `sushi_budgeteer/planning.py`: model → MCP tool → observation loop และ output gate
+- `sushi_budgeteer/checkout.py`: เลือกอาหาร เพิ่มน้ำ/ขนม และตรวจยอดก่อนยืนยัน
 - `mcp_server.py`: MCP stdio server อ่าน SQLite; เปิด subprocess แยกต่อ client/turn
 - `sushi_budgeteer/database.py`: validate/import CSV และอ่านฐานข้อมูล
 - `sushi_budgeteer/optimizer.py`: exact bounded DP ด้วยมิติจำนวนและหน่วยเงินสตางค์
@@ -200,6 +215,16 @@ Resources: `sushiro://menu/catalog`, `sushiro://menu/status`; prompt: `budget_op
 
 วงจรจำกัด 10 model rounds และไม่เกิน 8 tool calls ต่อ round มี timeout ต่อการเรียก MCP และขอบเขต DP หากเกิดข้อผิดพลาดจะหยุด/ถามเพิ่ม การสกัดภาษาธรรมชาติยังขึ้นกับความถูกต้องของ LLM จึงสรุปข้อมูลและให้ผู้ใช้ยืนยันก่อนจัดชุด และยังต้องทดสอบ provider จริงก่อนใช้จริง
 
+## เลือกชนิดเนื้อสัตว์บกโดยไม่เริ่มมื้อใหม่
+
+เมื่อพบคำกว้าง “ไม่ชอบเนื้อ / ไม่กินเนื้อ / แพ้เนื้อ” ระบบถามเลือก **หมู / เนื้อวัว / ไก่ / สัตว์บกทั้งหมด** เพียงขั้นเดียวก่อนสรุปยืนยัน โดยเก็บงบ จำนวนคน และเงื่อนไขเดิมไว้ คำที่ระบุชนิดอยู่แล้ว เช่น “ไม่กินเนื้อวัว” ไม่ต้องถามชนิดซ้ำ “ไม่แพ้เนื้อ” ไม่เปิดคำถามการแพ้
+
+- ไม่ชอบ: ลดคะแนนเฉพาะชนิดที่เลือก ไม่ตัดเป็น hard constraint หรือสร้าง allergy
+- ไม่กิน: ตัดเมนูตาม dietary tags ของชนิดที่เลือก ตรวจซ้ำตอน build/verify/checkout
+- แพ้: เพิ่มข้อจำกัดการแพ้ ไม่ลบการแพ้เดิม; สำหรับหมู/วัว/ไก่ตรวจทั้ง `allergen_tags` และแท็กวัตถุดิบเนื้อสัตว์ใน `dietary_tags` พร้อมกฎ Rego แยกต่างหาก Strict/opt-in และคำเตือนยังคงเดิม
+
+ปลาและอาหารทะเลไม่ถูกตัดเพราะการเลือกเนื้อสัตว์บก แต่ยังรักษาการแพ้/ข้อห้ามเดิม ผู้ที่แพ้ปลาอยู่แล้วจึงยังถูกกรองปลา ไม่มีเมนู beef ใน seed catalog ปัจจุบัน การไม่กินวัวอย่างเดียวอาจไม่ตัดรายการใด ส่วนการงดสัตว์บกทั้งหมดจะตัด F001 หมูและ F002 ไก่ตามแท็กที่มี Direct builder รองรับ alias “เนื้อ” เป็นกลุ่ม pork/beef/chicken; หน้าเว็บจะถามชนิดก่อนเพื่อไม่เดาความหมาย
+
 ## เงื่อนไขและตัวอย่างการใช้งาน
 
 หน้าเว็บต้องมีงบและจำนวนคน แล้วแสดงสรุปการแพ้/ข้อห้าม/ชอบ/ไม่ชอบให้ยืนยันครั้งเดียว ถ้ายังไม่เลือกน้ำหรือขนมจะไม่เพิ่มให้ ผู้ใช้เพิ่มภายหลังด้วยชื่อและจำนวนได้
@@ -245,7 +270,7 @@ Validator คำนวณราคา × จำนวนจาก catalog จร
 
 การเรียก library `dp_knapsack` แบบเดิมยังมี `objective="score"` เป็นค่าเริ่มต้นเพื่อคง baseline สำหรับการวิเคราะห์ ส่วน `build_optimal_set` ใช้ `objective="budget", diversity=True` และการจัดอาหารเริ่มต้นบนเว็บส่ง `spend_ratio=0.8`; checkout ตรวจส่วนเพิ่มด้วยงบเต็ม MCP/direct tools มีค่าเริ่มต้น `spend_ratio=1.0` สำหรับผู้เรียกเดิม จึงต้องระบุ 0.8 เมื่อต้องการจำลองเงื่อนไขเว็บ
 
-Benchmark ล่าสุดใช้ค่าเดียวกับ production: **objective=budget, diversity=true, spend_ratio=0.8, max_items=60, repeat_cap=3** เปรียบเทียบ DP, greedy density, greedy score และ Random บน safe pool เดียวกัน 12 สถานการณ์ (งบ 300/1,000/3,000/6,000 × 3 เงื่อนไข) และ Random 100 seeds ต่อสถานการณ์ รวม 1,200 runs รายงานใน `artifacts/benchmark-production.json`
+Benchmark ล่าสุดใช้ค่าเดียวกับ production: **objective=budget, diversity=true, spend_ratio=0.8, max_items=60, repeat_cap=3** เปรียบเทียบ DP, greedy density, greedy score และ Random บน safe pool เดียวกัน 12 สถานการณ์ (งบ 300/1,000/3,000/6,000 × 3 เงื่อนไข) และ Random 100 seeds ต่อสถานการณ์ รวม 1,200 runs รายงานใน `artifacts/review-round2/benchmark-production.json`
 
 DP ใช้งบเฉลี่ย **76.25% ของงบเต็ม / 95.3125% ของวงเงินอาหาร**, เมนูไม่ซ้ำเฉลี่ย 16.5 และ 7.42 หมวด คะแนนลดซ้ำเฉลี่ย 110.77; greedy density ได้คะแนน 117.44 และ 7.92 หมวด แต่ใช้งบเต็ม 72.06% จึง **ไม่อ้างว่า DP ชนะทุกตัวชี้วัด** ตรวจ dominance ตาม objective แบบ lexicographic เดียวกับ production ไม่ใช่ raw score; ไม่มี dominance failure และ feasibility failure ในชุดนี้ การใช้เงินอาจต่ำกว่าเป้าเมื่อเพดานจำนวน/ข้อจำกัดทำให้ทำไม่ได้ เวลา benchmark เป็น algorithm time ไม่ใช่เวลาตอบแชต
 
@@ -254,27 +279,27 @@ DP ใช้งบเฉลี่ย **76.25% ของงบเต็ม / 95.3
 ## ทดสอบและ artifacts
 
 ```bash
-python scripts/run_checks.py --output-dir artifacts/review-round1
+python scripts/run_checks.py --output-dir artifacts/review-round2
 python mcp_client_demo.py
-python scripts/benchmark.py
+python scripts/benchmark.py --output artifacts/review-round2/benchmark-production.json
 python scripts/capture_demo.py
-python scripts/evaluate.py --mode offline --output artifacts/review-round1-offline-evaluation.json
+python scripts/evaluate.py --mode offline --output artifacts/review-round2/offline-evaluation.json
 python scripts/evaluate.py --mode live --limit 3
-python scripts/live_sessions.py --output artifacts/review-round1-live-status.json
+python scripts/live_sessions.py --scenarios evaluation/round2_sessions.json --output artifacts/review-round2/live-status.json
 python scripts/build_report.py
 ```
 
 ผลตรวจในชุดนี้:
 
-- Regression/integration **127 tests** รวม DP เทียบ exhaustive search 35 fixtures, ทศนิยม, tampering, session isolation, unknown allergen, strict/simulation, DB เปลี่ยน, Agent gate และ Streamlit page
-- OPA/Rego **24 tests** ตรวจ allow/deny แยกจาก Python
+- Regression/integration **139 tests** รวม DP เทียบ exhaustive search 35 fixtures, ทศนิยม, tampering, session isolation, unknown allergen, strict/simulation, DB เปลี่ยน, Agent gate และ Streamlit page
+- OPA/Rego **25 tests** ตรวจ allow/deny แยกจาก Python
 - Evaluation **40 กรณี** ผ่าน MCP/SQLite/OPA จริง โดยไม่เรียก LLM; แยกจาก regression tests
 - Smoke **61 checks ต่อโหมด** ผ่านทั้ง strict และ simulation
 - MCP ทดสอบ subprocess จริง และเปลี่ยนราคาใน SQLite แล้วอ่านผ่าน MCP เพื่อพิสูจน์การดึงข้อมูลจริง
 - ติดตั้งจาก lockfile พร้อมตรวจ hashes ใน venv ใหม่บน Linux/Python 3.12 ผ่าน
 - Agent tests ใช้ **scripted fake model + MCP/SQLite จริง** ยังไม่ได้เรียก OpenAI จริงเพราะไม่มี API key
 
-Artifacts ล่าสุด: `artifacts/review-round1/validation-report.json`, `artifacts/review-round1/opa-tests.json`, smoke logs ทั้งสองโหมด, `artifacts/review-round1-offline-evaluation.json`, `artifacts/review-round1-live-status.json`, `artifacts/review-round1-scripted-consumer-trace.json`, `artifacts/benchmark-production.json` และ HTML ที่สร้างด้วย `scripts/build_report.py` ส่วน snapshot ชื่อเดิมนอกกลุ่มนี้เป็นหลักฐานรุ่นก่อน ดูขอบเขตและวันรันใน [EVALUATION.md](EVALUATION.md)
+Artifacts ล่าสุด: `artifacts/review-round2/validation-report.json`, `artifacts/review-round2/opa-tests.json`, smoke logs ทั้งสองโหมด, `artifacts/review-round2/offline-evaluation.json`, `artifacts/review-round2/live-status.json`, `artifacts/review-round2/scripted-consumer-trace.json`, `artifacts/review-round2/benchmark-production.json` และ HTML ที่สร้างด้วย `scripts/build_report.py` ส่วน snapshot รอบ1และชื่อเดิมนอกกลุ่มนี้เป็นหลักฐานรุ่นก่อน ดูขอบเขตและวันรันใน [EVALUATION.md](EVALUATION.md)
 
 `python scripts/collect_evidence.py --offline` เป็นคำสั่งรวมที่ **import CSV แบบ replace catalog ด้วย** หากมีข้อมูลร้านที่แก้ใน SQLite ให้สำรองก่อน หรือใช้คำสั่งแยกด้านบนเพื่อไม่ replace ข้อมูล การสร้าง report ไม่ได้รันทดสอบใหม่
 

@@ -1,7 +1,7 @@
 package shiro
 import rego.v1
 
-policy_version := "shiro-4.1"
+policy_version := "shiro-4.2"
 default allow := false
 
 valid_input if {
@@ -127,4 +127,12 @@ deny contains "unknown_dietary_evidence" if {
     count(input.excluded_dietary_tags) > 0
     some line in input.lines
     line.dietary_status != "reviewed_dataset"
+}
+
+# Explicit land-meat allergies also intersect raw reviewed ingredient tags.
+deny contains "allergen_conflict" if {
+    some line in input.lines
+    some tag in line.dietary_tags
+    tag in {"pork", "beef", "chicken"}
+    tag in requested_allergens
 }

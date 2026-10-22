@@ -1,6 +1,6 @@
 """Deterministic policy enforcement independent of the LLM."""
 from __future__ import annotations
-from .dietary import hard_excluded, requested_tags
+from .dietary import ingredient_allergens, hard_excluded, requested_tags
 import os
 from .database import cents, catalog_revision, budget_target_cents
 
@@ -56,7 +56,7 @@ def validate_result(result, menu, constraints=None, mode=None):
             issues.append('รายละเอียดเมนูไม่ตรงฐานข้อมูล')
         allergens=set(requested)
         if 'seafood' in allergens: allergens |= {'fish','crustacean','molluscs','echinoderm'}
-        if allergens & parse_allergen_tags(item['allergen_tags']):
+        if allergens & ingredient_allergens(item):
             issues.append(f"เมนู {item['name_th']} ขัดกับ allergen")
         if allergens and mode=='strict' and item.get('allergen_status')!='confirmed':
             issues.append(f"เมนู {item['name_th']} ยังไม่มีหลักฐาน allergen รายเมนู")
@@ -137,11 +137,11 @@ def policy_facts(result, menu, constraints, issues, mode=None):
             'catalog_item':bool(item),'food':food,'unit_cents':cents(item.get('price_baht',0)),
             'reported_unit_cents':cents(line.get('price_baht',0)),
             'reported_subtotal_cents':cents(line.get('subtotal_baht',0)),
-            'allergen_tags':sorted(parse_allergen_tags(item.get('allergen_tags'))),
+            'allergen_tags':sorted(ingredient_allergens(item)),
             'allergen_status':item.get('allergen_status','unknown'),
             'dietary_tags':sorted(parse_allergen_tags(item.get('dietary_tags'))),
             'dietary_status':item.get('dietary_status','unknown'),
-            'allergen_blocked':bool(allergens & parse_allergen_tags(item.get('allergen_tags'))),
+            'allergen_blocked':bool(allergens & ingredient_allergens(item)),
             'evidence_confirmed':item.get('allergen_status')=='confirmed',
             'hard_excluded':hard_excluded(item,constraints.get('hard_exclude_keywords',[])),
             'only_allowed':not only or matches_any_keyword(item,only)})

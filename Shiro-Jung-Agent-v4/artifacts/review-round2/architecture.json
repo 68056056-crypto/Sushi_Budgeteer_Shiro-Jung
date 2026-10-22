@@ -1,0 +1,42 @@
+{
+  "agent.py": {
+    "file_lines": 324,
+    "classes": {
+      "BudgeteerAgent": {
+        "lines": 288,
+        "methods": 9
+      }
+    }
+  },
+  "intake.py": {
+    "file_lines": 232,
+    "classes": {
+      "Extraction": {
+        "lines": 22,
+        "methods": 0
+      },
+      "IntakeMixin": {
+        "lines": 189,
+        "methods": 10
+      }
+    }
+  },
+  "planning.py": {
+    "file_lines": 216,
+    "classes": {
+      "PlanningMixin": {
+        "lines": 183,
+        "methods": 4
+      }
+    }
+  },
+  "checkout.py": {
+    "file_lines": 334,
+    "classes": {
+      "CheckoutMixin": {
+        "lines": 321,
+        "methods": 13
+      }
+    }
+  }
+}
