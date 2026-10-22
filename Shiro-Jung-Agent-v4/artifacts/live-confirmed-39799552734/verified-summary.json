@@ -1,0 +1,77 @@
+{
+  "source_commit": "426b48a8300dc341ad83dd0005ba638d5600304e",
+  "created_at": "2026-10-22T14:53:12.279324+00:00",
+  "live_llm_tested": true,
+  "success_rate": 1.0,
+  "model_selected_recommendations": 6,
+  "executed_turns": 18,
+  "successful_model_responses": 31,
+  "model_error_count": 0,
+  "workflow_run_url": "https://github.com/68056056-crypto/Sushi_Budgeteer_Shiro-Jung/actions/runs/39799552734",
+  "report_created_at_bangkok": "2026-10-22T21:53:12.279324+07:00",
+  "sessions": 5,
+  "gold_turns": 12,
+  "expected_recommendations": 6,
+  "expected_blocks": 4,
+  "expected_clarifications": 2,
+  "model": [
+    "gpt-4o-mini"
+  ],
+  "usage": {
+    "input_tokens": 113459,
+    "output_tokens": 2548,
+    "total_tokens": 116007
+  },
+  "verified_model_selected_pairs": [
+    {
+      "session": "remember_and_replan",
+      "gold_turn": 1,
+      "matched_result_ids": [
+        "4b07a8e2-2b40-4d03-9565-444634557ec9"
+      ]
+    },
+    {
+      "session": "remember_and_replan",
+      "gold_turn": 2,
+      "matched_result_ids": [
+        "d9dab2d4-f019-4681-a601-d74a58cea400"
+      ]
+    },
+    {
+      "session": "remember_and_replan",
+      "gold_turn": 3,
+      "matched_result_ids": [
+        "eac0e4f2-66a8-403c-9481-b7948f1d8351"
+      ]
+    },
+    {
+      "session": "infeasible_then_user_changes_budget",
+      "gold_turn": 2,
+      "matched_result_ids": [
+        "0922aea6-f6f9-42e6-bf3c-807c38ce28f5"
+      ]
+    },
+    {
+      "session": "land_meat_hard_choice",
+      "gold_turn": 2,
+      "matched_result_ids": [
+        "90c1fd22-67bc-4cda-b374-e94f72845608"
+      ]
+    },
+    {
+      "session": "land_meat_allergy_explicit_optin",
+      "gold_turn": 3,
+      "matched_result_ids": [
+        "64e522eb-ed47-4093-b479-bd0836b9558e"
+      ]
+    }
+  ],
+  "original_zip_sha256": "636f259f0b10c0ee129f765bf556a8eb7b5081f2ae3d97001a1eb3fe60d8e4d3",
+  "original_report_sha256": "cfb28e2a536178de17be43dc081da9f1217e5309d81ca7b2666c6aae72ae2bca",
+  "original_trace_sha256": "9306122ff4d1f0f844cf5865074f9f0c3f0bf34297ad4e366aa4c641a679eaf2",
+  "limitations": [
+    "Gold success is the runner assessment, not a human preference study or restaurant certification.",
+    "Original per-turn state list snapshots share mutable references. Use same-run build_set arguments for historical constraints; original report/trace are preserved.",
+    "Live result applies to source_commit 426b48a; subsequent snapshot/parser/exporter fixes are offline-tested, not a new live run."
+  ]
+}

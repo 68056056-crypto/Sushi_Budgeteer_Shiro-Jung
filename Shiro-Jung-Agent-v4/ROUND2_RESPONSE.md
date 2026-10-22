@@ -7,7 +7,7 @@
 | ข้อเสนอแนะ | การแก้ไขที่ทำแล้ว | สถานะ / หลักฐาน |
 |---|---|---|
 | ไม่กิน X ต้อง hard | เพิ่มกฎหลัง extraction สำหรับไม่กิน/ไม่ทาน/งด/ห้าม ลบ soft alias เดิมด้วย ไม่เปลี่ยน soft “ไม่ค่อยชอบ” เป็น hard | แก้แล้ว; test_explicit_refusals.py รวม scenario 1500 บาท 2 คน แพ้กุ้ง ชอบแซลมอน ไม่กินหมู |
-| Live LLM | เพิ่ม workflow แบบ manual, secure secret env, ตรวจ state และ success, model-selected gate และ export trace 1 session | ยังไม่มี API key ในเครื่อง และ GitHub Actions token ใช้ไม่ได้ จึงยัง live=false / executed=0 / model-selected-live=0 |
+| Live LLM | เพิ่ม workflow แบบ manual, secure secret env, ตรวจ state และ success, model-selected gate และ export trace 1 session | ยืนยัน Actions run 39799552734 ที่ commit426b48a: live=true, 12/12 gold, 18 turns, 31 responses, 6 model-selected recommendations, errors0 |
 | ข้อมูลร้าน | เพิ่ม team_reviewed พร้อมเหตุผล/ผู้ตรวจ/วันที่ ไม่ปลด strict; ราคา confirmed ต้องมีแหล่งหลักฐาน/วันที่ เตรียมคำถาม 15 เมนูและ checklist สาขา/ภาพป้าย | ยังไม่มีภาพป้าย/คำตอบร้านและยังไม่ได้ส่งข้อความ รักษา unknown/unverified ทั้ง 42 เมนู |
 | ชุดที่สองใกล้ซ้ำ | ตัดกลุ่มเมนูคะแนนสูงและตรวจชื่อเมนูอาหารเดิมที่หายไป ≥30%; คงข้อจำกัด/ส่วนเพิ่ม ลองได้สูงสุด 3 กลุ่ม | แก้แล้ว; ถ้าทำไม่ได้เสนอชุดเดียว ไม่ผ่อนการแพ้หรืองบเพื่อสร้างทางเลือก |
 | State persistence | ยังใช้ Streamlit session state; SQLite เก็บ catalog เท่านั้น | ยังไม่ทำตามทางเลือกในข้อเสนอแนะ ระบุข้อจำกัดในเอกสารและสไลด์ชัดเจน |
@@ -22,11 +22,11 @@
 
 ## ผลตรวจหลังแก้
 
-165 regression/integration tests, 25 Rego tests, smoke 61 ต่อโหมด, offline gold 40/40 ดู checked_at/release จาก artifacts/review-round2-credential-check/validation-report.json ไม่ใช้ผลเหล่านี้รับรองสูตรร้าน ความพึงพอใจจริง หรือ live-model quality
+165 regression/integration tests, 25 Rego tests, smoke 61 ต่อโหมด, offline gold 40/40 ดู checked_at/release จาก artifacts/review-live-confirmed-checks/validation-report.json ไม่ใช้ผลเหล่านี้รับรองสูตรร้าน ความพึงพอใจจริง หรือ live-model quality
 
 ## สิ่งที่ทีมต้องเติมจากหลักฐานจริง
 
-1. เพิ่ม secret ใน GitHub Actions แล้วรัน Live LLM evaluation ดาวน์โหลด JSON และ live-trace.md ตรวจ source commit/model/route/success ก่อนใส่ trace 1 session ลงสไลด์ ไม่แสดง API key หรือข้อมูลส่วนบุคคล
+1. ปิดประเด็นหลักฐาน live แล้วตาม run39799552734: เก็บ JSON ต้นฉบับ/trace/SHA256 และใส่ trace จริง 1 session ในสไลด์ ผลจำกัดที่ commit426b48a และ corpus นี้ การปรับ snapshot/parser หลังจากนั้นยังต้องแยกจากผล live เดิม
 2. ถ่ายป้ายราคา/สีจานที่สาขาพร้อมวันที่ ส่งร่างคำถามรายเมนูจาก RESTAURANT_VERIFICATION.md ผ่านช่องทางทางการที่ทีมเลือก เก็บคำตอบและขอบเขตสาขา/วันที่
 3. ทีมอ่านหลักฐานรายเมนูและลงชื่อ/เหตุผลก่อนใช้ team_reviewed หากร้านไม่ยืนยัน ห้ามเปลี่ยนเป็น confirmed เอง ห้ามลบแท็กสารที่อาจมีเพียงเพราะร้านไม่ตอบ
 4. สไลด์/Word/PDF จัดส่งแยกเพื่อดาวน์โหลด ไม่อัปโหลด GitHub ระบบแชตผู้บริโภคไม่แสดง trace หรือรายละเอียดเทคนิคเหล่านี้
@@ -41,3 +41,21 @@
 
 
 ปรับตัวตรวจคีย์ให้แกะ clipboard wrappers เช่น quotes/prefix ที่ขอบได้ โดยยังปฏิเสธหลายบรรทัดหรือเนื้อหาภายในผิดรูปแบบ และเพิ่มชื่อสาเหตุใน job summary เพื่อไม่ให้ผู้ใช้ลองแก้ Secret แบบไม่มีข้อมูล ไม่แสดงคีย์หรืออักขระจริง
+
+
+## ผล Live LLM ที่ตรวจหลักฐานแล้ว
+
+[GitHub Actions run 39799552734](https://github.com/68056056-crypto/Sushi_Budgeteer_Shiro-Jung/actions/runs/39799552734) ใช้ source commit **426b48a** และโมเดลที่ตั้งค่า **gpt-4o-mini** รายงานสร้างวันที่ **22 ตุลาคม 2569 เวลา 21:53 น. (Asia/Bangkok)** ตรวจจาก ZIP ที่ผู้ใช้ส่ง ไม่ได้รัน API ใหม่จากเครื่องนี้
+
+| ตัวชี้วัด | ผลจริง |
+|---|---|
+| Live / gold success | `live_llm_tested=true`, `success_rate=1.0` — ผ่าน 12/12 gold turns ใน 5 sessions |
+| ประเภทผลที่คาดหวัง | แนะนำอาหาร 6, block 4, clarification 2 |
+| Actual conversation turns | 18 รวมการยืนยันข้อมูลอัตโนมัติของ runner |
+| Successful model responses | 31; model errors 0 |
+| Model-selected recommendations | 6 — ตรวจ `route=model_selected` ของ build_set และ verify_set ที่ passed และ result_id ตรงกัน |
+| Tokens จาก provider metadata | input 113,459 + output 2,548 = 116,007; ไม่คำนวณค่าเงินโดยไม่มีราคาที่อ้างอิง |
+
+หลักฐานต้นฉบับและ SHA256 อยู่ใน [live evidence](artifacts/live-confirmed-39799552734/README.md) พร้อม [trace หนึ่ง session](artifacts/live-confirmed-39799552734/live-trace.md) สำหรับนำเสนอ ผล 100% จำกัดอยู่ที่ corpus นี้ ไม่ใช่การรับรองภาษาไทยทุกกรณี ความพึงพอใจ หรือสูตรอาหารของร้าน
+
+**ข้อจำกัดการบันทึกที่พบ:** ลิสต์ใน `turn.state` ของ artifact เดิมอาจถูกเติมด้วยข้อมูลรอบหลัง จึงเก็บต้นฉบับไว้และแสดง historical constraints จาก `build_set.arguments` ของรอบเดียวกันใน trace ที่สร้างใหม่ แก้ runner ให้ deep-copy snapshot และแก้ parser ไม่ตี “เงื่อนไขอื่นเหมือนเดิม” เป็นอาหารแล้ว การแก้สองจุดนี้ทดสอบ offline หลัง live commit ไม่อ้างว่าเป็น live rerun ชุดใหม่ ราคา/สารก่อภูมิแพ้ยัง unverified/unknown ทั้ง 42 รายการ และยังไม่มี persistence ข้าม session

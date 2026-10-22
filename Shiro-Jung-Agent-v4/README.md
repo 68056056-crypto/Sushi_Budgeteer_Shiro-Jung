@@ -1,12 +1,29 @@
 # 🍣 Shiro-Jung 4.0 — AI Agent + MCP + SQLite + OPA
 
+## ผล Live LLM ที่ตรวจหลักฐานแล้ว
+
+[GitHub Actions run 39799552734](https://github.com/68056056-crypto/Sushi_Budgeteer_Shiro-Jung/actions/runs/39799552734) ใช้ source commit **426b48a** และโมเดลที่ตั้งค่า **gpt-4o-mini** รายงานสร้างวันที่ **22 ตุลาคม 2569 เวลา 21:53 น. (Asia/Bangkok)** ตรวจจาก ZIP ที่ผู้ใช้ส่ง ไม่ได้รัน API ใหม่จากเครื่องนี้
+
+| ตัวชี้วัด | ผลจริง |
+|---|---|
+| Live / gold success | `live_llm_tested=true`, `success_rate=1.0` — ผ่าน 12/12 gold turns ใน 5 sessions |
+| ประเภทผลที่คาดหวัง | แนะนำอาหาร 6, block 4, clarification 2 |
+| Actual conversation turns | 18 รวมการยืนยันข้อมูลอัตโนมัติของ runner |
+| Successful model responses | 31; model errors 0 |
+| Model-selected recommendations | 6 — ตรวจ `route=model_selected` ของ build_set และ verify_set ที่ passed และ result_id ตรงกัน |
+| Tokens จาก provider metadata | input 113,459 + output 2,548 = 116,007; ไม่คำนวณค่าเงินโดยไม่มีราคาที่อ้างอิง |
+
+หลักฐานต้นฉบับและ SHA256 อยู่ใน [live evidence](artifacts/live-confirmed-39799552734/README.md) พร้อม [trace หนึ่ง session](artifacts/live-confirmed-39799552734/live-trace.md) สำหรับนำเสนอ ผล 100% จำกัดอยู่ที่ corpus นี้ ไม่ใช่การรับรองภาษาไทยทุกกรณี ความพึงพอใจ หรือสูตรอาหารของร้าน
+
+**ข้อจำกัดการบันทึกที่พบ:** ลิสต์ใน `turn.state` ของ artifact เดิมอาจถูกเติมด้วยข้อมูลรอบหลัง จึงเก็บต้นฉบับไว้และแสดง historical constraints จาก `build_set.arguments` ของรอบเดียวกันใน trace ที่สร้างใหม่ แก้ runner ให้ deep-copy snapshot และแก้ parser ไม่ตี “เงื่อนไขอื่นเหมือนเดิม” เป็นอาหารแล้ว การแก้สองจุดนี้ทดสอบ offline หลัง live commit ไม่อ้างว่าเป็น live rerun ชุดใหม่ ราคา/สารก่อภูมิแพ้ยัง unverified/unknown ทั้ง 42 รายการ และยังไม่มี persistence ข้าม session
+
 ## ตรวจรูปแบบ API key ก่อนเรียก provider
 
 `credentials.clean_api_key` ตัด whitespace และอักขระ clipboard ที่ขอบ พร้อมแกะเครื่องหมายคำพูดครอบ (รวม smart quotes/ข้างเดียว), `Bearer ` หรือ `OPENAI_API_KEY=` ที่นำหน้าคีย์ค่าเดียว ร่วมกันทั้ง Agent และ live runner ไม่ต่อหลายบรรทัดเข้าด้วยกันหรือแก้เนื้อหาคีย์ภายใน หากยังมี newline/ช่องว่างแทรก/อักขระแฝง/ข้อความตั้งค่าอื่น จะหยุดก่อน HTTP ด้วย `blocked_invalid_credential_format` และแสดง `credential_format_issues` เฉพาะชื่อสาเหตุ ไม่แสดงคีย์ การตรวจนี้ไม่พิสูจน์สิทธิ์หรือเครดิต API
 
 หาก job log มี `Illegal header value` ให้แก้ repository Secret `OPENAI_API_KEY` เป็นค่าคีย์บรรทัดเดียว ไม่รวมชื่อ environment variable หรือเครื่องหมายคำพูด จากนั้นเริ่ม **Run workflow ใหม่บน main** เพื่อใช้ commit ล่าสุด ค่า `***` ใน GitHub log เป็นการ mask secret ไม่ใช่หลักฐานว่าค่าคีย์จริงคือดอกจัน
 
-ตรวจ targeted 11 เคส: credential normalization/redaction 4, provider diagnostics 5, consumer live-runner harness 2 ผ่านโดยไม่เรียก API จริง โดย full-suite snapshot ล่าสุดยังเป็น 165 เคสก่อนเพิ่ม clipboard normalization; รอบปรับนี้ตรวจ focused 11 เคสซ้ำ รายละเอียดใน artifacts/review-round2-credential-check/clipboard-targeted-checks.json
+ตรวจ targeted 11 เคส: credential normalization/redaction 4, provider diagnostics 5, consumer live-runner harness 2 ผ่านโดยไม่เรียก API จริง โดย snapshot ก่อนหน้ามี 165 เคส และ targeted credential checks 11 เคส; รอบปัจจุบันรัน full suite อีกครั้งหลังแก้ snapshot/exporter/parser รายละเอียดใน artifacts/review-round2-credential-check/clipboard-targeted-checks.json
 
 ## วินิจฉัยการเรียก provider ใน GitHub Actions
 
@@ -25,7 +42,7 @@ Agent บันทึกเฉพาะ phase, exception type, HTTP status แ�
 - รองรับ `team_reviewed` ที่มีเหตุผลรายเมนู ผู้ตรวจ และวันที่ แต่ยังไม่ถือว่าร้านยืนยัน/ไม่ปลด strict; ไม่มีการเปลี่ยนสถานะเมนูเดิมอัตโนมัติ [แบบขอข้อมูล 15 เมนู](RESTAURANT_VERIFICATION.md)
 - State ยังอยู่ใน `st.session_state` และอายุของ session; **ยังไม่มี persistence หลัง browser refresh/session หมดอายุ** ไม่อ้างว่า SQLite catalog เก็บบทสนทนาให้แล้ว
 
-สถานะหลักฐาน: เครื่องนี้ไม่มี OpenAI key และ token ที่มีใช้เรียก GitHub Actions ไม่ได้ จึงยัง **live=false / model-selected live=0** การทดสอบ Streamlit ที่ผู้ใช้รายงานช่วยยืนยัน extraction ใน session นั้น แต่ยังไม่ใช่ trace ที่พิสูจน์ LLM เลือก build/verify ให้รัน workflow ด้วย GitHub account ที่มีสิทธิ์หลังเพิ่ม secret (ไม่ส่ง key ในแชต)
+สถานะหลักฐาน: ยืนยันผล Live LLM จาก GitHub Actions run 39799552734 แล้ว (5 sessions, 12/12 gold turns, 6 model-selected recommendations) เครื่องนี้ไม่ได้เก็บ key หรือเรียก API ใหม่
 
 ผู้ช่วยจัดชุดซูชิจาก **ฐานข้อมูล SQLite ที่นำเข้าจาก CSV จริง** มีเว็บ Streamlit และ CLI โดย Agent เลือก MCP tools อ่านผล แล้วเลือกทำต่อภายในวงจรที่จำกัดจำนวนรอบ คำแนะนำชุดอาหารจะถูกแสดงเฉพาะหลังผ่าน Python policy validator และตรวจฐานข้อมูลซ้ำก่อนตอบ
 
@@ -39,7 +56,7 @@ Agent บันทึกเฉพาะ phase, exception type, HTTP status แ�
 | Agent คลาสใหญ่ | แยก `intake.py`, `planning.py`, `checkout.py`; `agent.py` คุม lifecycle/routing เป็น mixins ที่ใช้ session state เดียวกัน ไม่เปลี่ยน public API |
 | คะแนน Greedy สูงกว่า DP | DP 110.77 เทียบ Greedy density 117.44; DP เหมาะที่สุดตามลำดับ objective ช่วงงบก่อนคะแนน ไม่อ้างชนะทุกตัวชี้วัด |
 | ใช้งบจริง | เฉลี่ย 76.25% ของงบเต็ม หรือ 95.3125% ของวงเงินอาหารเริ่มต้น 80%; ส่วนเพิ่มใช้เงินที่เหลือภายใต้งบเต็ม |
-| Live LLM | ยัง `live_llm_tested=false`: ไม่มี credentials ใน environment นี้; เพิ่ม corpus 5 consumer sessions รวมเลือกเนื้อ/opt-in และตรวจ runner แบบ offline โดยไม่อ้างเป็นผล live |
+| Live LLM | `live_llm_tested=true`, gold success 12/12 ใน 5 sessions; 6 model-selected build/verify recommendations — source commit 426b48a |
 | หลักฐานร้าน | allergen unknown 42/42, ราคา unverified 42/42; `scripts/catalog_audit.py` ส่งออก checklist ให้เติมหลักฐานจริง ไม่ตั้ง confirmed เอง |
 
 หลักฐานรอบนี้เก็บแยกใน `artifacts/review-round2-followup/` ผลรอบ 1 เก็บเป็นประวัติ ไม่แก้ผลเก่าให้ดูเหมือนผลใหม่ ดู [คำตอบข้อประเมินรอบ 2](ROUND2_RESPONSE.md) สำหรับสถานะรายข้อและงานที่ต้องใช้หลักฐานภายนอก
@@ -306,7 +323,7 @@ DP ใช้งบเฉลี่ย **76.25% ของงบเต็ม / 95.3
 ## ทดสอบและ artifacts
 
 ```bash
-python scripts/run_checks.py --output-dir artifacts/review-round2
+python scripts/run_checks.py --output-dir artifacts/review-live-confirmed-checks
 python mcp_client_demo.py
 python scripts/benchmark.py --output artifacts/review-round2-followup/benchmark-production.json
 python scripts/capture_demo.py
@@ -326,7 +343,7 @@ python scripts/build_report.py
 - ติดตั้งจาก lockfile พร้อมตรวจ hashes ใน venv ใหม่บน Linux/Python 3.12 ผ่าน
 - Agent tests ใช้ **scripted fake model + MCP/SQLite จริง** ยังไม่ได้เรียก OpenAI จริงเพราะไม่มี API key
 
-Artifacts ล่าสุด: `artifacts/review-round2-credential-check/validation-report.json`, `artifacts/review-round2-credential-check/opa-tests.json`, smoke logs ทั้งสองโหมด, `artifacts/review-round2-followup/offline-evaluation.json`, `artifacts/review-round2-followup/live-status.json`, `artifacts/review-round2-followup/scripted-consumer-trace.json`, `artifacts/review-round2-followup/benchmark-production.json` และ HTML ที่สร้างด้วย `scripts/build_report.py` ส่วน snapshot รอบ1และชื่อเดิมนอกกลุ่มนี้เป็นหลักฐานรุ่นก่อน ดูขอบเขตและวันรันใน [EVALUATION.md](EVALUATION.md)
+Artifacts ล่าสุด: `artifacts/review-live-confirmed-checks/validation-report.json`, `artifacts/review-live-confirmed-checks/opa-tests.json`, smoke logs ทั้งสองโหมด, `artifacts/review-round2-followup/offline-evaluation.json`, `artifacts/live-confirmed-39799552734/live-sessions.json`, `artifacts/review-round2-followup/scripted-consumer-trace.json`, `artifacts/review-round2-followup/benchmark-production.json` และ HTML ที่สร้างด้วย `scripts/build_report.py` ส่วน snapshot รอบ1และชื่อเดิมนอกกลุ่มนี้เป็นหลักฐานรุ่นก่อน ดูขอบเขตและวันรันใน [EVALUATION.md](EVALUATION.md)
 
 `python scripts/collect_evidence.py --offline` เป็นคำสั่งรวมที่ **import CSV แบบ replace catalog ด้วย** หากมีข้อมูลร้านที่แก้ใน SQLite ให้สำรองก่อน หรือใช้คำสั่งแยกด้านบนเพื่อไม่ replace ข้อมูล การสร้าง report ไม่ได้รันทดสอบใหม่
 

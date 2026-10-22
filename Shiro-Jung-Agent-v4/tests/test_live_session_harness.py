@@ -44,6 +44,8 @@ class LiveHarnessTest(unittest.TestCase):
             self.assertEqual(live_sessions.main(),0)
         report=json.loads(output.read_text())
         self.assertEqual(report['success_rate'],1)
+        self.assertEqual(report['sessions'][0]['turns'][0]['state']['hard_exclude_keywords'],[])
+        self.assertEqual(report['sessions'][1]['turns'][0]['state']['allergens'],[])
         self.assertFalse(report['live_llm_tested'])
         self.assertTrue(all(turn['success'] for session in report['sessions'] for turn in session['turns']))
 

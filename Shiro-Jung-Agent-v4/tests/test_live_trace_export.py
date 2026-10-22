@@ -10,8 +10,8 @@ class LiveTraceExportTest(unittest.TestCase):
         return {'live_llm_tested':True,'sessions':[{'id':'synthetic-unit-fixture','turns':[
             {'success':True,'model_selected_build_and_verify':True,'message':'fixture only',
              'runs':[{'model_source':'live','model_calls':2,'model':'fixture-model',
-                      'trace':[{'tool':'build_set','route':'model_selected','status':'candidate'},
-                               {'tool':'verify_set','route':'model_selected','passed':True}]}]}]}]}
+                      'trace':[{'tool':'build_set','route':'model_selected','status':'candidate','result_id':'fixture-id','arguments':{'hard_exclude_keywords':['หมู']}},
+                               {'tool':'verify_set','route':'model_selected','passed':True,'result_id':'fixture-id'}]}]}]}]}
 
     def test_rejects_scripted_even_when_top_level_flag_is_true(self):
         report=self.fixture()
@@ -33,3 +33,6 @@ class LiveTraceExportTest(unittest.TestCase):
         self.assertIn('build_set',text);self.assertIn('verify_set',text)
         self.assertNotIn('secret-example-for-unit-test',text)
         self.assertIn('[REDACTED]',text)
+        self.assertIn('arguments of this run',text)
+        report['sessions'][0]['turns'][0]['runs'][0]['trace'][1]['result_id']='different-id'
+        self.assertIn('unavailable',render_trace(report))

@@ -1,12 +1,29 @@
 # Code Review — Shiro-Jung 4.2.1
 
+## ผล Live LLM ที่ตรวจหลักฐานแล้ว
+
+[GitHub Actions run 39799552734](https://github.com/68056056-crypto/Sushi_Budgeteer_Shiro-Jung/actions/runs/39799552734) ใช้ source commit **426b48a** และโมเดลที่ตั้งค่า **gpt-4o-mini** รายงานสร้างวันที่ **22 ตุลาคม 2569 เวลา 21:53 น. (Asia/Bangkok)** ตรวจจาก ZIP ที่ผู้ใช้ส่ง ไม่ได้รัน API ใหม่จากเครื่องนี้
+
+| ตัวชี้วัด | ผลจริง |
+|---|---|
+| Live / gold success | `live_llm_tested=true`, `success_rate=1.0` — ผ่าน 12/12 gold turns ใน 5 sessions |
+| ประเภทผลที่คาดหวัง | แนะนำอาหาร 6, block 4, clarification 2 |
+| Actual conversation turns | 18 รวมการยืนยันข้อมูลอัตโนมัติของ runner |
+| Successful model responses | 31; model errors 0 |
+| Model-selected recommendations | 6 — ตรวจ `route=model_selected` ของ build_set และ verify_set ที่ passed และ result_id ตรงกัน |
+| Tokens จาก provider metadata | input 113,459 + output 2,548 = 116,007; ไม่คำนวณค่าเงินโดยไม่มีราคาที่อ้างอิง |
+
+หลักฐานต้นฉบับและ SHA256 อยู่ใน [live evidence](artifacts/live-confirmed-39799552734/README.md) พร้อม [trace หนึ่ง session](artifacts/live-confirmed-39799552734/live-trace.md) สำหรับนำเสนอ ผล 100% จำกัดอยู่ที่ corpus นี้ ไม่ใช่การรับรองภาษาไทยทุกกรณี ความพึงพอใจ หรือสูตรอาหารของร้าน
+
+**ข้อจำกัดการบันทึกที่พบ:** ลิสต์ใน `turn.state` ของ artifact เดิมอาจถูกเติมด้วยข้อมูลรอบหลัง จึงเก็บต้นฉบับไว้และแสดง historical constraints จาก `build_set.arguments` ของรอบเดียวกันใน trace ที่สร้างใหม่ แก้ runner ให้ deep-copy snapshot และแก้ parser ไม่ตี “เงื่อนไขอื่นเหมือนเดิม” เป็นอาหารแล้ว การแก้สองจุดนี้ทดสอบ offline หลัง live commit ไม่อ้างว่าเป็น live rerun ชุดใหม่ ราคา/สารก่อภูมิแพ้ยัง unverified/unknown ทั้ง 42 รายการ และยังไม่มี persistence ข้าม session
+
 ## ตรวจรูปแบบ API key ก่อนเรียก provider
 
 `credentials.clean_api_key` ตัด whitespace และอักขระ clipboard ที่ขอบ พร้อมแกะเครื่องหมายคำพูดครอบ (รวม smart quotes/ข้างเดียว), `Bearer ` หรือ `OPENAI_API_KEY=` ที่นำหน้าคีย์ค่าเดียว ร่วมกันทั้ง Agent และ live runner ไม่ต่อหลายบรรทัดเข้าด้วยกันหรือแก้เนื้อหาคีย์ภายใน หากยังมี newline/ช่องว่างแทรก/อักขระแฝง/ข้อความตั้งค่าอื่น จะหยุดก่อน HTTP ด้วย `blocked_invalid_credential_format` และแสดง `credential_format_issues` เฉพาะชื่อสาเหตุ ไม่แสดงคีย์ การตรวจนี้ไม่พิสูจน์สิทธิ์หรือเครดิต API
 
 หาก job log มี `Illegal header value` ให้แก้ repository Secret `OPENAI_API_KEY` เป็นค่าคีย์บรรทัดเดียว ไม่รวมชื่อ environment variable หรือเครื่องหมายคำพูด จากนั้นเริ่ม **Run workflow ใหม่บน main** เพื่อใช้ commit ล่าสุด ค่า `***` ใน GitHub log เป็นการ mask secret ไม่ใช่หลักฐานว่าค่าคีย์จริงคือดอกจัน
 
-ตรวจ targeted 11 เคส: credential normalization/redaction 4, provider diagnostics 5, consumer live-runner harness 2 ผ่านโดยไม่เรียก API จริง โดย full-suite snapshot ล่าสุดยังเป็น 165 เคสก่อนเพิ่ม clipboard normalization; รอบปรับนี้ตรวจ focused 11 เคสซ้ำ รายละเอียดใน artifacts/review-round2-credential-check/clipboard-targeted-checks.json
+ตรวจ targeted 11 เคส: credential normalization/redaction 4, provider diagnostics 5, consumer live-runner harness 2 ผ่านโดยไม่เรียก API จริง โดย snapshot ก่อนหน้ามี 165 เคส และ targeted credential checks 11 เคส; รอบปัจจุบันรัน full suite อีกครั้งหลังแก้ snapshot/exporter/parser รายละเอียดใน artifacts/review-round2-credential-check/clipboard-targeted-checks.json
 
 ## วินิจฉัยการเรียก provider ใน GitHub Actions
 
@@ -91,20 +108,20 @@ Agent บันทึกเฉพาะ phase, exception type, HTTP status แ�
 
 | หลักฐาน | ผล / แหล่งข้อมูล |
 |---|---|
-| Regression / integration | 165 tests, failures 0, errors 0 — `artifacts/review-round2-credential-check/validation-report.json` |
-| OPA / Rego | 25 tests ผ่าน — `artifacts/review-round2-credential-check/opa-tests.json` |
+| Regression / integration | 165 tests, failures 0, errors 0 — `artifacts/review-live-confirmed-checks/validation-report.json` |
+| OPA / Rego | 25 tests ผ่าน — `artifacts/review-live-confirmed-checks/opa-tests.json` |
 | Smoke | strict 61 และ simulation 61 ผ่าน — log ใน `artifacts/review-round2-followup/` |
 | Offline gold | 40/40 — `artifacts/review-round2-followup/offline-evaluation.json`; ไม่มี LLM |
-| Consumer planning trace | `artifacts/review-round2-followup/scripted-consumer-trace.json`; scripted model + real MCP/SQLite/OPA |
-| Live consumer sessions | `artifacts/review-round2-followup/live-status.json`: `blocked_missing_credentials`, 0 turns |
+| Consumer planning trace | `artifacts/review-round2-followup/scripted-consumer-trace.json`; scripted model + real MCP/SQLite/OPA แยกจาก live evidence จริงข้างต้น |
+| Live consumer sessions | `completed`, 12/12 gold, 18 actual turns, 31 responses, 6 model-selected recommendations — `artifacts/live-confirmed-39799552734/live-sessions.json`, source 426b48a |
 
-รอบนี้รัน regression และ benchmark ใหม่หลังแก้โค้ด ดูเวลาจริงจาก `checked_at` / `created_at` ใน artifacts ดูคำสั่งและขอบเขตใน [EVALUATION.md](EVALUATION.md)
+รอบนี้รัน regression ใหม่หลังแก้ snapshot/exporter/parser ส่วน benchmark ใช้ snapshot production config เดิมที่ยังไม่เปลี่ยน objective ดูเวลาจริงจาก `checked_at` / `created_at` ใน artifacts ดูคำสั่งและขอบเขตใน [EVALUATION.md](EVALUATION.md)
 
 ## ประเด็นที่ยังเปิดอยู่
 
 | ระดับ / ประเด็น | ผลกระทบและงานต่อ |
 |---|---|
-| สำคัญ: live LLM ยังไม่มีหลักฐาน | Default model เป็นค่าตั้งต้นของโค้ด ไม่ใช่หลักฐานว่า deployment ใช้ค่านั้นหรือผ่านการทดสอบ ต้องรัน consumer sessions และตรวจ tool selection, extraction, fallback, tokens และ latency จริง |
+| กลาง: ขอบเขต live ยังจำกัด | ผ่าน 5 sessions/12 gold turns ที่ commit 426b48a; ยังต้องทดสอบนอก corpus/human review; reporting/parser patch หลังจากนั้นยังไม่ใช่ live rerun |
 | สำคัญ: สูตรร้านยัง unknown | 42 เมนูราคา unverified และ allergen unknown; ทะเบียนฉลาก 10 กลุ่มไม่ใช่หลักฐานสูตร การใช้ชุดจำลองไม่รับรองความปลอดภัยแพ้อาหารหรือการปนเปื้อน |
 | กลาง: MCP subprocess ต่อ turn | เพิ่มเวลาเปิด process และ verify หลายรอบ ต้องวัด latency จริงก่อนเปลี่ยน lifecycle/session reuse |
 | กลาง: ไม่มี persistence/auth | ความจำอยู่ใน session ไม่รองรับการกู้คืนหลัง restart หรือระบบบัญชีผู้ใช้ |

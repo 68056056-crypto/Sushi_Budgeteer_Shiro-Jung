@@ -1,5 +1,6 @@
 """Capture real consumer-flow sessions; never substitute scripted model evidence."""
 import argparse
+import copy
 from datetime import datetime, timezone
 import json
 import os
@@ -81,9 +82,9 @@ def main():
                 success=success and agent.allergy_simulation_consent
             selected={step['tool'] for step in agent.last_trace if step.get('route')=='model_selected'}
             turns.append({'message':gold['message'],'response':response,
-                          'state':{'budget':agent.state.budget,'allergens':agent.state.allergens,
+                          'state':copy.deepcopy({'budget':agent.state.budget,'allergens':agent.state.allergens,
                                    'hard_exclude_keywords':agent.state.hard_exclude_keywords,
-                                   'dislikes':agent.state.dislikes},
+                                   'dislikes':agent.state.dislikes}),
                           'expected':gold['expected'],'gold_budget':gold['budget'],
                           'success':success,'model_selected_build_and_verify':(success and gold['expected']=='recommendation'
                               and {'build_set','verify_set'}<=selected

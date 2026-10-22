@@ -17,12 +17,19 @@ def render_trace(report):
                     if run.get('model_source')!='live' or not run.get('model_calls',0):
                         continue
                     selected=[event for event in run.get('trace',[]) if event.get('route')=='model_selected']
-                    tools={event.get('tool') for event in selected}
-                    if not {'build_set','verify_set'}<=tools:
+                    build=next((event for event in selected if event.get('tool')=='build_set'
+                                and event.get('status')=='candidate' and event.get('result_id')
+                                and any(check.get('tool')=='verify_set' and check.get('passed')
+                                        and check.get('result_id')==event['result_id'] for check in selected)),None)
+                    if build is None:
                         continue
+                    arguments=build.get('arguments',{})
+                    state={key:arguments[key] for key in ('budget','allergens','hard_exclude_keywords','dislikes')
+                           if key in arguments}
                     data=redact({'session':session['id'],'message':turn.get('message'),
                                  'source_commit':report.get('source_commit'),
-                                 'model':run.get('model'),'state':turn.get('state'),
+                                 'model':run.get('model'),'state':state,
+                                 'state_source':'arguments of this run model-selected build_set',
                                  'model_selected_events':selected,'usage':run.get('usage')})
                     return '# Live LLM trace for presentation\n\nReal provider run; model selected build_set and verify_set.\n\n```json\n'+json.dumps(data,ensure_ascii=False,indent=2)+'\n```\n'
     return '# Live LLM trace unavailable\n\nNo successful real-provider session with model-selected build_set AND verify_set was recorded. Do not present scripted or fallback traces as live evidence.\n'

@@ -59,7 +59,7 @@ def main() -> int:
     (ROOT / 'artifacts').mkdir(exist_ok=True)
     results['database_import'] = run('Import CSV -> SQLite', '-m', 'sushi_budgeteer.database', 'import', log='database-import.json')
     results['database_status'] = run('Database status', '-m', 'sushi_budgeteer.database', 'status', log='database-status.json')
-    results['checks'] = run('Regression + smoke + OPA tests', 'scripts/run_checks.py', '--output-dir', 'artifacts/review-round2')
+    results['checks'] = run('Regression + smoke + OPA tests', 'scripts/run_checks.py', '--output-dir', 'artifacts/review-live-confirmed-checks')
     results['mcp_demo'] = run('MCP client demo', 'mcp_client_demo.py', log='mcp-demo.log')
     results['offline_eval'] = run('Offline evaluation (40 cases)', 'scripts/evaluate.py', '--mode', 'offline', '--output', 'artifacts/review-round2-followup/offline-evaluation.json')
     results['benchmark'] = run('Benchmark DP vs greedy vs random', 'scripts/benchmark.py', '--output', 'artifacts/review-round2-followup/benchmark-production.json')
@@ -75,7 +75,10 @@ def main() -> int:
         results['live_eval'] = run(f'Live evaluation (limit {limit})', 'scripts/evaluate.py', '--mode', 'live', '--limit', limit)
         if args.full:
             results['live_sessions'] = run('Live multi-turn sessions', 'scripts/live_sessions.py', '--scenarios', 'evaluation/round2_sessions.json', '--output', 'artifacts/review-round2-followup/live-status.json')
-    results['report'] = run('Build review-round2-followup-report.html', 'scripts/build_report.py')
+    report_args=['scripts/build_report.py']
+    if isinstance(results.get('live_sessions'),int):
+        report_args+=['--live-report','artifacts/review-round2-followup/live-status.json']
+    results['report'] = run('Build review-round2-followup-report.html', *report_args)
     print('\n' + json.dumps(results, indent=2))
     print('\nOpen artifacts/review-round2-followup-report.html in a browser to review the evidence.')
     hard_fail = any(isinstance(v, int) and v not in (0,) for k, v in results.items() if not k.startswith('live'))

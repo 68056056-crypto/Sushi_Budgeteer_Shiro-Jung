@@ -79,6 +79,7 @@ class ExplicitRefusalTest(unittest.TestCase):
     def test_unknown_food_refusal_is_preserved_and_negated_refusal_is_not_added(self):
         self.assertEqual(_sanitize_extraction({},None,'ห้ามซอสพิเศษ')['hard_exclude_keywords'],['ซอสพิเศษ'])
         self.assertFalse(_sanitize_extraction({},None,'ไม่ได้งดไก่')['hard_exclude_keywords'])
+        self.assertEqual(_sanitize_extraction({},None,'ขอห้ามมีของดิบเลย เงื่อนไขอื่นเหมือนเดิม')['hard_exclude_keywords'],['ดิบ'])
         self.assertEqual(_sanitize_extraction({},None,'ไม่กินหมู ไม่แพ้อาหาร')['hard_exclude_keywords'],['หมู'])
 
     def test_alternative_changes_thirty_percent_food_names_and_keeps_fixed_extras(self):
