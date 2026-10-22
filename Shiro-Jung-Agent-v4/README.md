@@ -12,22 +12,6 @@
 
 หลักฐานล่าสุดเป็น **127 regression tests, 24 Rego tests, smoke 61 ต่อโหมด และ offline gold 40/40** โดย Agent tests ใช้ scripted model ไม่ใช่ผล live OpenAI ดูขอบเขตที่ [CODE_REVIEW.md](CODE_REVIEW.md) และ [EVALUATION.md](EVALUATION.md)
 
-## แก้ไขตามผลประเมินรอบ 1 — 22 ตุลาคม 2569
-
-| ข้อเสนอแนะ | สิ่งที่แก้และหลักฐาน |
-|---|---|
-| เส้นทางจัดชุดบนเว็บข้าม LLM | เอาทางลัด `_replan → build_set` ออก; หลังยืนยันและเมื่อปรับชุดใช้ `bind_tools` จริง โดย state ยังล็อกงบ/แพ้/ข้อห้าม; trace แสดง `route=model_selected` หรือ `fallback=after_stall` แยกกัน |
-| สูตรคะแนนสไลด์ไม่ตรงโค้ด | อธิบายคะแนนรายเมนูกับ objective ของทั้งชุดแยกกัน; ราคาเป็นช่วงราคา และ +2 ของหมวดที่ไม่ใช่ปลาดิบเป็น heuristic เดิม ไม่ใช่ category coverage |
-| “ไม่กินหมู/ดิบ” จับ fuzzy ผิด | เพิ่ม `dietary_tags` / `dietary_status`; ข้อห้ามที่รู้จักใช้ exact tag ส่วนชื่อเมนูอื่นใช้ literal match; ไม่ใช้ edit distance ใน hard exclusion |
-| ชื่อคอลัมน์ชวนเข้าใจผิด / S007 ผิดกลุ่ม | เปลี่ยนเป็น `allergen_tags` พร้อมรองรับ CSV/SQLite เดิม; อูนิเป็น echinoderm; ปลาไหลย่าง/หมึกต้มอยู่หมวดปรุงสุก |
-| OPA อาศัย boolean จาก Python | input schema 2 ส่ง raw tag arrays และสถานะให้ Rego เทียบเอง ทดสอบ conflict แม้ flags จาก Python เป็น false; ยัง deny เมื่อ Python แจ้งปัญหาด้วย |
-| Benchmark ใช้คนละ config | `optimization_config.py` ใช้ร่วมกับ production; รายงาน objective=budget, diversity=true, spend_ratio=0.8, max60, repeat3 ใน `artifacts/benchmark-production.json` |
-
-หลักฐานล่าสุด: [ผลตรวจ](artifacts/review-round1/validation-report.json), [offline 40 กรณี](artifacts/review-round1-offline-evaluation.json), [benchmark production](artifacts/benchmark-production.json), [สถานะ live](artifacts/review-round1-live-status.json) ส่วน artifact ชื่อเดิมนอกกลุ่มนี้เป็นหลักฐานรุ่นก่อน อย่านำตัวเลขมารวมกับรายงานรอบนี้
-
-**สิ่งที่ยังไม่เสร็จและไม่อ้างว่าผ่าน:** ข้อมูลร้าน 42 เมนูยัง unknown/unverified; ไม่มี API key จึงยังไม่ได้รัน live LLM 3 sessions; ยังไม่มี persistence ข้าม session, การรับประกันปริมาณต่อคน, ภาษี/ค่าบริการ หรือการ reuse MCP subprocess ขั้นตอน 80/20 เป็นความต้องการผลิตภัณฑ์จากผู้ใช้ ไม่ใช่ทฤษฎีว่าคุ้มที่สุดและไม่ใช้แทนการประเมินความพึงพอใจ
-
-ไฟล์นำเสนอ v8 และเอกสารตอบข้อประเมินส่งให้ผู้ใช้แยกจาก repository **ไม่ขึ้น GitHub**
 
 ## ไปต่อหลังแจ้งแพ้อาหารโดยไม่ลบการแพ้
 
