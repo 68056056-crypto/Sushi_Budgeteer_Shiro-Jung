@@ -133,6 +133,18 @@ class BudgeteerAgent(IntakeMixin, PlanningMixin, CheckoutMixin):
         if self.order_closed:
             return CLOSING_MESSAGE
         text=re.sub(r'\s*(?:ครับ|ค่ะ|คะ)[!? ]*$','',user_message.strip())
+        if re.search(r'(?:งบ(?:ประมาณ)?\s*0(?:\.0+)?\s*(?:บาท|$))',text):
+            return 'งบต้องมากกว่า 0 บาทครับ และเมื่อระบุจำนวนคนแล้ว ต้องมีงบอย่างน้อยคนละ 100 บาท'
+        if re.search(r'เบียร์\s*\d|(?:มี|ขอ|เอา|สั่ง)เบียร์',text):
+            return 'ไม่มีเบียร์ในเมนูขณะนี้ครับ ดูเครื่องดื่มที่มีได้โดยพิมพ์ เครื่องดื่ม อาหารที่เลือกไว้ยังอยู่ครับ'
+        if re.search(r'ราคา|กี่บาท|เท่าไหร่',text) and not re.search(r'งบ|เพิ่มงบ|ลดงบ',text):
+            from .database import records
+            from .optimizer import matches_any_keyword
+            query=re.sub(r'ราคา|กี่บาท|เท่าไหร่|เท่าไร|ขอทราบ|ถาม|เมนู|ครับ|ค่ะ|ไหม|\s','',text)
+            found=[row for row in records() if query and matches_any_keyword(row,[query])]
+            if found:
+                return '\n'.join(f"- {row['name_th']} — {float(row['price_baht']):,.2f} บาท" for row in found)+'\n\nรายการอาหารและชุดที่เลือกได้ยังอยู่ครับ'
+            return 'ยังไม่พบเมนูที่ถามราคาครับ กรุณาระบุชื่อเมนู เช่น โอโทโร่ ราคาเท่าไหร่ รายการและตัวเลือกเดิมยังอยู่ครับ'
         if self.pending_meat_scope and text in MEAT_CHOICES:
             self.state.add_message('user',user_message)
             answer=self.resolve_meat_choice(text)
@@ -209,8 +221,15 @@ class BudgeteerAgent(IntakeMixin, PlanningMixin, CheckoutMixin):
         if len(user_message)>4000: return 'กรุณาย่อข้อความให้ไม่เกิน 4000 ตัวอักษรครับ'
         try:
             extracted=self._extract_intent(user_message)
-            if extracted.get('min_items') and extracted.get('max_items') and extracted['min_items']>extracted['max_items']:
-                return 'จำนวนขั้นต่ำมากกว่าจำนวนสูงสุด กรุณาระบุใหม่ครับ'
+            cancelled=[kw for kw in self.state.required_keywords
+                       if re.search(r'(?:ยกเลิก|ไม่เอา|ไม่ต้องมี)\s*'+re.escape(kw),user_message)]
+            if cancelled:
+                self.state.required_keywords=[kw for kw in self.state.required_keywords if kw not in cancelled]
+                self.state.preferred_keywords=[kw for kw in self.state.preferred_keywords if kw not in cancelled]
+                for key in ('required_keywords','preferred_keywords'):
+                    extracted[key]=[kw for kw in extracted.get(key,[]) if kw not in cancelled]
+
+
             if extracted.get('drinks_budget_mode') not in {None,'within','separate'}:
                 return 'กรุณาระบุว่าจะรวมค่าเครื่องดื่ม/ของหวานในงบหรือคิดแยกครับ'
             if extracted.get('budget_delta') is not None and self.state.budget is not None and self.state.budget+extracted['budget_delta']<=0:
@@ -218,7 +237,11 @@ class BudgeteerAgent(IntakeMixin, PlanningMixin, CheckoutMixin):
             effective_min=extracted.get('min_items') or self.state.min_items
             effective_max=extracted.get('max_items') or self.item_limit()
             if effective_min>effective_max:
-                return 'จำนวนขั้นต่ำมากกว่าจำนวนสูงสุด กรุณาระบุใหม่ครับ'
+                valid={**extracted,'min_items':None,'max_items':None}
+                self.state.update_from_extraction(valid)
+                self.pending_confirmation=False
+                self.state.last_asked_field='item_bounds'
+                return 'จำนวนขั้นต่ำมากกว่าจำนวนสูงสุดครับ ผมเก็บงบ จำนวนคน การแพ้และความชอบไว้แล้ว กรุณาระบุเฉพาะจำนวนจานใหม่ เช่น อย่างน้อย 5 จาน ไม่เกิน 10 จาน'
             if extracted.get('budget') is not None: cents(extracted['budget'])
             if extracted.get('budget_delta') is not None:
                 cents(abs(extracted['budget_delta']))

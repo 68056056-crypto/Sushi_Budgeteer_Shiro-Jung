@@ -28,6 +28,7 @@ class Extraction(BaseModel):
     preferred_keywords: list[str]=Field(default_factory=list,max_length=30)
     hard_exclude_keywords: list[str]=Field(default_factory=list,max_length=30)
     must_include_keywords: list[str]=Field(default_factory=list,max_length=30)
+    required_keywords: list[str]=Field(default_factory=list,max_length=8)
     min_items: int | None=Field(None,ge=1,le=60)
     max_items: int | None=Field(None,ge=1,le=60)
     num_people: int | None=Field(None,ge=1,le=60)
@@ -68,6 +69,21 @@ class IntakeMixin:
         if (self.consumer_flow and self.state.wants_dessert is False
                 and not re.search(r'ของหวาน|ขอหวาน|dessert|โมจิ|ไอศกรีม|ขนม',message,re.IGNORECASE)):
             raw={**raw,'wants_dessert':None,'dessert_selection':[],'dessert_quantity':None}
+        if re.search(r'ขอใส่|ใส่ในชุด|ต้องมี|ขอเพิ่ม.{0,30}ในชุด',message):
+            from .database import records
+            from .optimizer import matches_any_keyword
+            request_text=re.sub(
+                r'(?:ไม่กิน|ไม่ทาน|งด|ห้าม(?:มี|กิน|ทาน)?|ไม่ค่อยชอบ|ไม่ชอบ|แพ้)\s*.*?'
+                r'(?=ชอบ|อยาก|ขอ|ต้องมี|งบ|ไม่กิน|ไม่ทาน|ไม่ชอบ|แพ้|[,;\n]|$)', '', message)
+            candidates=list(dict.fromkeys([*(kw for kw in raw.get('preferred_keywords',[]) if kw in request_text),
+                *(row['name_th'] for row in records() if row['name_th'] in request_text)]))
+            # Full catalogue keywords cover short requests such as โอโทโร่.
+            candidates.extend(kw for row in records() for kw in str(row.get('keywords','')).split(';')
+                              if len(kw.strip())>=3 and kw.strip() in request_text)
+            requested=[kw.strip() for kw in candidates if any(matches_any_keyword(row,[kw]) for row in records())]
+            raw['required_keywords']=list(dict.fromkeys([*(kw for kw in raw.get('required_keywords',[]) if kw in request_text),*requested]))[:8]
+            if not re.search(r'เฉพาะ|เท่านั้น|กินแค่|เอาแค่',message):
+                raw['must_include_keywords']=[]
         raw=defer_meat_guess(raw,message)
         return Extraction.model_validate(raw).model_dump()
 
@@ -120,6 +136,8 @@ class IntakeMixin:
                '- ไม่กิน: '+(', '.join(exclusion_label(word) for word in s.hard_exclude_keywords) or 'ไม่ได้ระบุ'),
                '- ชอบ: '+(', '.join(s.preferred_keywords) or 'ไม่ได้ระบุ'),
                '- ไม่ชอบ: '+(', '.join(s.dislikes) or 'ไม่ได้ระบุ')]
+        if s.required_keywords:
+            lines.append('- เมนูที่ขอให้มี: '+', '.join(s.required_keywords))
         if s.drink_selection:
             drinks=(', '.join(f'{name} {qty} แก้ว' for name,qty in s.drink_quantities.items())
                     if s.drink_quantities else ', '.join(s.drink_selection)+f' รวม {s.drink_quantity or s.num_people} แก้ว')
@@ -135,7 +153,7 @@ class IntakeMixin:
         lines.append('- ค่าเครื่องดื่ม/ของหวาน: '+('คิดเพิ่มนอกงบ' if s.drinks_budget_mode=='separate' else 'รวมในงบ'))
         if self.pending_allergy_removals:
             corrected=', '.join(self._ALLERGEN_TH.get(a,a) for a in self.pending_allergy_removals)
-            lines.append('คุณขอแก้ว่าไม่ได้แพ้ '+corrected+' — จะเปลี่ยนข้อมูลเมื่อคุณกดยืนยันเท่านั้น')
+            lines.append('\nคุณขอแก้ว่าไม่ได้แพ้ '+corrected+' — จะเปลี่ยนข้อมูลเมื่อคุณกดยืนยันเท่านั้น')
         return '\n\n'.join([lines[0], '\n'.join(lines[1:]),
             'ถ้าตรงแล้วกดยืนยันเพื่อจัดชุด หรือพิมพ์แก้เฉพาะส่วนที่ต้องการได้เลยครับ'])
 
@@ -186,10 +204,10 @@ class IntakeMixin:
         s=self.state
         return dict(budget=s.budget,allergens=s.allergens,dislikes=s.dislikes,
           preferred_keywords=s.preferred_keywords,hard_exclude_keywords=s.hard_exclude_keywords,
-          must_include_keywords=s.must_include_keywords,min_items=s.min_items,max_items=self.item_limit(),
+          must_include_keywords=s.must_include_keywords,required_keywords=s.required_keywords,max_items_explicit=s.max_items_explicit,min_items=s.min_items,max_items=self.item_limit(),
           num_people=s.num_people,drink_selection=s.drink_selection,drink_quantity=s.drink_quantity,
           drink_quantities=s.drink_quantities or None,
-          drinks_separate_from_budget=s.drinks_budget_mode=='separate',include_dessert=s.wants_dessert,
+          drinks_separate_from_budget=s.drinks_budget_mode=='separate',include_dessert=bool(s.wants_dessert),
           dessert_selection=s.dessert_selection,dessert_quantity=s.dessert_quantity,
           spend_ratio=INITIAL_SPEND_RATIO if self.consumer_flow else 1.0)
 
@@ -227,6 +245,9 @@ class IntakeMixin:
             else:
                 message+=' กรุณาให้พนักงานร้านช่วยเลือกเมนูและตรวจส่วนผสมก่อนครับ'
             return message+'\n\n'+ALLERGY_WARNING
+        requested=[i for i in issues if any(word in i for word in ('ไม่สามารถใส่','ไม่มีเมนูที่ขอ','ในเมนูขณะนี้'))]
+        if requested:
+            return '\n\n'.join(dict.fromkeys(requested))+' คงข้อห้ามและการแพ้เดิมไว้ครับ กรุณาเปลี่ยนเมนูที่ขอหรือปรับงบ'
         if any('opa_unavailable' in i for i in issues):
             return 'ระบบตรวจรายการไม่พร้อมชั่วคราว กรุณาลองใหม่ครับ'
         if any('เครื่องดื่ม' in i or 'ของหวาน' in i for i in issues):

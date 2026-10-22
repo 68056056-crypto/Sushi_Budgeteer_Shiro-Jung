@@ -1,8 +1,11 @@
 """Create a standalone presentation report from measured artifacts, with no external assets."""
 from pathlib import Path
+import sys
 import json
 import argparse
 ROOT=Path(__file__).resolve().parents[1]
+sys.path.insert(0,str(ROOT))
+from sushi_budgeteer import __version__
 def read(name):
     p=ROOT/'artifacts'/name
     return json.loads(p.read_text()) if p.exists() else {'status':'not_run'}
@@ -17,7 +20,7 @@ encoded=json.dumps(data,ensure_ascii=False).replace('</','<\\/')
 html='''<!doctype html><html lang="th"><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Shiro-Jung — Evidence Report</title><style>
 body{font:16px/1.6 system-ui,sans-serif;max-width:1150px;margin:36px auto;padding:0 20px;background:#fffaf6;color:#25303b}h1,h2{color:#a52e26}.cards{display:flex;flex-wrap:wrap;gap:16px}.card{background:white;padding:18px;border:1px solid #ddd;border-radius:12px;min-width:180px}.value{font-size:30px;font-weight:bold}table{border-collapse:collapse;width:100%;background:white;margin-top:15px}th,td{padding:9px;border-bottom:1px solid #ddd;text-align:left}select,button{font:inherit;padding:6px}.notice{padding:15px;background:#fff0c4;border-radius:8px}.bar{height:13px;margin:3px 0;background:#b5352a}.greedy{background:#4489ab}.random{background:#aaa}small{color:#555}details{margin:12px 0}pre{white-space:pre-wrap;overflow-wrap:anywhere}
-</style><h1>Shiro-Jung 4.2.2 — หลักฐานการทำงาน</h1>
+</style><h1>Shiro-Jung PACKAGE_VERSION — หลักฐานการทำงาน</h1>
 <p class="notice">Offline ใช้ MCP + SQLite + OPA จริง ส่วนการตัดสินใจด้วย OpenAI แสดงแยกตามสถานะ live ด้านล่าง ไม่ใช้ผลโมเดลจำลองแทนผลจริง ข้อมูลเมนู/ราคา/allergen ยังไม่ยืนยันกับร้าน</p>
 <div id="cards" class="cards"></div><h2>สถานะ LLM จริง</h2><p id="live"></p>
 <h2>Evaluation 40 กรณี</h2><label>กรองผล <select id="filter"><option value="all">ทั้งหมด</option><option value="pass">ผ่าน</option><option value="fail">ไม่ผ่าน</option></select></label><div id="evaluation"></div>
@@ -32,5 +35,5 @@ function evaluations(){const target=document.querySelector('#evaluation');target
 document.querySelector('#filter').onchange=evaluations;evaluations();
 const cases=data.benchmark.cases??[];const select=document.querySelector('#scenario');cases.forEach((c,i)=>{const o=node('option',c.full_budget+' บาท / ชอบ '+(c.preferences.join(',')||'ไม่ระบุ')+' / ห้าม '+(c.hard_exclusions.join(',')||'ไม่มี'));o.value=i;select.append(o)});
 function chart(){const c=cases[Number(select.value)];if(!c)return;const target=document.querySelector('#chart');target.replaceChildren();const a=c.algorithms;const values=[['DP',a.dp.diminishing_score,'bar'],['Greedy density',a.greedy_density.diminishing_score,'bar greedy'],['Greedy score',a.greedy_score.diminishing_score,'bar greedy'],['Random mean',a.random.means.diminishing_score,'bar random']];const max=Math.max(...values.map(x=>x[1]),1);for(const [label,value,cls]of values){target.append(node('p',label+': '+value.toFixed(3)));const b=node('div','');b.className=cls;b.style.width=(100*value/max)+'%';target.append(b)}target.append(node('small','Random: 100 seeds; DP ใช้งบเต็ม '+(a.dp.share_of_full_budget*100).toFixed(2)+'% / วงเงินอาหาร '+(a.dp.share_of_food_target*100).toFixed(2)+'%, '+a.dp.distinct_dishes+' เมนูไม่ซ้ำ'))}
-select.onchange=chart;chart();</script></html>'''.replace('DATA',encoded)
+select.onchange=chart;chart();</script></html>'''.replace('DATA',encoded).replace('PACKAGE_VERSION',__version__)
 path=ROOT/'artifacts'/'report.html';path.write_text(html);print(path)

@@ -72,7 +72,7 @@
   "limitations": [
     "Gold success is the runner assessment, not a human preference study or restaurant certification.",
     "Original live report per-turn state lists can reflect later turns. Use matching build_set arguments. Raw live report remains byte-for-byte; original trace is archived at commit3af6b28.",
-    "Live result belongs to source426b48a. Subsequent reporting/parser fixes and the 100-baht-per-person intake guard are offline-tested, not a new live API run."
+    "Live result belongs to source426b48a, not package4.3.0. Required menu, scoring, explicit-cap diversity, valid-field salvage, intake budget guard and SQLite session persistence are offline-tested, not a new live API run."
   ],
   "submission_layout": {
     "evidence_files": 7,
@@ -82,8 +82,6 @@
     "archive_commit": "3af6b28",
     "archived_original_trace_url": "https://github.com/68056056-crypto/Sushi_Budgeteer_Shiro-Jung/blob/3af6b28/Shiro-Jung-Agent-v4/artifacts/live-confirmed-39799552734/original-live-trace.md",
     "runtime_files_verified_unchanged": {
-      "app.py": "6e2f32d0dfc8ea6e55efa0a7fbd1a2336c831899ac0888e5220523369f1a533a",
-      "mcp_server.py": "32530b9eee1ebc43bb6859dd9a20383ffda6c82358ce9793d1d06c37392fba92",
       "sushiro_menu_dataset.csv": "dbda6c24f9db3bfd90d20010a9e29a6b23f25080e976c3bce2096dc0f910ec7c",
       "requirements.txt": "5f85fc15acc03179643432038f5fe50d9a6b7ade2e877bf96ebde56f03eaba7f",
       "requirements.lock": "4e6c1c93bb843a49bce29d86d02a357de4ae157af75b3bb4adb2cc32889e9194",
@@ -96,15 +94,19 @@
     },
     "public_url": "https://shiro-jung.streamlit.app/",
     "public_url_verification": "Not verified from this execution network; outbound proxy blocks access. Local startup/AppTest and runtime file hashes were checked.",
-    "checks_created_at": "2026-10-22T16:30:31.180941+00:00",
-    "current_package": "4.2.2",
-    "live_corpus_change": "Replaced 1-baht/1-person optimizer-block expectation with 50-baht/3-person intake budget_revision before planning; original live source426b48a does not test this new guard."
+    "checks_created_at": "2026-10-22T17:31:48.270174+00:00",
+    "current_package": "4.3.0",
+    "live_corpus_change": "Replaced 1-baht/1-person optimizer-block expectation with 50-baht/3-person intake budget_revision before planning; original live source426b48a does not test this new guard.",
+    "updated_runtime_file_sha256": {
+      "app.py": "f8c6691c2e592e6b3856406407f03c3be83fd39c05185eacf3531dca129203ad",
+      "mcp_server.py": "d022a1c254033b9b64b9f8aac6f87dfbc2b811ab28af492aab96a7fc732139d4"
+    }
   },
   "current_file_sha256": {
-    "benchmark.json": "92c975e21f223cbf417ba10b3edc0052e99679e4c22e5cf6bece33abaeaad187",
-    "offline-evaluation.json": "903ae977ac3d3cefb55d6ff2d1acbcbc779a846803c624e19aa2961d5246c909",
-    "checks.json": "ee5ec9e0bbf682a96e270d6fab148b08f0a4788bb386174e2989840dacd45295",
-    "catalog-audit.json": "6997cf2e330853d2a544fc2abc8703b8a0bd7a3d010b9db3f3aec96b7d71937f",
+    "benchmark.json": "a330e0f8401c2b8d322ca0c48b750c04a61c2b4b98a81fbb94a922ecf1ae2afe",
+    "offline-evaluation.json": "70d3b6efdfd9c01de37f2bbf68eccbfa18b471337da6f5d6971e69c3630715cb",
+    "checks.json": "0b097b54caf5643f9be01abb1740314504c128261d2294aad3b4d9589d41c10d",
+    "catalog-audit.json": "de7445f187b4f30eb22426c71ca92c84a5fcb34a2d1382e1d9df3be0b26aef94",
     "live-sessions.json": "cfb28e2a536178de17be43dc081da9f1217e5309d81ca7b2666c6aae72ae2bca",
     "live-trace.md": "133e240f555be8da67e778d92996b883a5f17ee98208a1d820338f1a17268abd"
   },
@@ -121,5 +123,26 @@
     "preserves_allergies_and_preferences": true,
     "offline_regression_tests": 7,
     "live_api_rerun_for_this_guard": false
+  },
+  "review_fixes": {
+    "release": "4.3.0",
+    "required_menu": "exact DP coverage mask, checked again from trusted catalog IDs; never relax exclusions",
+    "explicit_plate_cap": "score objective first; maximum 2 repeats per food dish",
+    "preference_points_per_keyword": 6,
+    "preference_points_maximum": 12,
+    "conflicting_bounds": "retain valid budget, people, allergies and preferences; request only corrected plate bounds",
+    "read_only_prices": "preserve options and checkout",
+    "unavailable_beer": "explicit not on menu response",
+    "persistence": {
+      "storage": "local SQLite JSON allowlist",
+      "ttl_seconds": 86400,
+      "token_bits": 256,
+      "provider_credentials_serialized": false,
+      "catalog_policy_revalidated_on_restore": true,
+      "durable_across_cloud_restart": false
+    },
+    "targeted_regression_cases": 10,
+    "live_rerun": false,
+    "restaurant_confirmations_added": 0
   }
 }

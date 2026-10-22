@@ -1,4 +1,4 @@
-# Evaluation — Shiro-Jung 4.0 / package 4.2.2
+# Evaluation — Shiro-Jung 4.0 / package 4.3.0
 
 เอกสารนี้แยก **offline regression / gold tools / benchmark / live LLM** ไม่รวมจำนวนหรืออ้างผลแทนกัน วันที่และ revision ดูจาก JSON ของแต่ละการรัน
 
@@ -6,7 +6,7 @@
 
 | ชั้นการประเมิน | ผล | ขอบเขต |
 |---|---|---|
-| Regression/integration | 172ผ่าน, failures0/errors0/skips0 | scripted model + real MCP subprocess, SQLite, OPA และ Streamlit AppTest |
+| Regression/integration | 182ผ่าน, failures0/errors0/skips0 | scripted model + real MCP subprocess, SQLite, OPA และ Streamlit AppTest |
 | Rego | 25/25 | กฎ allow/deny รวม raw-tag conflicts และ Python flagsfalse |
 | Smoke | strict61/61 และ simulation61/61 | ตรวจทั้งสองโหมด ไม่ลด strict เพื่อให้ผ่าน |
 | Offline gold | 40/40 | ใช้ tools โดยไม่เรียก LLM; ไม่วัดคุณภาพ extraction/provider |
@@ -94,14 +94,22 @@ python scripts/build_report.py --live-report artifacts/generated/live-sessions.j
 
 Live success เป็นผล runnerที่ใช้ validation helpersร่วมกับแอป ไม่มี raw final-menu payloadครบสำหรับ independent replay และยังไม่มี human preference study การแก้ snapshot/exporter/parserภายหลังผ่าน offline regression **ไม่ใช่ live rerun ใหม่** ผล100% จำกัดที่ corpus/commitนี้ ไม่รับรองทุกpromptหรือสูตรร้าน
 
+## Regression จาก review ล่าสุด
+
+`tests/test_requested_meals.py` มี10เคส: required coverage เทียบ exhaustive optimum, ขอ/บังคับเมนูและ alternative, verify ปฏิเสธเมนูที่ขาด, ความชอบทูน่าขัดข้อห้ามของดิบ, min>max เก็บข้อมูลที่ถูกต้อง, งบ0/เบียร์/ราคาไม่ล้างชุด, explicit cap เน้นความหลากหลาย, session round-trip/แยกผู้ใช้/หมดอายุ/ไม่บันทึก key, snapshot เปลี่ยนต้องจัดใหม่, Streamlit refresh+ปุ่มราคา และ real MCP required build→verify (บางเคสตรวจหลายพฤติกรรมร่วมกัน)
+
+Live ที่แนบเป็นผล source426b48a ก่อนเปลี่ยน scoring/required menu/explicit-cap objective และ session persistence ชุดใหม่ จึงใช้ยืนยันได้เฉพาะความสามารถและ corpus ณ commit นั้น ไม่อ้างว่าตัวเลข live12/12 เป็นผลรัน package4.3.0
+
 ## Objective และ benchmark
+
+Benchmark นี้วัดกรณีไม่มี explicit plate cap และไม่มี required menu เท่านั้น; กรณีใหม่มี regression แยก ไม่ใช้ตัวเลขนี้รับรอง optimality ของทุกเงื่อนไข
 
 Configร่วม: objectivebudget, diversitytrue, spend_ratio0.8, maxfood60, repeatcap3 DPเรียงคะแนนก่อนในช่วง95–100%ของวงเงินอาหาร; หากทำช่วงนั้นไม่ได้เรียงยอดเงินก่อนคะแนน ทั้งสาม baselineใช้ข้อจำกัดเดียวกัน ไม่ใช้ rawscoreเพียงอย่างเดียวตัดสินobjective dominance
 
 | วิธี | ใช้งบเต็มเฉลี่ย | ใช้วงเงินอาหารเฉลี่ย | คะแนนลดซ้ำเฉลี่ย |
 |---|---:|---:|---:|
-| DP | 76.25% | 95.3125% | 110.77 |
-| Greedy density | 72.06% | 90.07% | 117.44 |
+| DP | 76.25% | 95.3125% | 123.44 |
+| Greedy density | 72.11% | 90.14% | 130.77 |
 
 ไม่มี feasibility/objective-dominance failureในชุดbenchmarkนี้ แต่ Greedy densityได้คะแนนและความหลากหลายเฉลี่ยสูงกว่า จึงไม่อ้างว่า DPดีที่สุดทุกตัวชี้วัด 76.25%ของงบเต็มมีตัวหารต่างจาก95.3125%ของวงเงินอาหาร และไม่รวม extrasที่เพิ่มภายหลัง ส่วนที่สำรองเป็นนโยบายผลิตภัณฑ์ ไม่ใช่ผลวิจัยความอิ่มหรือความพึงพอใจ
 

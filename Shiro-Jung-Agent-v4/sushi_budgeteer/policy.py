@@ -20,6 +20,11 @@ def validate_result(result, menu, constraints=None, mode=None):
     from .optimizer import matches_any_keyword, parse_allergen_tags
     issues=list(result.get('preflight_issues',[]))
     constraints=constraints or result.get('constraints',{})
+    catalog_required={row['item_id']:row for row in menu}
+    for keyword in constraints.get('required_keywords',[]):
+        if not any(matches_any_keyword(catalog_required.get(row.get('item_id'),{}),[keyword]) and row.get('quantity',0)>0 for row in result.get('selected',[])):
+            issues.append(f'ยังไม่มีเมนูที่ขอ {keyword} ในชุด กรุณาปรับงบหรือเลือกเมนูอื่น')
+    constraints=constraints or result.get('constraints',{})
     if not constraints:
         return {'passed':False,'issues':['ไม่มี trusted constraint snapshot']}
     from .state import KNOWN_ALLERGENS
@@ -60,6 +65,8 @@ def validate_result(result, menu, constraints=None, mode=None):
             issues.append(f"เมนู {item['name_th']} ขัดกับ allergen")
         if allergens and mode=='strict' and item.get('allergen_status')!='confirmed':
             issues.append(f"เมนู {item['name_th']} ยังไม่มีหลักฐาน allergen รายเมนู")
+        if is_food and constraints.get('max_items_explicit') and qty>2:
+            issues.append('เมนูอาหารซ้ำเกิน 2 จานเมื่อจำกัดจำนวนจาน')
         if hard_excluded(item,constraints.get('hard_exclude_keywords') or []):
             issues.append(f"เมนู {item['name_th']} ขัดข้อห้าม")
         only=constraints.get('must_include_keywords') or []

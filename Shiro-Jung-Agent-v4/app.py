@@ -70,6 +70,24 @@ def _load_agent(api_key: str, model: str):
         return None
 
 
+# An unguessable URL token survives a browser refresh; it is a bearer session link.
+from secrets import token_hex
+from sushi_budgeteer.persistence import SessionStore
+_session_store = SessionStore()
+_session_token = st.query_params.get("session", "")
+if not _session_store.valid_token(_session_token):
+    _session_token = token_hex(32)
+    st.query_params["session"] = _session_token
+
+def _save_session():
+    current = st.session_state.get("agent")
+    if current is not None:
+        _session_store.save(_session_token, current, st.session_state.get("chat_history", []))
+
+def _rerun():
+    _save_session()
+    st.rerun()
+
 # ----------------------------------------------------------------------
 # ดึง API Key อย่างปลอดภัย (รองรับทั้ง Streamlit Secrets บน Cloud และ .env ในเครื่อง)
 # ----------------------------------------------------------------------
@@ -133,6 +151,9 @@ if api_key:
             st.session_state["_agent_key"] = (api_key, model_name, mode)
             loaded_agent.data_mode = mode
             loaded_agent.configured_data_mode = mode
+            restored = _session_store.restore(_session_token, loaded_agent)
+            if restored is not None:
+                st.session_state["chat_history"] = restored
             if not st.session_state.get("chat_history"):
                 st.session_state["chat_history"] = [{"role": "assistant", "content": GREETING_MESSAGE}]
 
@@ -158,7 +179,7 @@ if "agent" in st.session_state and st.session_state["agent"] is not None:
         st.session_state["agent"].reset_order()
         st.session_state.pop("pending_message",None)
         st.session_state["chat_history"] = [{"role": "assistant", "content": GREETING_MESSAGE}]
-        st.rerun()
+        _rerun()
 
 
 # ----------------------------------------------------------------------
@@ -202,7 +223,7 @@ else:
                 placeholder.markdown(full_text)
 
         st.session_state["chat_history"].append({"role": "assistant", "content": full_text})
-        st.rerun()
+        _rerun()
 
 # Only consumer actions are exposed here. Full traces remain on the backend agent.
 if "agent" in st.session_state:
@@ -218,19 +239,19 @@ if "agent" in st.session_state:
                     current_agent.state.add_message("assistant", answer)
                     st.session_state.setdefault("chat_history", []).append(
                         {"role": "assistant", "content": answer})
-                    st.rerun()
+                    _rerun()
         st.caption("การเลือกชุดเป็นเพียงสรุปสำหรับแจ้งร้าน ยังไม่มีการส่งคำสั่งซื้อหรือชำระเงิน")
     if current_agent.pending_meat_scope and not current_agent.order_closed:
         for column,label in zip(st.columns(4),("หมู","เนื้อวัว","ไก่","สัตว์บกทั้งหมด")):
             with column:
                 if st.button(label,key="meat_"+label):
                     st.session_state["pending_message"]=label
-                    st.rerun()
+                    _rerun()
 
     if current_agent.allergy_simulation_available and not current_agent.order_closed:
         if st.button("ดูชุดจำลองจากข้อมูลเมนู",key="allergy_simulation"):
             st.session_state["pending_message"]="ดูชุดจำลองจากข้อมูลเมนู"
-            st.rerun()
+            _rerun()
 
     if current_agent.pending_confirmation and not current_agent.order_closed:
         allergies=[a for a in current_agent.state.allergens if a not in current_agent.pending_allergy_removals]
@@ -240,17 +261,19 @@ if "agent" in st.session_state:
             with column:
                 if st.button(label, key="confirm_order" if column is confirm else "edit_order"):
                     st.session_state["pending_message"] = label
-                    st.rerun()
+                    _rerun()
 
     if current_agent.food_choice is not None and current_agent.checkout_result is not None and not current_agent.order_closed:
         if st.button("ยืนยันรายการทั้งหมด",key="final_confirm",disabled=bool(current_agent.pending_extra_order)):
             answer=current_agent.checkout_action("ยืนยันรายการทั้งหมด")
             st.session_state.setdefault("chat_history",[]).append({"role":"assistant","content":answer})
-            st.rerun()
+            _rerun()
     if current_agent.order_closed and st.button("รีเซ็ตคำถามเพื่อเริ่มใหม่",key="new_order"):
         current_agent.reset_order()
         st.session_state.pop("pending_message",None)
         st.session_state["chat_history"]=[{"role":"assistant","content":GREETING_MESSAGE}]
-        st.rerun()
+        _rerun()
 
 st.caption(MENU_NOTICE)
+
+_save_session()

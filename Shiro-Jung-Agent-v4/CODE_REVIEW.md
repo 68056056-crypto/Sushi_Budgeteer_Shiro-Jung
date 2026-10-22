@@ -1,4 +1,4 @@
-# Code Review — Shiro-Jung 4.0 / package 4.2.2
+# Code Review — Shiro-Jung 4.0 / package 4.3.0
 
 เอกสารนี้รวมคำอธิบาย implementation และการตอบข้อเสนอแนะรอบ 1–2 สำหรับชุดส่งตรวจปัจจุบัน ไม่ใช่การให้คะแนนใหม่แก่โครงงาน
 
@@ -42,13 +42,26 @@ LLM เลือก tool สูงสุด10รอบ/ไม่เกิน8 ca
 
 คำว่า “เงื่อนไขอื่นเหมือนเดิม” เป็นบริบทสนทนา ไม่สร้าง hard food keyword ปะปนอีกต่อไป การแก้ parser/snapshots หลัง live commit มี regression รองรับ แต่ยังไม่อ้างเป็น live rerun ใหม่
 
+## Review รอบล่าสุด — package 4.3.0
+
+| ปัญหา | การแก้และจุดตรวจ |
+|---|---|
+| ขอเมนูแล้วไม่อยู่ในชุด | `intake.py` แยก `required_keywords` จาก ONLY filter; `state.py` จำคำขอ; MCP `build_set` ส่งต่อ; DP coverage bitmask บังคับครบทุกคำ (สูงสุด 8); `policy.py` ตรวจซ้ำจาก item_id ใน catalog |
+| ความชอบขัดข้อห้าม | `tools.py` เทียบเมนูต้นฉบับกับหลังกรองและส่ง `preference_warnings`; `presentation.py` แจ้งผู้ใช้; required menu ที่ขัด/ไม่มี/งบไม่พอไม่ผ่าน validation |
+| min > max ทำข้อมูลหาย | `agent.py` บันทึกเฉพาะฟิลด์ที่ถูกต้องก่อนถามแก้จำนวนจาน ไม่แก้ตัวเลขให้ผ่านเอง |
+| จานน้อยแต่เมนูแพงซ้ำ | `max_items_explicit=True` → score-first, repeat cap2; preference6/คำสูงสุด12; ไม่ปรับ allergy/hard exclusions และไม่เพิ่มของหวานเอง |
+| ปุ่มเลือกชุดหายเมื่อถามราคา | read-only catalog lookup ก่อน reset ตัวเลือก/checkout; เบียร์นอก catalog มีข้อความตรงตัว |
+| รีเฟรชแล้วข้อมูลหาย | `persistence.py` JSON allowlist + SQLite + random256-bit session token, TTL24ชม.; ไม่ serialize API key/client/trace; ตรวจ catalog/policy อีกครั้งก่อนใช้ชุดเก่า |
+
+ทดสอบทั้ง real MCP build→verify และ Streamlit AppTest: ถามราคาแล้วปุ่มยังอยู่, เปิด session เดิมในหน้าใหม่คืนตัวเลือกและเลือกได้ หลักฐานอยู่ `tests/test_requested_meals.py` รวม10เคส ไม่ใช่ live LLM run ใหม่ ข้อมูลร้านยังไม่ตั้ง confirmed โดยไม่มีหลักฐาน
+
 ## Objective ที่อธิบายได้
 
-คะแนนฐาน `max(0, preference + price_tier + category_weight − dislike_penalty)`; preferenceสูงสุด5, price tier3/2/1, category weight+2เมื่อไม่ใช่ปลาดิบ, dislike penalty3 จานซ้ำได้คะแนนส่วนเพิ่ม1/0.5/0.25 เป็น heuristic ไม่ใช่โภชนาการ/ความอิ่ม/ความคุ้มค่าที่ผู้ใช้รับรอง
+คะแนนฐาน `max(0, preference + price_tier + category_weight − dislike_penalty)`; preference 6 ต่อคำที่ตรง สูงสุด12 (มากกว่า price+category สูงสุด5), price tier3/2/1, category weight+2เมื่อไม่ใช่ปลาดิบ, dislike penalty3 จานซ้ำได้คะแนนส่วนเพิ่ม1/0.5/0.25 เป็น heuristic ไม่ใช่โภชนาการ/ความอิ่ม/ความคุ้มค่าที่ผู้ใช้รับรอง
 
-Bounded exact DP ใช้ state `(count, cost_satang)`, immutable backtracking, GCD ลดมิติ และ state limit250,000 กำหนดใน [optimization_config.py](sushi_budgeteer/optimization_config.py): วงเงินเริ่มต้น80%, maxfood60, repeatcap3, diversitytrue, objectivebudget
+Bounded exact DP ใช้ state `(count, cost_satang, required_coverage_mask)`, immutable backtracking, GCD ลดมิติ และ state limit250,000 กำหนดใน [optimization_config.py](sushi_budgeteer/optimization_config.py): วงเงินเริ่มต้น80%, maxfood60, repeatcap3, diversitytrue, objectivebudget; หากจำกัดจานเองใช้ objective score และ repeatcap2
 
-หากมีชุดในช่วง95–100%ของวงเงินอาหาร เลือกคะแนนลดซ้ำสูงสุดแล้วใช้ยอดเงินเป็น tie break ถ้าไม่มีชุดในช่วงนั้น เลือกยอดสูงสุดก่อนคะแนน จึง **ไม่ได้อ้างว่า DP ชนะ Greedy ทุกตัวชี้วัด** ผลเฉลี่ย DP score110.77 / ใช้งบเต็ม76.25% เทียบ Greedy density score117.44 / ใช้งบเต็ม72.06% ขอบเขตและค่าจริงอยู่ใน [EVALUATION.md](EVALUATION.md)
+กรณีไม่ได้จำกัดจำนวนจาน: หากมีชุดในช่วง95–100%ของวงเงินอาหาร เลือกคะแนนลดซ้ำสูงสุดแล้วใช้ยอดเงินเป็น tie break ถ้าไม่มีชุดในช่วงนั้น เลือกยอดสูงสุดก่อนคะแนน จึง **ไม่ได้อ้างว่า DP ชนะ Greedy ทุกตัวชี้วัด** ผลเฉลี่ย DP score123.44 / ใช้งบเต็ม76.25% เทียบ Greedy density score130.77 / ใช้งบเต็ม72.11% ขอบเขตและค่าจริงอยู่ใน [EVALUATION.md](EVALUATION.md)
 
 ## Trust boundary และข้อมูลแพ้อาหาร
 
@@ -68,7 +81,7 @@ Python สร้าง trusted facts จาก SQLite; Rego policy `shiro-4.2` s
 
 - ข้อมูลราคา/ส่วนผสม42รายการยัง unverified/unknown; ไม่มีหลักฐานร้านใหม่ในชุดส่งนี้
 - Live ผ่านเฉพาะ5sessions/12goldที่ระบุ ไม่ใช่ human preference study หรือคุณภาพทุก prompt
-- ไม่มี durable conversation persistence/account system; SQLite เก็บ catalog ไม่ใช่ความจำบทสนทนาหลัง refresh
+- Session persistence มีอายุ 24 ชั่วโมงใน SQLite บนเครื่องที่รันแอป; ไม่ใช่บัญชีผู้ใช้หรือ durable storage ข้าม Cloud restart/redeploy
 - MCP เปิด subprocess ต่อ planning turn และมี rechecks หลายรอบ ยังไม่ได้พิสูจน์ latency improvement เชิงควบคุม
 - ไม่คำนวณ portion/ความอิ่ม/ภาษี/service charge และไม่ส่งออเดอร์จริง
 

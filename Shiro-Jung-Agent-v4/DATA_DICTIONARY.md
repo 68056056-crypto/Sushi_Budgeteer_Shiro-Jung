@@ -82,3 +82,7 @@ python scripts/catalog_audit.py --checklist artifacts/generated/menu-evidence-ch
 ```
 
 ไฟล์ checklistเป็นแบบฟอร์ม ไม่ใช่การรับรอง หากไม่มีคำตอบร้านและทีมตรวจข้อมูลจริงแล้วจึงใช้ team_reviewedพร้อมเหตุผล/ผู้ตรวจ/วันที่; ไม่ตั้งอัตโนมัติเพียงเพราะร้านไม่ตอบ การใช้ชุดจำลองไม่ทดแทนการตรวจส่วนผสมกับร้าน โดยเฉพาะกรณีแพ้รุนแรง
+
+## ข้อมูล session ของแอป
+
+`data/sessions.sqlite3` แยกจาก menu catalog ใช้ JSON snapshot ตาม allowlist ของ `persistence.py`: งบ คน การแพ้ ความชอบ ข้อห้าม เมนูที่ขอให้มี ตัวเลือกอาหารและรายการเพิ่มเติม และบทสนทนาล่าสุด ไม่บันทึก provider key/client/trace มีอายุ24ชั่วโมง ลบ record หมดอายุเมื่อเขียนครั้งถัดไป; reset เขียนสถานะมื้อเริ่มต้นทับ record เดิม ไม่รวมฐานข้อมูลใน Git หรือ ZIP หาก Cloud ล้าง filesystem ข้อมูลนี้อาจหาย URL session เป็น bearer token ห้ามเผยแพร่พร้อมข้อมูลผู้ใช้ ไม่มี account/access-control ข้ามอุปกรณ์

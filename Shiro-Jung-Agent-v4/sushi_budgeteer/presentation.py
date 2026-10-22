@@ -19,6 +19,8 @@ def render_menu(result):
         net=round(result['budget']-result['total_price'],2)
         lines.append(f"เทียบงบรวมเดิม คงเหลือ {net:,.2f} บาท หลังรวมรายการที่คิดเพิ่ม")
         lines.append(f"ค่าอาหาร {result['food_total_price']:,.2f} บาท · เครื่องดื่มและของหวานคิดเพิ่มนอกงบ")
+    for warning in result.get('preference_warnings',[]):
+        lines.extend(['', warning+' — ยังคงข้อห้ามเดิมไว้ครับ'])
     if result.get('data_mode')=='simulation':
         lines.extend(['', '🧑‍🍳 ชุดทดลองเพื่อช่วยวางแผนมื้ออาหาร ยังไม่ใช่การสั่งซื้อ'])
     if result.get('allergens_requested'):

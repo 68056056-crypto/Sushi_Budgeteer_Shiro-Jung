@@ -17,7 +17,8 @@ def explain(result, menu):
             'price_status':item['price_status'],'allergen_status':item['allergen_status'],
             'allergen_tags':item['allergen_tags'],'allergen_source_url':item.get('allergen_source_url',''),
             'checked_at':item.get('checked_at','')})
-    return {'objective':'target 95–100% of usable food budget then maximize diminishing-repeat preference score and spend; otherwise maximize spend then score',
+    return {'objective':('maximize diminishing-repeat preference score then spend; repeat cap 2' if constraints.get('max_items_explicit') else 'target 95–100% of usable food budget then maximize diminishing-repeat preference score and spend; otherwise maximize spend then score'),
+        'required_keywords':constraints.get('required_keywords',[]),
         'budget':constraints['budget'],'budget_mode':'food_only' if constraints['drinks_separate_from_budget'] else 'all_items',
         'budget_remaining':round(constraints['budget']-(result['food_total_price'] if constraints['drinks_separate_from_budget'] else result['total_price']),2),
         'catalog_revision':result['catalog_revision'],'data_source':'SQLite imported from local CSV',

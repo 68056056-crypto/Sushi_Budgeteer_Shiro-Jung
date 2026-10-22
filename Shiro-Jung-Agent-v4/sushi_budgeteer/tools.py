@@ -267,6 +267,8 @@ def build_optimal_set(
     preferred_keywords: Optional[List[str]] = None,
     hard_exclude_keywords: Optional[List[str]] = None,
     must_include_keywords: Optional[List[str]] = None,
+    required_keywords: Optional[List[str]] = None,
+    max_items_explicit: bool = False,
     min_items: int = 1,
     max_items: int = 20,
     num_people: int = 1,
@@ -286,6 +288,8 @@ def build_optimal_set(
     - allergens: แพ้อาหารจริง (การแพทย์) — hard block, ตรวจจาก allergen_tags เท่านั้น
     - hard_exclude_keywords: ข้อจำกัดด้านอาหารที่ไม่ใช่การแพ้ แต่ต้อง "ตัดออกเด็ดขาด"
       เช่น "ไม่กินของดิบเลย", "ไม่แตะเนื้อหมู" — ใช้เมื่อผู้ใช้พูดชัดเจนว่าห้ามมีเลย
+    - required_keywords: ขอให้มีเมนูนี้ในชุดอย่างน้อยหนึ่งจาน; ถ้าขัดข้อห้ามหรือจัดไม่ได้ต้องแจ้ง
+    - max_items_explicit: ผู้ใช้จำกัดจำนวนจานเอง ให้คะแนนก่อนงบและซ้ำเมนูอาหารได้ไม่เกิน 2
     - preferred_keywords: ชอบ/อยากได้ — แค่บวกคะแนน ไม่ตัดรายการอื่นออก
     - must_include_keywords: "กินแค่ X" / "เอาเฉพาะ X" — ตัดทุกอย่างที่ไม่ตรงออกทั้งหมด
       ต่างจาก preferred_keywords ตรงที่นี่คือข้อจำกัดเด็ดขาด ไม่ใช่แค่ให้คะแนนเพิ่ม
@@ -335,7 +339,7 @@ def build_optimal_set(
         drink_quantity = sum(drink_quantities.values())
     constraints = dict(budget=budget, allergens=allergens or [], dislikes=dislikes or [],
         preferred_keywords=preferred_keywords or [], hard_exclude_keywords=hard_exclude_keywords or [],
-        must_include_keywords=must_include_keywords or [], min_items=min_items, max_items=max_items,
+        must_include_keywords=must_include_keywords or [], required_keywords=required_keywords or [], max_items_explicit=max_items_explicit, min_items=min_items, max_items=max_items,
         num_people=num_people, drink_selection=drink_selection or [], drink_quantity=drink_quantity,
         drinks_separate_from_budget=drinks_separate_from_budget, include_dessert=include_dessert,
         dessert_selection=dessert_selection or [], dessert_quantity=dessert_quantity,
@@ -369,6 +373,17 @@ def build_optimal_set(
         food_menu, allergens, dislikes, hard_exclude_keywords, must_include_keywords
     )
     safe_items = [row for row in safe_items if row["item_id"] not in (excluded_item_ids or [])]
+    preference_warnings=[]
+    for keyword in dict.fromkeys([*(preferred_keywords or []), *(required_keywords or [])]):
+        original=[row for row in food_menu if matches_any_keyword(row,[keyword])]
+        available=[row for row in safe_items if matches_any_keyword(row,[keyword])]
+        if not available:
+            limits=', '.join(hard_exclude_keywords or [])
+            reason=f'ขัดกับข้อห้าม {limits}' if limits else 'ขัดกับข้อมูลการแพ้หรือเงื่อนไขเมนูของคุณ'
+            message=(f'ไม่สามารถใส่ {keyword} ได้ เพราะเมนูที่มี{reason}'
+                     if original else f'ไม่มี {keyword} ในเมนูขณะนี้')
+            preference_warnings.append(message)
+            if keyword in (required_keywords or []): preflight_issues.append(message)
     dislike_ids = {row["item_id"] for row in dislike_items}
 
     scored_items = []
@@ -384,8 +399,8 @@ def build_optimal_set(
 
     food_min_items = max(1, min_items - len(fixed_items))
     food_selected = (dp_knapsack(scored_items, round(food_budget,2), max_items=food_max_items,
-                                min_items=food_min_items, objective=FOOD_OBJECTIVE, diversity=DIVERSITY,
-                                max_repeat_per_item=MAX_REPEAT)
+                                min_items=food_min_items, objective="score" if max_items_explicit else FOOD_OBJECTIVE, diversity=DIVERSITY,
+                                max_repeat_per_item=2 if max_items_explicit else MAX_REPEAT, required_keywords=required_keywords)
                      if food_min_items <= food_max_items else [])
     selected = food_selected + fixed_items
     food_total_price = round(sum(float(it["price_baht"]) for it in food_selected), 2)
@@ -414,6 +429,7 @@ def build_optimal_set(
         "data_mode": data_mode(),
         "disclaimer": DISCLAIMER,
         "preflight_issues": preflight_issues,
+        "preference_warnings": preference_warnings,
         # Aggregated by dish (quantity + subtotal_baht) so repeats of the same
         # item — e.g. 2 plates of Salmon Sushi to land closer to the budget —
         # show as one line with "quantity": 2 instead of two duplicate rows.

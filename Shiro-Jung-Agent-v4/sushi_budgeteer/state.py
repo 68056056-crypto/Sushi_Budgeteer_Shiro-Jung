@@ -50,6 +50,7 @@ class BudgeteerState:
     #   other item is excluded, not just deprioritized.
     hard_exclude_keywords: List[str] = field(default_factory=list)
     must_include_keywords: List[str] = field(default_factory=list)
+    required_keywords: List[str] = field(default_factory=list)
     min_items: int = 1
     max_items: int = 20
     max_items_explicit: bool = False
@@ -157,6 +158,7 @@ class BudgeteerState:
         # now, not "fish AND shrimp" — unless the user's new list clearly
         # extends it, which the LLM already handles by re-listing everything
         # it currently means; we just take the latest non-empty extraction.
+        self.required_keywords = list(dict.fromkeys([*self.required_keywords, *(extracted.get("required_keywords") or [])]))
         new_must_include = extracted.get("must_include_keywords") or []
         if new_must_include:
             self.must_include_keywords = [str(kw).strip() for kw in new_must_include if str(kw).strip()]
@@ -366,6 +368,7 @@ class BudgeteerState:
         self.preferred_keywords = []
         self.hard_exclude_keywords = []
         self.must_include_keywords = []
+        self.required_keywords = []
         self.min_items = 1
         self.max_items = 20
         self.max_items_explicit = False

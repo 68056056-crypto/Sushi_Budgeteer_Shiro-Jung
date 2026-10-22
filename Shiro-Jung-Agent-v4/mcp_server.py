@@ -42,6 +42,8 @@ def build_set(
     preferred_keywords: Optional[List[str]] = None,
     hard_exclude_keywords: Optional[List[str]] = None,
     must_include_keywords: Optional[List[str]] = None,
+    required_keywords: Optional[List[str]] = None,
+    max_items_explicit: bool = False,
     min_items: int = 1,
     max_items: int = 20,
     num_people: int = 1,

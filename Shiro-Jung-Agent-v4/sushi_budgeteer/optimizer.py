@@ -126,7 +126,7 @@ def matches_any_keyword(row: Dict[str, Any], keywords: Iterable[str]) -> bool:
 
 
 # ----------------------------------------------------------------------
-# 4.2.1  score_item() — value-for-money scoring (0-10)
+# 4.2.1  score_item() — preference/price/category heuristic (0-17)
 # ----------------------------------------------------------------------
 def score_components(
     row: Dict[str, Any],
@@ -136,7 +136,8 @@ def score_components(
 ) -> dict:
     """Combine item heuristics; budget proximity is a separate set-level objective.
 
-    - Preference Score (0-5): 2.5 points per matching preferred keyword.
+    - Preference Score (0-12): 6 points per matching preferred keyword; a single
+      preference outweighs the maximum combined price/category bonus of 5.
     - Price Efficiency Score (0-3): sweet spot 35-80 THB = 3, <=100 THB = 2,
       otherwise 1.
     - Legacy category weight (0-2, NOT set-level category coverage): +2 for any category other than raw fish
@@ -153,7 +154,7 @@ def score_components(
         for kw in preferred_keywords
         if str(kw).strip().lower() and fuzzy_contains(text, str(kw).strip().lower())
     )
-    pref_score = min(5.0, matches * 2.5)
+    pref_score = min(12.0, matches * 6.0)
 
     if 35 <= price <= 80:
         price_score = 3.0
@@ -177,9 +178,9 @@ def score_item(row, preferred_keywords=None, budget=None, is_disliked=False):
 
 
 # ----------------------------------------------------------------------
-# 4.2.2  dp_knapsack() — bounded Knapsack via Dynamic Programming
+# Exact bounded dp_knapsack() — bounded Knapsack via Dynamic Programming
 # ----------------------------------------------------------------------
-def dp_knapsack(items, budget, max_items=20, max_repeat_per_item=3, min_items=0, objective="score", diversity=False):
+def dp_knapsack(items, budget, max_items=20, max_repeat_per_item=3, min_items=0, objective="score", diversity=False, required_keywords=None):
     """Exact bounded knapsack: score first, actual spend second; count is a DP dimension."""
     if not 1 <= max_repeat_per_item <= 10:
         raise ValueError("repeat cap ต้องอยู่ระหว่าง 1–10")
@@ -190,10 +191,13 @@ def dp_knapsack(items, budget, max_items=20, max_repeat_per_item=3, min_items=0,
             if diversity:
                 copy['score']=float(item['score'])*(0.5**repeat)
             expanded.append(copy)
-    return _dp_knapsack_01(expanded,budget,max_items=max_items,min_items=min_items,objective=objective)
+    return _dp_knapsack_01(expanded,budget,max_items=max_items,min_items=min_items,objective=objective,required_keywords=required_keywords)
 
 
-def _dp_knapsack_01(items, budget, max_items=20, min_items=0, objective="score"):
+def _dp_knapsack_01(items, budget, max_items=20, min_items=0, objective="score", required_keywords=None):
+    required_keywords=list(dict.fromkeys(required_keywords or []))
+    if len(required_keywords)>8: raise ValueError("ขอเมนูที่ต้องมีได้ไม่เกิน 8 รายการ")
+    complete=(1 << len(required_keywords))-1
     if objective not in {"score", "budget"}:
         raise ValueError("unknown optimization objective")
     cap = cents(budget)
@@ -205,22 +209,23 @@ def _dp_knapsack_01(items, budget, max_items=20, min_items=0, objective="score")
     scale = reduce(gcd, (p for p in prices if p), 0) or 1
     capacity = cap // scale
     # Immutable paths make backtracking valid even after a state is replaced.
-    states = {(0, 0): (0.0, ())}
+    states = {(0, 0, 0): (0.0, ())}
     for i, item in enumerate(items):
         price, score = prices[i] // scale, float(item['score'])
         if not isfinite(score):
             raise ValueError("score ต้องเป็นจำนวนจำกัด")
-        for (count, cost), (value, path) in list(states.items()):
+        coverage=sum(1 << bit for bit,keyword in enumerate(required_keywords) if matches_any_keyword(item,[keyword]))
+        for (count, cost, covered), (value, path) in list(states.items()):
             if count >= max_items or cost + price > capacity:
                 continue
-            key = (count + 1, cost + price)
+            key = (count + 1, cost + price, covered | coverage)
             candidate = (value + score, path + (i,))
             if key not in states or candidate[0] > states[key][0]:
                 states[key] = candidate
         if len(states) > 250_000:
             raise ValueError("DP state limit: กรุณาลดงบ/จำนวนรายการ")
-    feasible = [(value, cost, path) for (count,cost),(value,path) in states.items()
-                if min_items <= count <= max_items]
+    feasible = [(value, cost, path) for (count,cost,covered),(value,path) in states.items()
+                if min_items <= count <= max_items and covered == complete]
     if not feasible:
         return []
     if objective == "budget":
