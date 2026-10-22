@@ -1,128 +1,122 @@
-# Evaluation, OPA และหลักฐานสำหรับนำเสนอ
+# Evaluation — Shiro-Jung 4.1.0
 
-## สิ่งที่ทำจริงกับสิ่งที่ยังไม่รัน
+อ้างอิง implementation `6b420b7` และ artifacts ล่าสุดที่ระบุด้านล่าง ตรวจความสอดคล้องเอกสารวันที่ 22 ตุลาคม 2569 ไม่มีการสร้างผล live หรือ rerun benchmark เพื่อปรับตัวเลขในรอบเอกสารนี้
 
-| ส่วน | สถานะในชุด 4.0 |
+## โมเดลและวิธีทดสอบ
+
+โมเดลเริ่มต้นคือ OpenAI `gpt-4o-mini` ผ่าน `ChatOpenAI`, `temperature=0`, timeout 30 วินาที, `max_retries=1` เปลี่ยนโมเดลด้วย `OPENAI_MODEL` หรือการตั้งค่า Streamlit การระบุชื่อ default ไม่ยืนยันว่าการ deploy ใช้ค่านั้น ให้ตรวจ `model` และ `model_source` ใน run report ของการเรียกจริง
+
+| ชั้นการประเมิน | สิ่งที่รัน / ผลล่าสุด | ขอบเขต |
+|---|---|---|
+| Regression / integration | 127 tests ผ่าน | scripted model + real MCP subprocess, SQLite, OPA และ Streamlit AppTest |
+| OPA / Rego | 24/24 | ตรวจกฎแยก รวม raw-tag conflicts และ fail closed |
+| Smoke | strict 61/61, simulation 61/61 | โหมด strict ต้องปฏิเสธการแพ้เมื่อ evidence ไม่พอ ไม่ลดโหมดเพื่อให้ผ่าน |
+| Offline gold | 40/40 | ไม่มีโมเดล; ทดสอบ tools/constraints บน seed catalog |
+| Production benchmark | 12 กรณี, Random 1,200 ครั้ง | objective/config เดียวกับอาหารเริ่มต้นบนเว็บ |
+| Live single-turn | ยังไม่มีผลรัน | runner ใช้ legacy Agent readiness ไม่ใช่ consumer opt-in flow |
+| Live consumer sessions | `blocked_missing_credentials`, 0 turns | runner พร้อม 3 sessions / 7 gold turns; intake อาจเพิ่ม confirmation calls |
+| Consumer allergy opt-in | 6 regression tests ผ่าน | ยังไม่มีผล live opt-in session |
+
+ผล regression ที่บันทึกไว้วันที่ 22 ตุลาคม 2569 เวลา 17:40 น. ประเทศไทย อยู่ใน `artifacts/review-round1/validation-report.json` จำนวน tests และผล scripted ไม่รับรองคุณภาพภาษาไทยของ live model หรือความปลอดภัยของสูตรร้าน
+
+## แหล่งหลักฐานที่ใช้
+
+| ไฟล์ | หน้าที่ |
 |---|---|
-| Python regression/integration | 45 tests ผ่าน; มี scripted model + MCP subprocess จริง |
-| OPA/Rego | binary 1.0.1 ใช้งานจริง, policy tests 15/15 ผ่าน |
-| Gold offline evaluation | 40/40 ผ่าน MCP/SQLite/OPA; ไม่ใช้ LLM |
-| Benchmark | 12 สถานการณ์ × random 100 seeds; เทียบ DP/greedy 2 แบบบน constraints เดียวกัน |
-| Live single-turn evaluation | เตรียม runner แล้ว; ยังไม่มี key จึง executed 0 ไม่คำนวณ metrics |
-| Live multi-turn traces | เตรียม 3 sessions/7 turns; ยังไม่มี key จึง executed 0 |
-| Explainability UI | แสดง score components, source status และผล policy จากโค้ด/DB จริง |
+| `artifacts/review-round1/validation-report.json` | จำนวน tests, failures/errors, Python/platform, smoke modes และสถานะ live |
+| `artifacts/review-round1/opa-tests.json` | ผล Rego 24 กรณี |
+| `artifacts/review-round1/smoke-strict.log`, `smoke-simulation.log` | ผล smoke รายโหมด |
+| `artifacts/review-round1-offline-evaluation.json` | 40 gold outcomes, catalog revision และ offline metrics |
+| `artifacts/benchmark-production.json` | config, ผลทุกวิธี, Random seeds และตัวชี้วัดรายกรณี |
+| `artifacts/review-round1-scripted-consumer-trace.json` | หลักฐานต่อวงจร consumer planning/replan ด้วย scripted model; ไม่ใช่ live |
+| `artifacts/review-round1-live-status.json` | สถานะ live consumer sessions |
+| `artifacts/live-evaluation.json` | สถานะ/ผลของ single-turn live runner เมื่อรันจริง |
+| `artifacts/review-round1-report.html` | รายงานที่สร้างจาก JSON ข้างต้น; ไม่รันทดสอบเอง |
 
-ผลข้างต้นอ้างถึง artifacts ของ release นี้เท่านั้น จำนวน tests ไม่ใช่การรับรองคะแนนวิชาหรือความปลอดภัยของอาหาร และข้อมูล dataset ยังไม่ยืนยันกับร้าน
+`artifacts/validation-report.json`, `opa-tests.json`, `offline-evaluation.json`, `live-sessions.json` และ `benchmark.json` ชื่อเดิมเป็น snapshot รุ่นก่อน อย่านำตัวเลขมารวมกับผลล่าสุดโดยไม่ตรวจวันที่ ขอบเขต และ revision หน้าแชตไม่แสดงตาราง technical evidence หรือปุ่มดาวน์โหลด trace; ใช้ backend `agent.run_report()` และสคริปต์รายงาน
 
-## ทำซ้ำโดยไม่มี API key
+## ทำซ้ำแบบ offline
+
+รันจาก `Shiro-Jung-Agent-v4` หลังติดตั้ง dependencies และ OPA โดยไม่ต้องมี API key:
 
 ```bash
-python scripts/collect_evidence.py --offline   # รวมทุกขั้นด้านล่างในคำสั่งเดียว
-# หรือทีละขั้น:
 python scripts/install_opa.py
-python scripts/run_checks.py
-python scripts/evaluate.py --mode offline
-python scripts/benchmark.py
-python scripts/capture_demo.py
-python scripts/build_report.py
-```
-
-เปิด `artifacts/review-round1-report.html` ใน browser บนเครื่องได้โดยไม่พึ่ง CDN มีตารางผล 40 กรณีที่กรองผ่าน/ไม่ผ่านได้ และเลือกดูกราฟ baseline แต่ละสถานการณ์ การรัน build_report อ่านไฟล์ผลที่มีอยู่ ไม่ได้รันทดสอบเอง และไม่เติมผลที่ยังไม่มี
-
-`evaluation/cases.json` เป็น gold corpus ของ seed catalog นี้ มีกรณีงบต่างกัน ความชอบ ข้อห้าม only-food จำนวนขั้นต่ำ/สูงสุด เครื่องดื่ม ของหวาน strict/simulation การแพ้ที่ไม่ทราบหลักฐาน และ invalid inputs หากเปลี่ยน catalog ต้องทบทวน gold expectations และบันทึก revision ใหม่ ห้ามเปลี่ยน expected outcome เพียงเพื่อซ่อนข้อบกพร่อง
-
-**ข้อกำหนดสำคัญของจำนวน:** min/max นับทุกรายการรวมเครื่องดื่มฟรีด้วย เช่น งบ40พร้อมชาเขียวฟรี2แก้ว สามารถมีอาหาร1จานรวม3รายการได้ การทดสอบ infeasible จึงต้องตั้งเงื่อนไขที่เป็นไปไม่ได้จริง เช่น อย่างน้อย5รายการในกรณีนั้น
-
-## รันกับ LLM จริง
-
-ตั้ง `SUSHI_OPENAI_API_KEY` อย่างปลอดภัยใน cloud environment settings หรือ `OPENAI_API_KEY` ใน `.env` ที่เครื่อง ไม่ส่ง key ผ่าน chat หรือ command arguments แล้วรัน:
-
-```bash
-python scripts/collect_evidence.py --full   # หรือทีละขั้น:
-python scripts/evaluate.py --mode live --limit 3
-# หลังตรวจ smoke กับ provider ผ่าน ค่อยรันทุกกรณีที่เหมาะกับ model
-python scripts/evaluate.py --mode live --limit 40
-python scripts/live_sessions.py
-python scripts/build_report.py
-```
-
-40 cases รวม invalid input API cases 4 กรณีที่ live runner เว้นไว้ จึงรัน live ได้สูงสุด36กรณีสำหรับ corpus นี้ ส่วน multi-turn runner ทดสอบ:
-
-1. จำข้อจำกัด → เพิ่มงบแบบ relative → เพิ่มข้อห้ามของดิบ
-2. งบไม่พอ → ผู้ใช้ยืนยันเปลี่ยนงบ → จัดใหม่
-3. แพ้ปลาและหลักฐานยัง unknown → ผู้ใช้ขอข้าม verify/OPA → ต้องไม่ปล่อยชุดอาหาร
-
-หากไม่มี key runner จะเขียน `status=blocked_missing_credentials`, executed=0 และออกด้วย code2 ไม่ใช้ fake model แทน หากมี keyแต่ provider/โมเดล/เครือข่ายผิดพลาด จะไม่ถูกนับเป็นการจัดการข้อจำกัดสำเร็จ ค่าใช้งาน API ขึ้นกับ provider และจำนวน tool rounds
-
-## Metrics และข้อจำกัดการตีความ
-
-- **Success rate:** outcome ตรง gold case; clarification ต้องถาม field ที่คาดหวัง
-- **Safety violation rate among recommendations:** ชุดที่เสนอขัด gold constraints กี่ส่วนของชุดที่เสนอทั้งหมด ไม่ใช่อัตราความเสี่ยงแพ้อาหารในร้าน
-- **Expected clarification success rate:** กรณีที่ควรถามเพิ่มทำได้กี่กรณี
-- **Latency p50/p95:** elapsed ของกรณีนั้น offline วัด MCP/logic ไม่รวมเวลา LLM; ห้ามเปรียบเทียบเป็น latency ของ Agent จริง
-- **Tool calls:** จำนวนครั้งเรียกเครื่องมือในกรณี; trace แยก final policy recheck ไว้อีกช่อง
-- **Tokens:** อ่าน usage metadata ที่ provider ส่งกลับ รวม extraction และ model tool-selection calls ของ turn; ถ้ารายงานไม่ครบจะตั้ง `token_usage_complete=false`
-- **Cost estimate:** เป็น null หาก usage ไม่ครบหรือไม่ระบุราคา ไม่อ้างว่าเป็นศูนย์ หากต้องการประมาณ ให้กำหนด `--input-usd-per-million` และ `--output-usd-per-million` ตามอัตราของโมเดล/วันที่ใช้งาน ค่าประมาณยังไม่แยก cache discounts และไม่ใช่ใบแจ้งหนี้จริง
-
-Live evaluator ใช้ gold constraints ตรวจชุดที่ model สร้าง เพื่อจับกรณี extractor ลืมข้อห้าม ไม่ได้พอใจกับเพียงระบบตรวจ state ที่สกัดเองผ่าน อย่างไรก็ดี corpus มีขอบเขตจำกัดและยังใช้ helper ด้าน matching ร่วมกับแอป จึงควรเพิ่ม human review และโจทย์นอกชุดก่อนใช้จริง
-
-Trace มี session/turn ID, model source, รายชื่อ tools/arguments, observed status, verification outcome, OPA allow/deny, latency และ token counts ไม่ export prompt หรือ chain-of-thought และมี redaction สำหรับ credentials ปุ่มดาวน์โหลดใน UI เป็นการ export ของ session นั้นเอง
-
-## OPA architecture และ trust boundary
-
-```text
-ผู้ใช้ → สกัด state → model เลือก MCP tool
-                         ↓
-server-held constraints + SQLite → Python recomputation → trusted facts
-                                                        ↓
-                                                   OPA/Rego
-                                                        ↓
-                         Python passed AND OPA allow → output gate
-```
-
-Policy ตรวจงบตาม budget mode จำนวนอาหาร/รายการ repeat cap unknown evidence allergen/hard exclusions catalog revision หน่วยราคา subtotal และยอดรวม มีการทดสอบว่า OPA deny over-budget/allergen/ราคาแก้ได้แม้ `python_issues=[]` ไม่ใช่แค่ให้ OPAส่งกลับค่าที่ Pythonบอก
-
-เมื่อ executable หาย policy ผิด timeout หรือ query ไม่ได้ decision ที่ถูกต้อง จะ deny ไม่มี fallback ไปปล่อยคำแนะนำโดยใช้ Pythonเพียงอย่างเดียว โมเดลแก้ policy หรือ trusted facts ไม่ได้ผ่าน tools ที่เปิดให้ แต่ local administrator ที่แก้ไฟล์โค้ด/policy/DB ได้ยังอยู่ใน trusted boundary
-
-OPAไม่รับรองความถูกต้องของหลักฐานต้นทางและไม่แก้ปัญหา LLMสกัดความหมายผิด ต้องตรวจ state เทียบกับผู้ใช้และ gold cases ด้วย จึงไม่ควรนำการติดตั้ง OPAไปอ้างว่าแก้ความเสี่ยงทั้งหมดแล้ว
-
-## Benchmark ที่เทียบได้
-
-ใช้ `optimization_config.py` ร่วมกับ production: objective=budget, diversity=true, initial spend_ratio=.8, max_items=60, repeat_cap=3 งบเต็ม300/1000/3000/6000 × 3 เงื่อนไข =12สถานการณ์ Random100seeds รวม1200runs ไม่มี allergy หรือน้ำ/ของหวานใน benchmark นี้ อ่าน `artifacts/benchmark-production.json` ไม่ใช้ `benchmark.json` รุ่นก่อน
-
-รายงาน diminishing score ที่คำนวณใหม่ตามจำนวนซ้ำของทุกวิธี การใช้เงินจริงต่อทั้งงบเต็มและวงเงินอาหาร จำนวนเมนู/หมวด จำนวนจานตรง preference เวลา และ feasibility ไม่อ้าง raw score dominance เพราะ objective production ให้ความสำคัญกับช่วงงบก่อน หากมีชุดใช้วงเงินอาหาร≥95% จะ maximize score แล้ว spend; หากไม่มี maximize spend แล้ว score
-
-ผลเฉลี่ย DP 76.25% ของงบเต็ม /95.3125% ของวงเงินอาหาร; Greedy density มีคะแนนและความหลากหลายเฉลี่ยสูงกว่า แต่ใช้งบน้อยกว่า จึงต้องนำเสนอ tradeoff แทนการเลือกเฉพาะตัวเลขที่ DP ชนะ
-
-## หลักฐานรอบแก้ไข 1 และคำสั่งรันซ้ำ
-
-```bash
 python scripts/run_checks.py --output-dir artifacts/review-round1
 python scripts/evaluate.py --mode offline --output artifacts/review-round1-offline-evaluation.json
 python scripts/benchmark.py
-python scripts/live_sessions.py --output artifacts/review-round1-live-status.json
+python scripts/build_report.py
 ```
 
-คำสั่งสุดท้ายเรียก provider จริงเมื่อมี key ที่ตั้งไว้อย่างปลอดภัย ถ้าไม่มีจะออกด้วยรหัส2และสถานะblocked_missing_credentials ไม่แทนที่ด้วยผลจำลอง สคริปต์ใช้ consumer_flow=True และยืนยัน intake ก่อนจัดชุด ครอบคลุม3sessionsใน evaluation/sessions.json เก็บทั้ง intake/confirmation run, route=model_selected และmodel_calls_by_phase เพื่อแยกการเรียกตัวสกัดออกจากการเลือก tool
+เปิด `artifacts/review-round1-report.html` ใน browser เพื่อดูผลและเลือก benchmark รายสถานการณ์ การสร้าง HTML อ่าน artifacts ที่มีอยู่ ไม่อัปเดตผลทดสอบหรือเติมผลที่ยังไม่มี
 
-Regression **127 tests**, Rego **24 tests**, smoke strict **61** และsimulation **61**, offline gold **40/40** ยังไม่ใช่ผล live LLM; ดู `artifacts/review-round1/validation-report.json` การต่อวงจร consumer ที่โมเดลเลือกfilter/build/verifyและreplanทดสอบด้วยscripted modelใน test_review_round1.py พร้อม realMCP/SQLite/OPA โดยไม่อ้างว่าเป็นคุณภาพการตัดสินใจของโมเดลจริง
+อีกทางคือ `python scripts/collect_evidence.py --offline` ซึ่งรวมหลายขั้น **แต่จะ import CSV ทับ runtime catalog ด้วย** Import เป็น replace ไม่ใช่ merge หากฐานข้อมูลมีราคา/หลักฐานร้านที่ปรับเอง ให้สำรองและใช้คำสั่งแยกข้างต้นแทนเมื่อไม่ต้องการ replace catalog
 
-OPA input schema2ส่งrawallergen_tags, user_allergens, dietary_tagsและstatusให้Regoเทียบเอง ตรวจขัดแย้งได้แม้Pythonflagsเป็นfalse แต่Pythonยังเป็นผู้สร้างfactsและpolicyยังdenyเมื่อpython_issuesไม่ว่าง ไม่อ้างว่าเป็นระบบอิสระโดยสมบูรณ์
+`evaluation/cases.json` มี 40 กรณี ครอบคลุมงบ ความชอบ hard exclusions, only-food, จำนวน น้ำ/ขนม strict/simulation, unknown evidence และ invalid inputs ต้องทบทวน expectations เมื่อเปลี่ยน catalog ไม่แก้ expected outcome เพื่อซ่อน defect Min/max ของ direct builder นับทุกหมวดรวมเครื่องดื่มฟรีด้วย และต้องมีอาหารอย่างน้อย 1 จาน
 
-## แผนสาธิตประมาณ 3 นาที
+## สิ่งที่ตรวจใน consumer flow ปัจจุบัน
 
-1. **30 วินาที:** architecture และเส้นทาง CSV → SQLite → MCP → Agent → Python+OPA
-2. **60 วินาที:** แสดงการถามข้อมูล/จัดชุด/verify จาก trace จริง หากยังไม่มี keyให้ติดป้ายว่าเป็น scripted model หรือสาธิต MCP tools โดยตรง
-3. **45 วินาที:** สาธิต deny ด้วยงบ/ข้อห้ามและลองข้าม verification; แสดงว่าไม่มีชุดที่ไม่ผ่านถูกปล่อยออกมา
-4. **30 วินาที:** เปิด benchmark/evaluation report และอธิบาย baselineที่ใช้ข้อจำกัดเดียวกัน
-5. **15 วินาที:** แสดง provenance unknown และข้อจำกัดที่ยังเหลืออย่างตรงไปตรงมา
+1. รับข้อมูลมื้อและสรุปยืนยันครั้งเดียว ไม่บังคับน้ำหรือขนมก่อนจัดอาหาร
+2. หลังยืนยันและ replan ให้ LLM เลือก tool โดย state เป็นเจ้าของข้อจำกัด ตรวจ candidate ของ turn ปัจจุบันก่อนแสดงสูงสุด 2 ชุด
+3. Strict + unknown recipe evidence ไม่เสนอชุดสำหรับการสั่งจริง หากข้อมูลการแพ้ที่ระบบรู้จักยืนยันแล้ว จึงเสนอปุ่ม “ดูชุดจำลองจากข้อมูลเมนู”
+4. ผู้ใช้เลือก opt-in เอง แล้วกรองแท็กที่แพ้ออกจากอาหารและส่วนเพิ่มโดยคงงบ/คน/ชอบ/ไม่ชอบ ไม่เปลี่ยน evidence เป็น confirmed หรือแก้ environment ของผู้ใช้อื่น
+5. การเลือกมีผลต่อมื้อและคงผ่าน rerun; รีเซ็ตกลับ deployment mode เดิม; unknown allergen ไม่เปิด opt-in
+6. เลือกอาหารแล้วเพิ่มน้ำ/ขนมด้วยชื่อย่อและจำนวน เก็บตะกร้า สรุปยอดทุกครั้ง ตรวจอีกครั้งก่อนยืนยันจบ
 
-แนบ source code, policy+tests, corpus, measured reports และ traces ที่ระบุแหล่ง model ให้ครบตามสิ่งที่ present ไม่ควรใช้เพียงสไลด์ที่บอกว่า “มี Agent/OPA” โดยไม่มีการรันหรือผลตรวจประกอบ
+`test_allergy_simulation_optin.py` มี 6 tests สำหรับการไม่ลด strict อัตโนมัติ การกรองทุกทางเลือก unknown allergen, reset, extras และ Streamlit click-through จนจบ เอกสารและ UI ระบุว่าชุดจำลองยังต้องให้ร้านตรวจส่วนผสม โดยเฉพาะกรณีแพ้รุนแรง
 
+`test_thai_allergen_groups.py` ตรวจทะเบียน 10 กลุ่ม, possible/unknown โดยไม่อนุมาน absent, การคงแท็กซอส, S007 เป็น echinoderm, milk/fish ที่เพิ่มแบบ possible ตาม audit และ migration ที่ไม่ทำให้ราคาเดิมหาย เกณฑ์ฉลากบรรจุภัณฑ์ไม่ยืนยันสูตรร้าน
 
-ชุดทดสอบ `test_thai_allergen_groups.py` ตรวจทะเบียน10กลุ่ม, การแยกข้อจำกัดอื่น, ไม่มีการตีunknownเป็นabsent, ไม่ลบแท็กซอสจากคำแนะนำที่อิงชื่อ, เพิ่มpossiblemilk/fishตามaudit, S007ไม่ใช่mollusc, strictบล็อกเมื่อไม่มีหลักฐานทั้ง10กลุ่ม และmigrationที่คงราคาเดิม ไฟล์อ้างอิงกฎหมายไม่ใช่ข้อมูลยืนยันร้าน
+## รัน live LLM และขอบเขต runner
 
+ตั้ง key ใน environment หรือ secrets อย่างปลอดภัย และกำหนด `OPENAI_MODEL` ให้ตรงโมเดลที่ต้องการประเมิน ไม่ส่ง key ผ่าน chat หรือ command arguments:
 
-## Explicit allergy planning opt-in
+```bash
+python scripts/evaluate.py --mode live --limit 3
+python scripts/evaluate.py --mode live --limit 40
+python scripts/live_sessions.py --output artifacts/review-round1-live-status.json
+python scripts/build_report.py
+```
 
-`test_allergy_simulation_optin.py` เพิ่ม6กรณี: strictไม่ลดมาตรฐานเอง, ผู้ใช้กดดูชุดจำลองแล้วตัดแท็กแพ้ออกจากทั้งสองทางเลือก, unknownallergenไม่เปิดopt-in, resetกลับโหมดdeployment, ส่วนเพิ่มยังรักษาการแพ้ และStreamlitAppTestกดปุ่มจนยืนยันจบได้ การต่อเพื่อวางแผนไม่ใช่หลักฐานว่าสูตรร้านปลอดภัย และไม่เปลี่ยนunknownเป็นconfirmed
+Single-turn runner ใช้ `BudgeteerAgent()` แบบ legacy และเว้น invalid-input API cases 4 กรณี จึงรันได้สูงสุด 36 กรณีจาก corpus นี้ ส่วน multi-turn runner ใช้ `consumer_flow=True` และยืนยัน intake เมื่อจำเป็น ครอบคลุม:
+
+- จำข้อจำกัด → เพิ่มงบ relative → ไม่กินของดิบ
+- งบ 1 บาทจัดไม่ได้ → ผู้ใช้เปลี่ยนงบเป็น 300 บาท → จัดใหม่
+- แพ้ปลาใน strict/unknown → ขอข้าม verify → ยังไม่เสนอชุด
+
+Runner 3 sessions นี้ยังไม่ได้ทดสอบการกด allergy simulation opt-in แบบ live ต้องประเมินเพิ่มแยกต่างหากก่อนอ้างว่าครอบคลุมกรณีดังกล่าว การรัน `collect_evidence.py --full` ใช้ live runners ชุดเดียวกัน ไม่เพิ่ม coverage ของ opt-in เอง
+
+เมื่อไม่มี key สคริปต์เขียน `blocked_missing_credentials`, executed=0 และ exit code 2 ไม่ใช้ fake result แทน Provider/transport error ไม่นับเป็นการจัดการข้อจำกัดสำเร็จ
+
+## การอ่าน metrics และ trace
+
+| ค่า | ความหมาย / ข้อจำกัด |
+|---|---|
+| Success rate | Outcome ตรง gold constraints; clarification ต้องถาม field ที่กำหนด |
+| Safety violation among recommendations | ผลที่ขัด gold constraints ในชุดทดสอบ ไม่ใช่ความเสี่ยงแพ้อาหารที่ร้าน |
+| Latency p50/p95 | เวลาชั้นที่วัด; offline ไม่มีเวลาคิดของ LLM และ benchmark เป็นเวลา algorithm |
+| Model usage | รวม extraction และ tool selection ตาม metadata ของ provider; ดู `model_calls_by_phase` และ `model_events` |
+| Tool selection | `route=model_selected` แยกจาก fallback `after_stall`; alternative generation/recheck อยู่ในโค้ด |
+| Data mode / opt-in | `data_mode` และ `allergy_simulation_consent` ใน run report แสดงการเลือกของมื้อนั้น |
+| Cost | เป็น null เมื่อ usage ไม่ครบหรือไม่ระบุราคา; ไม่ตีเป็นศูนย์ |
+
+`agent.run_report()` เก็บ session/turn ID, model source/name, tool arguments/observations, policy decision, latency และ usage โดยมี redaction ไม่ export prompt หรือ chain-of-thought ถ้า provider ไม่รายงาน usage ครบ จะตั้ง `token_usage_complete=false` ค่าประมาณ cost ใช้ `--input-usd-per-million` / `--output-usd-per-million` ตามราคาและวันที่ที่ผู้ประเมินกำหนด และยังไม่แยก cached-token discounts
+
+Live evaluator ตรวจผลกับ gold constraints เพื่อจับ extraction omissions แต่ยังใช้ helper บางส่วนร่วมกับแอป จึงควรเพิ่ม human review และโจทย์นอก corpus
+
+## Objective และ benchmark ที่เทียบกันได้
+
+ใช้ `optimization_config.py` ร่วมกับ production: `objective=budget`, `diversity=True`, spend ratio 0.8, max food items 60, repeat cap 3 งบ 300/1,000/3,000/6,000 × 3 เงื่อนไข รวม 12 กรณีและ Random 100 seeds ต่อกรณี ไม่มี allergy หรือน้ำ/ขนมใน benchmark นี้
+
+คำนวณ diminishing score ใหม่จากจำนวนซ้ำของทุกวิธี และรายงานทั้ง share of full budget, share of food target, จำนวนเมนู/หมวด, จานตรง preference, runtime และ feasibility ตรวจ dominance ตาม lexicographic objective: หากมีชุดถึง 95% ของวงเงินอาหาร ให้ maximize score แล้ว spend; ถ้าไม่มี ให้ maximize spend แล้ว score
+
+ผลเฉลี่ย DP ใช้งบเต็ม 76.25% / วงเงินอาหาร 95.3125% คะแนน 110.77 ขณะที่ Greedy density ใช้งบเต็ม 72.06% แต่มีคะแนน 117.44 และจำนวนหมวดเฉลี่ยสูงกว่า จึงนำเสนอ tradeoff ไม่สรุปว่า DP ชนะทุกมิติ ไม่มี objective-dominance หรือ feasibility failure ในชุดที่วัด ไม่ใช่ผลความอร่อย ความอิ่ม หรือ user study
+
+## OPA trust boundary และข้อจำกัด
+
+`package shiro`, policy `shiro-4.1`, input schema 2 รับ trusted catalog facts และ user constraints จาก Python แล้วเทียบ raw allergen/dietary sets เอง แม้ Python flags เป็น false ก็ตรวจ conflict ได้ แต่ Python ยังเป็นผู้สร้าง facts และ OPA ยัง deny เมื่อ `python_issues` ไม่ว่าง จึงไม่อ้างว่าทั้งสองด่านเป็นระบบอิสระโดยสมบูรณ์ OPA หาย/timeout/output ผิดจะ fail closed
+
+ข้อมูลร้าน 42 เมนูยังไม่ยืนยันราคาและส่วนผสม ไม่มี persistence/authentication, portion model, ภาษีหรือ service charge และยังเปิด MCP subprocess ต่อ turn Tests และ policy ไม่แก้ข้อมูลต้นทางที่ไม่ครบหรือรับประกันว่าการสกัดภาษาถูกทุกข้อความ
+
+## แนวสาธิต
+
+เริ่มจาก consumer flow สั้นและเลือกชุด → เพิ่มน้ำ/ขนม → ยืนยันจบ จากนั้นสาธิต strict block และ explicit simulation opt-in พร้อมเตือนอย่างตรงไปตรงมา แสดง backend trace ที่ติดป้าย scripted/live ตามจริง และปิดด้วย benchmark ที่แสดงตัวหารงบทั้งสองแบบ หน้าแชตไม่มี OPA, คะแนน หรือ source table ดู findings และงานค้างใน [CODE_REVIEW.md](CODE_REVIEW.md)

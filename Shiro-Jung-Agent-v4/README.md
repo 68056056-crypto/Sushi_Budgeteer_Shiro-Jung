@@ -4,6 +4,14 @@
 
 > **ข้อมูลเพื่อการศึกษา:** 42 เมนูที่แนบ (รวมน้ำเปล่า 20 บาท ราคาจากผู้ใช้) ยังไม่ได้ตรวจยืนยันราคาปัจจุบันหรือ allergen รายเมนูกับร้าน ไม่รับประกันส่วนผสมและการปนเปื้อนจริง ผู้แพ้อาหารต้องตรวจสอบกับพนักงานร้านโดยตรง
 
+## โมเดลและขอบเขตรุ่นปัจจุบัน
+
+เอกสารนี้ตรงกับ implementation `6b420b7`, package **4.1.0** ตรวจวันที่ 22 ตุลาคม 2569 โมเดล default คือ OpenAI **`gpt-4o-mini`** ผ่าน LangChain `ChatOpenAI` ตั้ง `temperature=0`, timeout 30 วินาที และ `max_retries=1` เปลี่ยนได้ด้วย `OPENAI_MODEL` หรือ Streamlit secrets ตาม logic ใน `app.py` ให้ตรวจชื่อที่เรียกจริงจาก `agent.run_report()['model']` ไม่อนุมานจากค่า default ว่า deployment ใช้โมเดลนั้นเสมอ
+
+หน้าเว็บใช้ `consumer_flow=True`: ข้อมูลมื้อ → สรุปยืนยัน → LLM เลือก MCP tools → ตรวจผล → เลือกอาหาร → เพิ่มรายการตามต้องการ → ยืนยันจบ คำตอบสั้น การเลือกชุด และการอ่านชื่อย่อพร้อมจำนวนใช้โค้ดโดยตรง การสร้างทางเลือกที่สองและตรวจซ้ำอยู่ใน orchestration โมเดลมีหน้าที่สกัดข้อมูลและเลือก tool ส่วน DP คำนวณชุดและ validator/OPA บังคับข้อจำกัด ไม่มีการฝึกหรือ fine-tune weights ของโมเดลในโครงการนี้
+
+หลักฐานล่าสุดเป็น **127 regression tests, 24 Rego tests, smoke 61 ต่อโหมด และ offline gold 40/40** โดย Agent tests ใช้ scripted model ไม่ใช่ผล live OpenAI ดูขอบเขตที่ [CODE_REVIEW.md](CODE_REVIEW.md) และ [EVALUATION.md](EVALUATION.md)
+
 ## แก้ไขตามผลประเมินรอบ 1 — 22 ตุลาคม 2569
 
 | ข้อเสนอแนะ | สิ่งที่แก้และหลักฐาน |
@@ -86,7 +94,7 @@
 หลังติดตั้ง dependencies ตามหัวข้อถัดไป ใช้คำสั่งเดียวรันหลักฐานทั้งหมดแล้วสร้างรายงาน HTML ใหม่ (ไม่ต้องใช้ bash):
 
 ```bash
-python scripts/collect_evidence.py --offline   # ไม่เรียก LLM
+python scripts/collect_evidence.py --offline   # ไม่เรียก LLM; import CSV แบบ replace catalog ด้วย
 python scripts/collect_evidence.py             # + live smoke 3 กรณี เมื่อมี key ใน .env
 python scripts/collect_evidence.py --full      # + live ทุกกรณี + multi-turn 3 sessions
 ```
@@ -124,11 +132,11 @@ Copy-Item .env.example .env
 .\.venv\Scripts\python.exe -m streamlit run app.py --server.headless true --browser.gatherUsageStats false
 ```
 
-ทดสอบการติดตั้งจริงบน Linux/Python 3.12.14; คำสั่ง Windows/macOS จัดไว้เป็นแนวทางและยังไม่ได้ทดสอบบนเครื่องเหล่านั้น หากต้องการ terminal chat ใช้ `python -m sushi_budgeteer` พิมพ์ `/reset` เริ่มใหม่ และ `/exit` จบ ส่วน `llm_qa.py` เป็นตัวอย่างถาม LLM ตรง ๆ ไม่ใช่ Agent จัดชุดอาหาร
+ทดสอบการติดตั้งจริงบน Linux/Python 3.12.14; คำสั่ง Windows/macOS จัดไว้เป็นแนวทางและยังไม่ได้ทดสอบบนเครื่องเหล่านั้น หากต้องการ terminal chat ใช้ `python -m sushi_budgeteer` พิมพ์ `/exit` จบ; CLI เป็น legacy flow และ `/reset` ปัจจุบันล้างเฉพาะ state ไม่ได้รีเซ็ต workflow ทั้งหมดเหมือนปุ่มหน้าเว็บ ส่วน `llm_qa.py` เป็นตัวอย่างถาม LLM ตรง ๆ ไม่ใช่ Agent จัดชุดอาหาร
 
 `bash scripts/setup.sh` รวมขั้นตอนสร้าง venv/ติดตั้ง/import/test สำหรับ Linux/macOS; `bash scripts/start.sh` เริ่มเว็บหลัง setup คำสั่ง import จะ **แทน catalog เดิม** ด้วย CSV ให้สำรองฐานข้อมูลที่แก้เองก่อน รัน setup ซ้ำจึงเหมาะเมื่อ CSV เป็น source of truth
 
-ใน cloud ที่เตรียมไว้แล้วใช้ `source /workspace/.venvs/sushi-release/bin/activate` และทำงานจาก `/workspace/Shiro-Jung-Agent-v4` ไม่ต้องสร้าง worktree ใหม่
+ใน cloud ให้ทำงานจากโฟลเดอร์ `Shiro-Jung-Agent-v4` ของ checkout ที่ใช้งานจริง และ activate `.venv` ตามขั้นตอนข้างต้น ไม่ใช้ absolute path ของเครื่องอื่น
 
 ## Configuration
 
@@ -137,7 +145,7 @@ Copy-Item .env.example .env
 | `OPENAI_API_KEY` | key สำหรับ LLM; ไม่อยู่ใน ZIP |
 | `SUSHI_OPENAI_API_KEY` | ชื่อสำรองสำหรับ cloud ที่สงวนชื่อ `OPENAI_`; Agent รองรับโดยตรง |
 | `OPENAI_MODEL` | `gpt-4o-mini` |
-| `SUSHI_DATA_MODE` | `strict` หรือ `simulation` |
+| `SUSHI_DATA_MODE` | default `strict`; `simulation` สำหรับการทดลอง; per-meal opt-in บนเว็บไม่เปลี่ยน environment นี้ |
 | `SUSHI_DB_PATH` | default `data/menu.sqlite3`; แนะนำ absolute path เมื่อกำหนดเอง |
 | `SUSHI_MENU_CSV_PATH` | ใช้เป็นไฟล์ตั้งต้นเมื่อ DB ยังไม่มี |
 | `SUSHI_OPA_BINARY` | default `tools/opa/opa` หรือ `opa.exe`; หาไม่พบ/timeout จะไม่อนุญาตคำแนะนำ |
@@ -188,14 +196,15 @@ Importer ตรวจคอลัมน์ที่จำเป็น ID ไม�
 | `database_status` | อ่านจำนวนเมนู revision และสถานะข้อมูลจาก SQLite |
 | `search_menu` | ค้นชื่อ/หมวด/เพดานราคา คืนข้อมูลจาก DB |
 | `get_menu_item` | อ่านรายละเอียด item ID รวม provenance |
-| `filter_menu` | ดูผลกรอง allergen/hard block และ dislikes/soft penalty |
+| `filter_menu` | ดูผลกรอง allergens และ dislikes; ข้อห้าม dietary ใช้ใน builder/validator |
 | `build_set` | จัดชุดด้วย DP ตามข้อจำกัด คืน candidate หรือ requires_clarification |
 | `verify_set` | รับ result ID ที่ server สร้าง ตรวจ catalog/ราคา/ยอด/ข้อจำกัดใหม่ |
 | `clarify` | สร้างคำถามช่องข้อมูลที่ขาด |
+| `alternative_set` | Server tool ที่ orchestration เรียกเพื่อสร้างชุดที่สอง; ไม่อยู่ใน schemas ที่ให้ LLM เลือก |
 
 Resources: `sushiro://menu/catalog`, `sushiro://menu/status`; prompt: `budget_optimizer`
 
-Agent เรียก tools เหล่านี้ผ่าน MCP จริง ไม่ import ฟังก์ชันคำนวณมาใช้แทน MCP ผลลัพธ์แต่ละชุดมี UUID และ trusted constraint snapshot ฝั่ง server; client ส่งยอด/รายการมาอ้างว่าผ่านเองไม่ได้ result ID ใช้ได้ใน subprocess ที่สร้างมันและหมดอายุเมื่อจบ turn
+การวางแผนและสร้างทางเลือกเรียก tools ผ่าน MCP จริง ส่วนการเลือกชุดและ checkout ตรวจด้วย validator ฝั่ง Agent อีกครั้ง ผลลัพธ์แต่ละชุดมี UUID และ trusted constraint snapshot ฝั่ง server; client ส่งยอด/รายการมาอ้างว่าผ่านเองไม่ได้ result ID ใช้ได้ใน subprocess ที่สร้างมันและหมดอายุเมื่อจบ turn
 
 สำหรับ external MCP client ให้แทน absolute paths ใน `mcp-config.example.json` ตามเครื่อง เลือก `strict` เป็นค่าเริ่มต้น แล้วให้ client เปิด `python mcp_server.py` แบบ stdio ไม่ต้องเปิด server ทิ้งไว้อีกอัน ไม่มี SSE/network endpoint ที่เปิดให้เข้าถึงโดยไม่มี authentication Client ภายนอกต้องบังคับ verify เองด้วย; output gate ที่แถมมาครอบคลุม Agent ของโครงการนี้
 
@@ -209,38 +218,30 @@ Agent เรียก tools เหล่านี้ผ่าน MCP จริ�
 
 ## เงื่อนไขและตัวอย่างการใช้งาน
 
-ลำดับข้อมูลที่ต้องมี: **งบ → จำนวนคน → แพ้/ไม่ชอบ → ชื่อเครื่องดื่ม → จำนวน → รวม/แยกงบ → รับของหวานหรือไม่ → ชื่อและจำนวนถ้ารับ** ระบบอนุญาตให้ผู้ใช้ให้หลายช่องพร้อมกันได้ แต่จะไม่เดาข้อมูลที่ขาด เครื่องดื่มเป็นข้อกำหนดของแอปเวอร์ชันนี้ ชาเขียวร้อนฟรีเป็นตัวเลือกใน dataset
+หน้าเว็บต้องมีงบและจำนวนคน แล้วแสดงสรุปการแพ้/ข้อห้าม/ชอบ/ไม่ชอบให้ยืนยันครั้งเดียว ถ้ายังไม่เลือกน้ำหรือขนมจะไม่เพิ่มให้ ผู้ใช้เพิ่มภายหลังด้วยชื่อและจำนวนได้
 
 ```text
-ผู้ใช้: งบ 300 บาท 2 คน ชอบแซลมอน
-Agent: มีอะไรที่ไม่ชอบทาน หรือแพ้อาหารประเภทไหนไหมครับ?
-ผู้ใช้: ไม่มี
-Agent: รับเครื่องดื่มอะไรบ้างครับ?
-ผู้ใช้: ชาเขียวร้อน
-Agent: ต้องการเครื่องดื่มนี้กี่แก้วครับ?
-ผู้ใช้: 2 แก้ว
-Agent: ต้องการให้ค่าเครื่องดื่มรวมอยู่ในงบเดิม หรือคิดแยกต่างหากดีครับ?
-ผู้ใช้: รวมในงบ
-Agent: รับของหวานด้วยไหมครับ?
-ผู้ใช้: ไม่รับ
-Agent: [เลือก build_set → อ่าน candidate → verify_set → ตอบรายการจาก DB]
-ผู้ใช้: เพิ่มงบอีก 100 บาท
-Agent: [จำข้อจำกัดเดิม ใช้งบ 400 และตรวจชุดใหม่]
+ผู้ใช้: งบ 1,000 บาท 2 คน ชอบแซลมอน ไม่ชอบปลาหมึก ไม่มีแพ้
+ระบบ: สรุปข้อมูลมื้อให้ตรวจและยืนยัน
+ผู้ใช้: ยืนยันว่าไม่แพ้และจัดชุด
+ระบบ: [LLM เลือก tools → build_set → verify_set → ตรวจซ้ำ → แสดง ≤ 2 ชุด]
+ผู้ใช้: เลือกชุด 1
+ระบบ: สรุปอาหารที่เลือก ยอดรวม และเงินเหลือ
+ผู้ใช้: เครื่องดื่ม
+ระบบ: รายการเครื่องดื่มและราคา
+ผู้ใช้: น้ำส้ม 2 ชาเขียว 1
+ระบบ: สรุปอาหารเดิมรวมเครื่องดื่มและเงินเหลือ
+ผู้ใช้: ของหวาน
+ระบบ: รายการของหวานและราคา
+ผู้ใช้: วาราบี 1 ชาเขียว 1
+ระบบ: เพิ่มโมจิ 1 และไอศกรีมชาเขียว 1 แล้วสรุปรวมใหม่
+ผู้ใช้: ยืนยันรายการทั้งหมด
+ระบบ: ตรวจยอด/ข้อจำกัดอีกครั้ง แล้วปิดบทสนทนาพร้อมปุ่มรีเซ็ต
 ```
 
-ตัวอย่างนี้เป็นสถานการณ์ที่ออกแบบไว้ ไม่ใช่ transcript จาก OpenAI ที่ผ่านการทดสอบแล้ว หากแพ้กุ้งใน strict mode และยังไม่มีหลักฐานรายเมนู ระบบจะไม่เสนอชุดโดยอาศัยการเดา ต้องเพิ่มหลักฐานหรือเลือก simulation เพื่อการสาธิตเท่านั้น ไม่ควรชักชวนผู้แพ้ให้ใช้ simulation เพื่อรับประทานจริง
+ตัวอย่างเป็น flow ที่ออกแบบไว้ ไม่ใช่ transcript ของ OpenAI ที่ผ่านการทดสอบจริง ถ้าระบุการแพ้และ strict จัดไม่ได้เพราะหลักฐานยังไม่พอ ให้ผู้ใช้เลือก **ดูชุดจำลองจากข้อมูลเมนู** เพื่อวางแผนโดยกรองแท็กแพ้เดิม ระบบไม่ลบการแพ้ ไม่เปลี่ยนข้อมูลร้านเป็น confirmed และยังต้องให้ร้านตรวจส่วนผสมก่อนรับประทาน
 
-| ความหมาย | Field | กฎ |
-|---|---|---|
-| แพ้กุ้ง | `allergens=["crustacean"]` | hard exclusion จาก tags; unknown ถูกบล็อกใน strict |
-| ไม่ชอบหอย | `dislikes` | หักคะแนน 3 ยังอาจเลือกได้ |
-| ห้ามมีของดิบ | `hard_exclude_keywords` | ตัดออกด้วย text matching ทุกส่วนของชุด |
-| ชอบแซลมอน | `preferred_keywords` | เพิ่มคะแนน ไม่บังคับต้องมี |
-| กินเฉพาะกุ้งกับปลา | `must_include_keywords` | อาหารหลักแต่ละเมนูต้องตรงอย่างน้อยหนึ่งคำ; ไม่บังคับให้มีทั้งสองชนิด เครื่องดื่ม/ของหวานที่เลือกเองแยกกฎนี้ |
-
-งบต้องมากกว่า 0 และไม่เกิน 100,000 บาท ทศนิยมไม่เกิน 2 ตำแหน่ง จำนวนคนสูงสุด 60 คน การจัดชุดอาหารมีขอบเขต 60 รายการ ส่วน checkout รวมรายการเพิ่มใช้ขอบเขตแยกหมวดตามที่อธิบายด้านบน จำนวน min/max **นับรวมอาหาร เครื่องดื่ม ของหวาน** และต้องมีอาหารหลักอย่างน้อย 1 จาน หากเลือกคิดแยก งบครอบคลุมเฉพาะอาหาร แต่จะรายงานยอดจ่ายรวมเครื่องดื่ม/ของหวานชัดเจน ภาษีและ service charge ยังไม่ได้จำลอง
-
-State เก็บงบและข้อจำกัดข้าม turn พร้อมประวัติช่วงล่าสุด แต่ยังไม่บันทึกบทสนทนาลง disk การแพ้/ข้อห้าม/ความชอบส่วนใหญ่สะสม การส่งรายการว่างไม่ล้างค่า ใช้ปุ่มรีเซ็ตเริ่มชุดเงื่อนไขใหม่ ไม่แชร์ Agent กับผู้ใช้อื่น จำนวนคนยังไม่ได้แปลงเป็นโภชนาการหรือปริมาณอิ่มต่อคน
+CLI (`python -m sushi_budgeteer`) และ single-turn live evaluator ยังใช้ legacy readiness ซึ่งอาจถามชื่อ/จำนวนเครื่องดื่ม โหมดงบ และของหวานทีละช่อง ตัวอย่างหน้าเว็บข้างต้นไม่ใช่คำอธิบายของ CLI ดูข้อจำกัด reset ใน CODE_REVIEW
 
 ## Optimization และ verification
 
@@ -254,11 +255,11 @@ category_weight (legacy, ไม่ใช่ category coverage): ไม่ใช�
 penalty: ตรง dislike = 3
 ```
 
-เครื่องดื่ม/ของหวานเลือกตามชื่อและจำนวนที่ยืนยันก่อน แล้วหักวงเงินจัดชุดเมื่อเลือกแบบรวม ความหลากหลายสนับสนุนผ่านคะแนนส่วนเพิ่มที่ลดลงตามจำนวนจานซ้ำ (1, 0.5, 0.25 เท่าของคะแนนพื้นฐาน) และรายงานจำนวนเมนูไม่ซ้ำ ไม่ใช่การบังคับครบทุกหมวด ไม่ใช่คะแนนโภชนาการหรือคุณภาพจริง
+เครื่องดื่ม/ของหวานที่ระบุก่อน build จัดเป็น fixed allocation และหักวงเงินเมื่อเลือกแบบรวม ส่วนที่เพิ่มหลังเลือกอาหารตรวจใน checkout กับงบเต็ม ความหลากหลายสนับสนุนผ่านคะแนนส่วนเพิ่มที่ลดลงตามจำนวนจานซ้ำ (1, 0.5, 0.25 เท่าของคะแนนพื้นฐาน) และรายงานจำนวนเมนูไม่ซ้ำ ไม่ใช่การบังคับครบทุกหมวด ไม่ใช่คะแนนโภชนาการหรือคุณภาพจริง
 
 Validator คำนวณราคา × จำนวนจาก catalog จริง ตรวจ ID, quantity, ยอดรวม, งบตาม mode, จำนวนขั้นต่ำ/สูงสุด, อาหารอย่างน้อยหนึ่งจาน, repeat cap, allergen, hard exclusions, only-food constraint และ catalog revision ผลที่ไม่ผ่านไม่ถูกนำไปแสดงเป็นคำแนะนำ จำนวนเครื่องดื่ม/ของหวานที่ขอจะถูกตรวจด้วย
 
-การเรียก library `dp_knapsack` แบบเดิมยังมี `objective="score"` เป็นค่าเริ่มต้นเพื่อคง baseline สำหรับการวิเคราะห์ ส่วน `build_optimal_set` ใช้ `objective="budget", diversity=True` และหน้าเว็บส่ง `spend_ratio=0.8` ทุกครั้ง MCP/direct tools มีค่าเริ่มต้น `spend_ratio=1.0` สำหรับผู้เรียกเดิม จึงต้องระบุ 0.8 เมื่อต้องการจำลองเงื่อนไขเว็บ
+การเรียก library `dp_knapsack` แบบเดิมยังมี `objective="score"` เป็นค่าเริ่มต้นเพื่อคง baseline สำหรับการวิเคราะห์ ส่วน `build_optimal_set` ใช้ `objective="budget", diversity=True` และการจัดอาหารเริ่มต้นบนเว็บส่ง `spend_ratio=0.8`; checkout ตรวจส่วนเพิ่มด้วยงบเต็ม MCP/direct tools มีค่าเริ่มต้น `spend_ratio=1.0` สำหรับผู้เรียกเดิม จึงต้องระบุ 0.8 เมื่อต้องการจำลองเงื่อนไขเว็บ
 
 Benchmark ล่าสุดใช้ค่าเดียวกับ production: **objective=budget, diversity=true, spend_ratio=0.8, max_items=60, repeat_cap=3** เปรียบเทียบ DP, greedy density, greedy score และ Random บน safe pool เดียวกัน 12 สถานการณ์ (งบ 300/1,000/3,000/6,000 × 3 เงื่อนไข) และ Random 100 seeds ต่อสถานการณ์ รวม 1,200 runs รายงานใน `artifacts/benchmark-production.json`
 
@@ -269,14 +270,13 @@ DP ใช้งบเฉลี่ย **76.25% ของงบเต็ม / 95.3
 ## ทดสอบและ artifacts
 
 ```bash
-python scripts/collect_evidence.py --offline   # หรือรันทีละขั้นด้านล่าง
-python scripts/run_checks.py
+python scripts/run_checks.py --output-dir artifacts/review-round1
 python mcp_client_demo.py
 python scripts/benchmark.py
 python scripts/capture_demo.py
-python scripts/evaluate.py --mode offline
+python scripts/evaluate.py --mode offline --output artifacts/review-round1-offline-evaluation.json
 python scripts/evaluate.py --mode live --limit 3
-python scripts/live_sessions.py
+python scripts/live_sessions.py --output artifacts/review-round1-live-status.json
 python scripts/build_report.py
 ```
 
@@ -290,7 +290,9 @@ python scripts/build_report.py
 - ติดตั้งจาก lockfile พร้อมตรวจ hashes ใน venv ใหม่บน Linux/Python 3.12 ผ่าน
 - Agent tests ใช้ **scripted fake model + MCP/SQLite จริง** ยังไม่ได้เรียก OpenAI จริงเพราะไม่มี API key
 
-Artifacts: `artifacts/validation-report.json`, `artifacts/opa-tests.json`, `artifacts/offline-evaluation.json`, `artifacts/live-evaluation.json`, `artifacts/live-sessions.json`, `artifacts/demo-traces.json`, `artifacts/benchmark.json` และ `artifacts/review-round1-report.html` ซึ่งเปิดเป็นไฟล์ HTML บนเครื่องเพื่อดูตาราง/กราฟและกรองผลได้
+Artifacts ล่าสุด: `artifacts/review-round1/validation-report.json`, `artifacts/review-round1/opa-tests.json`, smoke logs ทั้งสองโหมด, `artifacts/review-round1-offline-evaluation.json`, `artifacts/review-round1-live-status.json`, `artifacts/review-round1-scripted-consumer-trace.json`, `artifacts/benchmark-production.json` และ HTML ที่สร้างด้วย `scripts/build_report.py` ส่วน snapshot ชื่อเดิมนอกกลุ่มนี้เป็นหลักฐานรุ่นก่อน ดูขอบเขตและวันรันใน [EVALUATION.md](EVALUATION.md)
+
+`python scripts/collect_evidence.py --offline` เป็นคำสั่งรวมที่ **import CSV แบบ replace catalog ด้วย** หากมีข้อมูลร้านที่แก้ใน SQLite ให้สำรองก่อน หรือใช้คำสั่งแยกด้านบนเพื่อไม่ replace ข้อมูล การสร้าง report ไม่ได้รันทดสอบใหม่
 
 Trace ระบุ model source, session/turn ID, tools ที่เลือก, arguments, observation status, OPA decision, latency และ token counts จาก provider โดยไม่บันทึก prompt/chain-of-thought/API key ผล `scripted` ไม่ใช่หลักฐาน LLM จริง หาก provider ไม่รายงาน usage จะระบุว่าไม่ครบและไม่ตีค่าใช้จ่ายเป็นศูนย์ Cost ใน live evaluation คำนวณเมื่อผู้ใช้ระบุ rate ที่ต้องการเองเท่านั้น เป็นประมาณการที่ยังไม่แยก cached token discounts
 
@@ -324,10 +326,10 @@ Trace ระบุ model source, session/turn ID, tools ที่เลือก
 
 OPA ใช้งานจริงผ่าน CLI ใน `sushi_budgeteer/opa.py` กับ `policies/recommendation.rego` Python คำนวณ trusted facts จาก SQLite และ constraints ที่ server เก็บไว้ แล้วบังคับ **Python ผ่าน AND OPA allow** ก่อนส่งชุดอาหาร ค่า `verified=true` จาก model ไม่ถูกใช้เป็นใบอนุญาต ถ้าขาด executable, policy ผิด, timeout หรือผลอ่านไม่ได้ จะ fail closed มี Rego tests ที่พิสูจน์ว่า OPA ตรวจ over-budget/allergen/ราคาผิดได้เอง แม้ลบ Python issues ออกจาก input ทดสอบ
 
-ZIP แนบ Linux amd64 static binary ของ OPA 1.0.1, checksum และ Apache license จากต้นทาง `scripts/install_opa.py` ตรวจ SHA256 ของ binary และคืน executable permission หลังแตก ZIP; บนแพลตฟอร์มอื่นดาวน์โหลด asset ทางการพร้อม checksum ไม่มีการปิด TLS/hash verification
+`scripts/install_opa.py` ติดตั้ง OPA 1.0.1 และตรวจ SHA256 จาก asset ทางการก่อนใช้งาน Source checkout ไม่เก็บ executable ใน Git ให้ติดตั้งตามแพลตฟอร์มของเครื่อง รายการไฟล์ใน ZIP ขึ้นกับ manifest ของชุดส่งนั้น
 
 อ่าน [EVALUATION.md](EVALUATION.md) สำหรับ live runners, การอ่าน metrics และแผนสาธิต 3 นาที ปัจจุบันรายงาน live เป็น **blocked_missing_credentials (0 calls)** จนกว่าจะตั้ง key อย่างปลอดภัย ห้ามใช้ traces จำลองแทนหลักฐาน LLM จริง และ OPA ไม่ได้แทน optimizer หรือรับรองความถูกต้องของข้อมูลร้าน
 
 เอกสารเพิ่มเติม: [CODE_REVIEW.md](CODE_REVIEW.md), [DATA_DICTIONARY.md](DATA_DICTIONARY.md), [EVALUATION.md](EVALUATION.md), [OPA documentation](https://www.openpolicyagent.org/docs), [Streamlit cache scope](https://docs.streamlit.io/develop/api-reference/caching-and-state/st.cache_resource)
 
-`rag.py` และ `requirements-rag.txt` เป็นส่วนทดลองเสริม ไม่อยู่ใน MCP tools ของ release นี้ การจัดชุดทุกเส้นทางหลักใช้ shared builder; ไม่ต้องติดตั้ง FAISS เพื่อใช้ Agent/MCP/SQLite และไม่อ้างว่า RAG ผ่านการทดสอบ live แล้ว
+`rag.py` และ `requirements-rag.txt` เป็นส่วนทดลองเสริม ไม่อยู่ใน MCP tools ของ release นี้ การจัดชุดเส้นทาง planning ใช้ shared builder ส่วน checkout คงอาหารที่เลือกและตรวจยอดใหม่; ไม่ต้องติดตั้ง FAISS เพื่อใช้ Agent/MCP/SQLite และไม่อ้างว่า RAG ผ่านการทดสอบ live แล้ว
