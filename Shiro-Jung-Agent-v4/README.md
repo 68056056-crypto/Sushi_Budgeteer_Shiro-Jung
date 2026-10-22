@@ -1,5 +1,13 @@
 # 🍣 Shiro-Jung 4.0 — AI Agent + MCP + SQLite + OPA
 
+## วินิจฉัยการเรียก provider ใน GitHub Actions
+
+`executed_turns` นับรอบสนทนาที่ runner ลองทำ ไม่ใช่จำนวนคำตอบที่ API ส่งกลับสำเร็จ ดู `successful_model_responses`, `model_error_count` และ `error_categories` เพิ่มเติม `live_llm_tested` ยังต้องมี successful real-provider response จึงเป็น true; ไม่ตั้ง true จากการมี API key เพียงอย่างเดียว
+
+Agent บันทึกเฉพาะ phase, exception type, HTTP status และ provider error code ที่อนุญาต โดยไม่ export raw exception/body/header หรือ key แยก authentication (401), quota/billing (`insufficient_quota`), rate limit (429), model access, permission, timeout, connection และ invalid extraction response ในรายงานหลังบ้าน ไม่แสดงรายละเอียดเหล่านี้ในแชตผู้บริโภค
+
+เมื่อไม่มี successful provider response และมี error จะรายงาน `failed_no_successful_model_response` แทน completed; หากรันแล้วมี gold failures ใช้ `completed_with_failures` ส่วน job summary แนะนำการตรวจ Secret หรือ API billing ตาม category ที่ตรวจได้ ไม่เดาสาเหตุจากภาพ success_rate=0 อย่างเดียว คำตอบ JSON ที่ไม่ผ่าน schema ยังนับว่าได้รับ response แต่ไม่ผ่านงาน
+
 ## แก้ไขข้อเสนอแนะรอบติดตาม (4.2.1)
 
 - **ไม่กิน/ไม่ทาน/งด/ห้าม** ตามด้วยชื่ออาหารเป็น hard exclusion เสมอ มี deterministic guard หลังการสกัด ไม่ขึ้นกับว่า LLM ส่งเป็น dislike หรือไม่ เช่น ไม่กินหมู → ตัดรายการที่มีแท็ก pork; ไม่ทานของดิบ → raw; งดไก่ → chicken ส่วน “ไม่ค่อยชอบหมู” ยังคงเป็น soft dislike
@@ -34,7 +42,7 @@
 
 หน้าเว็บใช้ `consumer_flow=True`: ข้อมูลมื้อ → สรุปยืนยัน → LLM เลือก MCP tools → ตรวจผล → เลือกอาหาร → เพิ่มรายการตามต้องการ → ยืนยันจบ คำตอบสั้น การเลือกชุด และการอ่านชื่อย่อพร้อมจำนวนใช้โค้ดโดยตรง การสร้างทางเลือกที่สองและตรวจซ้ำอยู่ใน orchestration โมเดลมีหน้าที่สกัดข้อมูลและเลือก tool ส่วน DP คำนวณชุดและ validator/OPA บังคับข้อจำกัด ไม่มีการฝึกหรือ fine-tune weights ของโมเดลในโครงการนี้
 
-หลักฐานล่าสุดเป็น **156 regression tests, 25 Rego tests, smoke 61 ต่อโหมด และ offline gold 40/40** โดย Agent tests ใช้ scripted model ไม่ใช่ผล live OpenAI ดูขอบเขตที่ [CODE_REVIEW.md](CODE_REVIEW.md) และ [EVALUATION.md](EVALUATION.md)
+หลักฐานล่าสุดเป็น **161 regression tests, 25 Rego tests, smoke 61 ต่อโหมด และ offline gold 40/40** โดย Agent tests ใช้ scripted model ไม่ใช่ผล live OpenAI ดูขอบเขตที่ [CODE_REVIEW.md](CODE_REVIEW.md) และ [EVALUATION.md](EVALUATION.md)
 
 ## ไปต่อหลังแจ้งแพ้อาหารโดยไม่ลบการแพ้
 
@@ -302,7 +310,7 @@ python scripts/build_report.py
 
 ผลตรวจในชุดนี้:
 
-- Regression/integration **156 tests** รวม DP เทียบ exhaustive search 35 fixtures, ทศนิยม, tampering, session isolation, unknown allergen, strict/simulation, DB เปลี่ยน, Agent gate และ Streamlit page
+- Regression/integration **161 tests** รวม DP เทียบ exhaustive search 35 fixtures, ทศนิยม, tampering, session isolation, unknown allergen, strict/simulation, DB เปลี่ยน, Agent gate และ Streamlit page
 - OPA/Rego **25 tests** ตรวจ allow/deny แยกจาก Python
 - Evaluation **40 กรณี** ผ่าน MCP/SQLite/OPA จริง โดยไม่เรียก LLM; แยกจาก regression tests
 - Smoke **61 checks ต่อโหมด** ผ่านทั้ง strict และ simulation
@@ -310,7 +318,7 @@ python scripts/build_report.py
 - ติดตั้งจาก lockfile พร้อมตรวจ hashes ใน venv ใหม่บน Linux/Python 3.12 ผ่าน
 - Agent tests ใช้ **scripted fake model + MCP/SQLite จริง** ยังไม่ได้เรียก OpenAI จริงเพราะไม่มี API key
 
-Artifacts ล่าสุด: `artifacts/review-round2-followup/validation-report.json`, `artifacts/review-round2-followup/opa-tests.json`, smoke logs ทั้งสองโหมด, `artifacts/review-round2-followup/offline-evaluation.json`, `artifacts/review-round2-followup/live-status.json`, `artifacts/review-round2-followup/scripted-consumer-trace.json`, `artifacts/review-round2-followup/benchmark-production.json` และ HTML ที่สร้างด้วย `scripts/build_report.py` ส่วน snapshot รอบ1และชื่อเดิมนอกกลุ่มนี้เป็นหลักฐานรุ่นก่อน ดูขอบเขตและวันรันใน [EVALUATION.md](EVALUATION.md)
+Artifacts ล่าสุด: `artifacts/review-round2-diagnostics/validation-report.json`, `artifacts/review-round2-diagnostics/opa-tests.json`, smoke logs ทั้งสองโหมด, `artifacts/review-round2-followup/offline-evaluation.json`, `artifacts/review-round2-followup/live-status.json`, `artifacts/review-round2-followup/scripted-consumer-trace.json`, `artifacts/review-round2-followup/benchmark-production.json` และ HTML ที่สร้างด้วย `scripts/build_report.py` ส่วน snapshot รอบ1และชื่อเดิมนอกกลุ่มนี้เป็นหลักฐานรุ่นก่อน ดูขอบเขตและวันรันใน [EVALUATION.md](EVALUATION.md)
 
 `python scripts/collect_evidence.py --offline` เป็นคำสั่งรวมที่ **import CSV แบบ replace catalog ด้วย** หากมีข้อมูลร้านที่แก้ใน SQLite ให้สำรองก่อน หรือใช้คำสั่งแยกด้านบนเพื่อไม่ replace ข้อมูล การสร้าง report ไม่ได้รันทดสอบใหม่
 

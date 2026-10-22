@@ -1,5 +1,13 @@
 # Code Review — Shiro-Jung 4.2.1
 
+## วินิจฉัยการเรียก provider ใน GitHub Actions
+
+`executed_turns` นับรอบสนทนาที่ runner ลองทำ ไม่ใช่จำนวนคำตอบที่ API ส่งกลับสำเร็จ ดู `successful_model_responses`, `model_error_count` และ `error_categories` เพิ่มเติม `live_llm_tested` ยังต้องมี successful real-provider response จึงเป็น true; ไม่ตั้ง true จากการมี API key เพียงอย่างเดียว
+
+Agent บันทึกเฉพาะ phase, exception type, HTTP status และ provider error code ที่อนุญาต โดยไม่ export raw exception/body/header หรือ key แยก authentication (401), quota/billing (`insufficient_quota`), rate limit (429), model access, permission, timeout, connection และ invalid extraction response ในรายงานหลังบ้าน ไม่แสดงรายละเอียดเหล่านี้ในแชตผู้บริโภค
+
+เมื่อไม่มี successful provider response และมี error จะรายงาน `failed_no_successful_model_response` แทน completed; หากรันแล้วมี gold failures ใช้ `completed_with_failures` ส่วน job summary แนะนำการตรวจ Secret หรือ API billing ตาม category ที่ตรวจได้ ไม่เดาสาเหตุจากภาพ success_rate=0 อย่างเดียว คำตอบ JSON ที่ไม่ผ่าน schema ยังนับว่าได้รับ response แต่ไม่ผ่านงาน
+
 ## ข้อแก้ไขเร่งด่วนหลังทดสอบเว็บจริง
 
 | จุดตรวจ | ผลแก้ไข / ขอบเขต |
@@ -75,8 +83,8 @@
 
 | หลักฐาน | ผล / แหล่งข้อมูล |
 |---|---|
-| Regression / integration | 156 tests, failures 0, errors 0 — `artifacts/review-round2-followup/validation-report.json` |
-| OPA / Rego | 25 tests ผ่าน — `artifacts/review-round2-followup/opa-tests.json` |
+| Regression / integration | 161 tests, failures 0, errors 0 — `artifacts/review-round2-diagnostics/validation-report.json` |
+| OPA / Rego | 25 tests ผ่าน — `artifacts/review-round2-diagnostics/opa-tests.json` |
 | Smoke | strict 61 และ simulation 61 ผ่าน — log ใน `artifacts/review-round2-followup/` |
 | Offline gold | 40/40 — `artifacts/review-round2-followup/offline-evaluation.json`; ไม่มี LLM |
 | Consumer planning trace | `artifacts/review-round2-followup/scripted-consumer-trace.json`; scripted model + real MCP/SQLite/OPA |

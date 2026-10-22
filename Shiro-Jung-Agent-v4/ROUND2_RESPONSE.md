@@ -22,7 +22,7 @@
 
 ## ผลตรวจหลังแก้
 
-156 regression/integration tests, 25 Rego tests, smoke 61 ต่อโหมด, offline gold 40/40 ดู checked_at/release จาก artifacts/review-round2-followup/validation-report.json ไม่ใช้ผลเหล่านี้รับรองสูตรร้าน ความพึงพอใจจริง หรือ live-model quality
+161 regression/integration tests, 25 Rego tests, smoke 61 ต่อโหมด, offline gold 40/40 ดู checked_at/release จาก artifacts/review-round2-diagnostics/validation-report.json ไม่ใช้ผลเหล่านี้รับรองสูตรร้าน ความพึงพอใจจริง หรือ live-model quality
 
 ## สิ่งที่ทีมต้องเติมจากหลักฐานจริง
 
@@ -30,3 +30,8 @@
 2. ถ่ายป้ายราคา/สีจานที่สาขาพร้อมวันที่ ส่งร่างคำถามรายเมนูจาก RESTAURANT_VERIFICATION.md ผ่านช่องทางทางการที่ทีมเลือก เก็บคำตอบและขอบเขตสาขา/วันที่
 3. ทีมอ่านหลักฐานรายเมนูและลงชื่อ/เหตุผลก่อนใช้ team_reviewed หากร้านไม่ยืนยัน ห้ามเปลี่ยนเป็น confirmed เอง ห้ามลบแท็กสารที่อาจมีเพียงเพราะร้านไม่ตอบ
 4. สไลด์/Word/PDF จัดส่งแยกเพื่อดาวน์โหลด ไม่อัปโหลด GitHub ระบบแชตผู้บริโภคไม่แสดง trace หรือรายละเอียดเทคนิคเหล่านี้
+
+
+## เพิ่มการวินิจฉัย provider
+
+เพิ่ม 5 diagnostic regression tests ด้วย synthetic exceptions ไม่เรียก API จริง แยก authentication/quota/transport และ JSON validation failure เก็บ metadata ปลอดภัยใน run report/job summary เพื่อให้แก้ปัญหาจากหลักฐานแทนเดา ค่า live ยังต้องพิจารณาจากผล workflow ของ commit ที่รันจริง

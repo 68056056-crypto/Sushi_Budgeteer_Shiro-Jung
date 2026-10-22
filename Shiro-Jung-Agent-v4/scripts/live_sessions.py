@@ -84,6 +84,15 @@ def main():
     gold_turns=[turn for session in report['sessions'] for turn in session['turns']]
     report['success_rate']=sum(turn['success'] for turn in gold_turns)/len(gold_turns)
     report['model_selected_recommendations']=sum(turn['model_selected_build_and_verify'] for turn in gold_turns)
+    errors=[error for turn in gold_turns for run in turn['runs'] for error in run.get('model_errors',[])]
+    report['model_error_count']=len(errors)
+    report['successful_model_responses']=sum(run.get('model_calls',0) for turn in gold_turns for run in turn['runs'])
+    report['error_categories']={category:sum(error['category']==category for error in errors)
+                                for category in sorted({error['category'] for error in errors})}
+    if errors and not report['live_llm_tested']:
+        report['status']='failed_no_successful_model_response'
+    elif report['success_rate']<1:
+        report['status']='completed_with_failures'
     args.output.parent.mkdir(parents=True,exist_ok=True)
     args.output.write_text(json.dumps(redact(report),ensure_ascii=False,indent=2))
     print('Live consumer sessions:',len(report['sessions']),'success rate:',report['success_rate'])

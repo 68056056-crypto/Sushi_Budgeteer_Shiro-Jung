@@ -15,6 +15,7 @@ from .presentation import ALLERGY_WARNING
 from .optimization_config import INITIAL_SPEND_RATIO
 from .dietary import exclusion_label
 from .meat_scope import MEAT_CHOICES, MEAT_WORDS, defer_meat_guess
+from .telemetry import model_error
 LOG=logging.getLogger('shiro_jung.agent')
 
 class Extraction(BaseModel):
@@ -140,7 +141,8 @@ class IntakeMixin:
         self._replan=True
         try:
             return asyncio.run(self._run('จัดชุดตามข้อมูลที่ยืนยัน'))
-        except Exception:
+        except Exception as exc:
+            self.last_run.setdefault('model_errors',[]).append(model_error(exc,'planning'))
             LOG.exception('confirmed order failed')
             self.clear_choices()
             return 'จัดชุดไม่สำเร็จชั่วคราวครับ ลองใหม่ได้เลย ข้อมูลเดิมยังอยู่'

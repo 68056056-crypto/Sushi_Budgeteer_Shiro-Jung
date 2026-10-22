@@ -18,7 +18,7 @@ from .extraction import _sanitize_extraction, requested_allergy_corrections
 from .database import cents
 from .meat_scope import MEAT_CHOICES, meat_relation
 from .presentation import render_menu, ALLERGY_WARNING, CLOSING_MESSAGE
-from .telemetry import redact
+from .telemetry import redact, model_error
 from .intake import IntakeMixin, Extraction
 from .planning import PlanningMixin, SYSTEM_PROMPT
 from .checkout import CheckoutMixin
@@ -260,6 +260,7 @@ class BudgeteerAgent(IntakeMixin, PlanningMixin, CheckoutMixin):
                 return answer
         except Exception as exc:
             cause=_root_cause(exc)
+            self.last_run.setdefault('model_errors',[]).append(model_error(cause,'extraction'))
             LOG.exception('intent extraction failed: %s',type(cause).__name__)
             return 'อ่านความต้องการไม่สำเร็จชั่วคราว ลองส่งข้อความอีกครั้งได้เลยครับ ผมยังเก็บข้อมูลเดิมไว้'
         self.state.add_message('user',user_message)
@@ -291,6 +292,7 @@ class BudgeteerAgent(IntakeMixin, PlanningMixin, CheckoutMixin):
             answer=asyncio.run(self._run(user_message,extracted.get('budget_change_unclear',False)))
         except Exception as exc:
             cause=_root_cause(exc)
+            self.last_run.setdefault('model_errors',[]).append(model_error(cause,'planning'))
             LOG.exception('agent turn failed: %s',type(cause).__name__)
             self.clear_choices()
             self.last_trace.append({'step':'turn','error':f'{type(cause).__name__}: {str(cause)[:300]}'})

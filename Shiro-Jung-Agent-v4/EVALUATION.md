@@ -1,5 +1,13 @@
 # Evaluation — Shiro-Jung 4.2.1
 
+## วินิจฉัยการเรียก provider ใน GitHub Actions
+
+`executed_turns` นับรอบสนทนาที่ runner ลองทำ ไม่ใช่จำนวนคำตอบที่ API ส่งกลับสำเร็จ ดู `successful_model_responses`, `model_error_count` และ `error_categories` เพิ่มเติม `live_llm_tested` ยังต้องมี successful real-provider response จึงเป็น true; ไม่ตั้ง true จากการมี API key เพียงอย่างเดียว
+
+Agent บันทึกเฉพาะ phase, exception type, HTTP status และ provider error code ที่อนุญาต โดยไม่ export raw exception/body/header หรือ key แยก authentication (401), quota/billing (`insufficient_quota`), rate limit (429), model access, permission, timeout, connection และ invalid extraction response ในรายงานหลังบ้าน ไม่แสดงรายละเอียดเหล่านี้ในแชตผู้บริโภค
+
+เมื่อไม่มี successful provider response และมี error จะรายงาน `failed_no_successful_model_response` แทน completed; หากรันแล้วมี gold failures ใช้ `completed_with_failures` ส่วน job summary แนะนำการตรวจ Secret หรือ API billing ตาม category ที่ตรวจได้ ไม่เดาสาเหตุจากภาพ success_rate=0 อย่างเดียว คำตอบ JSON ที่ไม่ผ่าน schema ยังนับว่าได้รับ response แต่ไม่ผ่านงาน
+
 ## เกณฑ์เพิ่มหลังข้อเสนอแนะจากเว็บจริง
 
 เพิ่ม regression 17 เคส: hard refusal ที่โมเดลจัดผิด/หลายข้อห้าม/alias ใน state เดิม/strict→opt-in จริงผ่าน MCP, soft dislike, ตัวเลือกต่าง ≥30%, team-reviewed import/migration/strict gate และ live-trace exporter ที่ไม่รับ scripted/fallback
@@ -33,7 +41,7 @@ python scripts/export_live_trace.py --input artifacts/live-actions/live-sessions
 
 | ชั้นการประเมิน | สิ่งที่รัน / ผลล่าสุด | ขอบเขต |
 |---|---|---|
-| Regression / integration | 156 tests ผ่าน | scripted model + real MCP subprocess, SQLite, OPA และ Streamlit AppTest |
+| Regression / integration | 161 tests ผ่าน | scripted model + real MCP subprocess, SQLite, OPA และ Streamlit AppTest |
 | OPA / Rego | 25/25 | ตรวจกฎแยก รวม raw-tag conflicts และ fail closed |
 | Smoke | strict 61/61, simulation 61/61 | โหมด strict ต้องปฏิเสธการแพ้เมื่อ evidence ไม่พอ ไม่ลดโหมดเพื่อให้ผ่าน |
 | Offline gold | 40/40 | ไม่มีโมเดล; ทดสอบ tools/constraints บน seed catalog |
@@ -42,15 +50,15 @@ python scripts/export_live_trace.py --input artifacts/live-actions/live-sessions
 | Live consumer sessions | `blocked_missing_credentials`, 0 turns | runner พร้อม 5 sessions / 12 gold turns; intake อาจเพิ่ม confirmation calls |
 | Consumer allergy opt-in | 6 regression tests ผ่าน | ยังไม่มีผล live opt-in session |
 
-ผล regression รอบแก้ไข 2 ดูวันเวลา `checked_at` จาก JSON (UTC; เวลาไทย UTC+7) อยู่ใน `artifacts/review-round2-followup/validation-report.json` จำนวน tests และผล scripted ไม่รับรองคุณภาพภาษาไทยของ live model หรือความปลอดภัยของสูตรร้าน
+ผล regression รอบแก้ไข 2 ดูวันเวลา `checked_at` จาก JSON (UTC; เวลาไทย UTC+7) อยู่ใน `artifacts/review-round2-diagnostics/validation-report.json` จำนวน tests และผล scripted ไม่รับรองคุณภาพภาษาไทยของ live model หรือความปลอดภัยของสูตรร้าน
 
 ## แหล่งหลักฐานที่ใช้
 
 | ไฟล์ | หน้าที่ |
 |---|---|
-| `artifacts/review-round2-followup/validation-report.json` | จำนวน tests, failures/errors, Python/platform, smoke modes และสถานะ live |
-| `artifacts/review-round2-followup/opa-tests.json` | ผล Rego 25 กรณี |
-| `artifacts/review-round2-followup/smoke-strict.log`, `smoke-simulation.log` | ผล smoke รายโหมด |
+| `artifacts/review-round2-diagnostics/validation-report.json` | จำนวน tests, failures/errors, Python/platform, smoke modes และสถานะ live |
+| `artifacts/review-round2-diagnostics/opa-tests.json` | ผล Rego 25 กรณี |
+| `artifacts/review-round2-diagnostics/smoke-strict.log`, `smoke-simulation.log` | ผล smoke รายโหมด |
 | `artifacts/review-round2-followup/offline-evaluation.json` | 40 gold outcomes, catalog revision และ offline metrics |
 | `artifacts/review-round2-followup/benchmark-production.json` | config, ผลทุกวิธี, Random seeds และตัวชี้วัดรายกรณี |
 | `artifacts/review-round2-followup/scripted-consumer-trace.json` | หลักฐานต่อวงจร consumer planning/replan ด้วย scripted model; ไม่ใช่ live |
