@@ -44,10 +44,10 @@ class Extraction(BaseModel):
 class IntakeMixin:
     def _extract_intent(self, message):
         if getattr(self,"_picker_update",None) is not None:
-            return Extraction.model_validate(self._picker_update).model_dump()
+            return Extraction.model_validate(_sanitize_extraction(self._picker_update,self.state.last_asked_field,message)).model_dump()
         direct=contextual_answer(self.state.last_asked_field,message)
         if direct is not None:
-            return Extraction.model_validate(direct).model_dump()
+            return Extraction.model_validate(_sanitize_extraction(direct,self.state.last_asked_field,message)).model_dump()
         state=asdict(self.state)
         state.pop('conversation'); state.pop('last_result')
         prompt=(EXTRACT_PROMPT+'\nคืน JSON object เท่านั้น อย่าลบ allergen ที่ไม่รู้จัก ให้คงชื่อเดิมไว้'

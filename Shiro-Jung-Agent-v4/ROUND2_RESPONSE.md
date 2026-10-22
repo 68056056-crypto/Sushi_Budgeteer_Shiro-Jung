@@ -1,37 +1,32 @@
-# คำตอบผลประเมินรอบ 2 — Shiro-Jung 4.2.0
+# ตอบข้อเสนอแนะอาจารย์ รอบ 2 และรอบติดตาม
 
-สรุปการแก้ไขวันที่ 22 ตุลาคม 2569 ตาม 6 ประเด็นที่ได้รับ เอกสารประเมินที่ผู้ใช้แนบรายงาน 31/35 เป็นคะแนนจากผู้ประเมิน ไม่ใช่การคาดการณ์คะแนนหลังแก้รอบนี้
+โครงงาน Shiro-Jung Agent 4.0 / implementation 4.2.1 ตรวจ 22 ตุลาคม 2569 ไม่มีการประเมินคะแนนใหม่ให้ตนเอง
 
-| ประเด็น | สิ่งที่ทำ | สถานะ |
+## ข้อเสนอแนะล่าสุด เรียงตามความสำคัญ
+
+| ข้อเสนอแนะ | การแก้ไขที่ทำแล้ว | สถานะ / หลักฐาน |
 |---|---|---|
-| Live LLM ยังไม่รัน | ตรวจ credentials และเรียก runner จริงให้บันทึกสถานะ เพิ่ม corpus 5 sessions / 12 gold turns ครอบคลุมชนิดเนื้อและ explicit opt-in; ทดสอบ orchestration แบบ offline โดยไม่ตี scripted เป็น live | ยังไม่มี credentials: `live_llm_tested=false`, 0 live turns |
-| ข้อมูลร้าน unknown/unverified | Audit ครบ42เมนูและส่งออก checklist สำหรับเติม URL ส่วนผสม/ราคา วันที่ตรวจ และบันทึกผู้ตรวจ ไม่เปลี่ยนสถานะเอง | ยังรอหลักฐานร้าน: allergen42/42 unknown, ราคา42/42 unverified |
-| Greedy score สูงกว่า DP | รัน production benchmark ใหม่ รายงาน DP110.77 / Greedy density117.44 และลำดับ objective อย่างตรงไปตรงมา | แก้เอกสารและสไลด์แล้ว |
-| ไม่กินเนื้อไม่ตัดเมนู | หน้าเว็บถามชนิดหมู/วัว/ไก่/สัตว์บกทั้งหมด โดยคงไม่ชอบ/ไม่กิน/แพ้ต่างกัน รักษางบและการแพ้อื่น; direct hard-filter รองรับกลุ่มเนื้อสัตว์บก | แก้และทดสอบทั้ง UI/Agent/filter/OPA |
-| ใช้จริง76%ของงบ | ระบุตัวหารสองค่า: 76.25% ของงบเต็ม /95.3125% ของวงเงินอาหาร80%; ใช้เงินเหลือเพิ่มน้ำ/ขนมได้ถึงงบเต็ม | แก้เอกสารและสไลด์แล้ว |
-| agent.py เกือบ1000บรรทัด | แยก intake/planning/checkout เป็น mixins และเก็บ lifecycle/routing ใน Agent เดิม รักษา API/session state/guards | Refactor แล้ว และ regression ผ่าน |
+| ไม่กิน X ต้อง hard | เพิ่มกฎหลัง extraction สำหรับไม่กิน/ไม่ทาน/งด/ห้าม ลบ soft alias เดิมด้วย ไม่เปลี่ยน soft “ไม่ค่อยชอบ” เป็น hard | แก้แล้ว; test_explicit_refusals.py รวม scenario 1500 บาท 2 คน แพ้กุ้ง ชอบแซลมอน ไม่กินหมู |
+| Live LLM | เพิ่ม workflow แบบ manual, secure secret env, ตรวจ state และ success, model-selected gate และ export trace 1 session | ยังไม่มี API key ในเครื่อง และ GitHub Actions token ใช้ไม่ได้ จึงยัง live=false / executed=0 / model-selected-live=0 |
+| ข้อมูลร้าน | เพิ่ม team_reviewed พร้อมเหตุผล/ผู้ตรวจ/วันที่ ไม่ปลด strict; ราคา confirmed ต้องมีแหล่งหลักฐาน/วันที่ เตรียมคำถาม 15 เมนูและ checklist สาขา/ภาพป้าย | ยังไม่มีภาพป้าย/คำตอบร้านและยังไม่ได้ส่งข้อความ รักษา unknown/unverified ทั้ง 42 เมนู |
+| ชุดที่สองใกล้ซ้ำ | ตัดกลุ่มเมนูคะแนนสูงและตรวจชื่อเมนูอาหารเดิมที่หายไป ≥30%; คงข้อจำกัด/ส่วนเพิ่ม ลองได้สูงสุด 3 กลุ่ม | แก้แล้ว; ถ้าทำไม่ได้เสนอชุดเดียว ไม่ผ่อนการแพ้หรืองบเพื่อสร้างทางเลือก |
+| State persistence | ยังใช้ Streamlit session state; SQLite เก็บ catalog เท่านั้น | ยังไม่ทำตามทางเลือกในข้อเสนอแนะ ระบุข้อจำกัดในเอกสารและสไลด์ชัดเจน |
 
-## ผลตรวจรอบนี้
+## ข้อเสนอแนะรอบ 2 เดิมที่ยังคงอธิบายตามจริง
 
-- Regression/integration **139 tests** ผ่าน, errors/failures0
-- OPA **25 tests** ผ่าน; เพิ่มกฎตรวจการแพ้สัตว์บกจาก raw dietary tags แม้ flag Pythonเป็นfalse
-- Smoke **61 checks ต่อโหมด** ผ่านทั้งstrictและsimulation
-- Offline gold **40/40** โดยเรียกMCP/SQLite/OPAตรง ไม่มีLLM ส่วนAgent regression/harnessใช้scripted model แยกกัน
-- Benchmark **12 สถานการณ์ ×100 Random seeds =1,200 runs**; ไม่มีfeasibility/objective-dominance failure ในชุดนี้
+- คำว่าเนื้อที่ไม่ระบุชนิดถามครั้งเดียวให้เลือกหมู/วัว/ไก่/สัตว์บกทั้งหมด แยกไม่ชอบ/ไม่กิน/แพ้ตามผู้ใช้ และไม่ตัดปลา/อาหารทะเลเพียงเพราะเลือกสัตว์บก
+- แยก Agent เป็น intake/planning/checkout mixins คง public API และ shared session state; ไม่อ้างว่าลด shared-state coupling หมดแล้ว
+- bounded exact DP ดีที่สุดตาม objective ที่นิยาม ไม่ใช่ทุกตัวชี้วัด: ภายในช่วง ≥95% ของวงเงินอาหารให้คะแนนก่อน หากช่วงนั้นทำไม่ได้ให้ยอดใช้จ่ายก่อน Greedy density ได้คะแนนเฉลี่ย 117.44 ขณะที่ DP 110.77
+- วงเงินอาหารเริ่มต้น 80% ของงบเต็ม ผล benchmark DP ใช้งบเต็มเฉลี่ย 76.25% หรือ 95.3125% ของวงเงินอาหาร ไม่ได้หมายความว่าใช้เงินครบ 80% ทุกกรณี เงื่อนไข/เพดานจำนวนอาจทำให้ไม่ถึงเป้า
+- 40 offline gold scenarios ไม่เรียก LLM; Agent integration ใช้ scripted model กับ MCP/SQLite/OPA จริง ไม่รวมเป็นหลักฐาน provider จริง
 
-ดูผลจริงใน `artifacts/review-round2/` และขอบเขตใน [EVALUATION.md](EVALUATION.md) ไม่มีการใช้ผล scripted แทนหลักฐาน provider จริง และไม่ได้รับรองสูตรร้านจากทะเบียนสารก่อภูมิแพ้10กลุ่ม
+## ผลตรวจหลังแก้
 
-## ข้อความแนะนำสำหรับนำเสนอ
+156 regression/integration tests, 25 Rego tests, smoke 61 ต่อโหมด, offline gold 40/40 ดู checked_at/release จาก artifacts/review-round2-followup/validation-report.json ไม่ใช้ผลเหล่านี้รับรองสูตรร้าน ความพึงพอใจจริง หรือ live-model quality
 
-> “DP ของเราหาคำตอบที่ดีที่สุดตามลำดับ objective ที่กำหนด ถ้ามีชุดในช่วง95–100%ของวงเงินอาหาร จะเลือกคะแนนลดซ้ำสูงสุด แล้วใช้ยอดเงินเป็นตัวตัดสินกรณีคะแนนเท่ากัน ถ้าเข้าไม่ถึงช่วงนั้น จะเลือกใช้เงินได้มากสุดภายใต้ข้อจำกัดก่อน ดังนั้น Greedy อาจได้ raw score หรือความหลากหลายสูงกว่า DP ได้ เราไม่ได้อ้างว่าชนะทุกตัวชี้วัด”
+## สิ่งที่ทีมต้องเติมจากหลักฐานจริง
 
-> “วงเงินจัดอาหารเริ่มต้นเป็น80%ของงบผู้ใช้ เพื่อเหลือเงินให้ตัดสินใจเพิ่มน้ำหรือขนมภายหลัง ค่าเฉลี่ยการทดลองนี้ใช้76.25%ของงบเต็ม หรือ95.3125%ของวงเงินอาหาร ไม่ใช่ใช้95%ของงบผู้ใช้ การคิดเงินตอนสรุปสุดท้ายรวมส่วนเพิ่มต้องอยู่ในงบเต็ม”
-
-> “live LLM ยังไม่ผ่านการทดสอบใน environment นี้ ข้อมูลสูตรร้านและราคายังไม่ยืนยัน เราแยกสิ่งที่ทดสอบกับtoolsจริงออกจากผลจำลองของAgentอย่างชัดเจน และไม่ตั้งconfirmedขึ้นเอง”
-
-## ขั้นตอนปิดสองข้อที่ยังค้าง
-
-1. ตั้ง API key ใน environment/secrets อย่างปลอดภัยและรัน `python scripts/live_sessions.py --scenarios evaluation/round2_sessions.json --output artifacts/review-round2/live-status.json` ตรวจทั้งusage, source, constraints, mode, consent และผลรายturnก่อนอ้างความสามารถจริง
-2. ใช้ `python scripts/catalog_audit.py --checklist <path.csv>` แล้วให้ผู้ตรวจเติมหลักฐานเมนูจริง เริ่ม10–15เมนูที่เอกสารส่วนผสมครอบคลุมซอส/ท็อปปิง/การปนเปื้อน พร้อมแหล่งราคาและวันที่ ตรวจต้นฉบับก่อนเปลี่ยนสถานะในcatalog ไม่ใช้fixtureในtestsเป็นหลักฐานร้าน
-
-ไฟล์นำเสนอและเอกสารส่งอาจารย์เก็บแยกจากrepositoryตามที่ผู้ใช้ระบุ ไม่ส่งPowerPoint/PDF/Wordขึ้นGitHub
+1. เพิ่ม secret ใน GitHub Actions แล้วรัน Live LLM evaluation ดาวน์โหลด JSON และ live-trace.md ตรวจ source commit/model/route/success ก่อนใส่ trace 1 session ลงสไลด์ ไม่แสดง API key หรือข้อมูลส่วนบุคคล
+2. ถ่ายป้ายราคา/สีจานที่สาขาพร้อมวันที่ ส่งร่างคำถามรายเมนูจาก RESTAURANT_VERIFICATION.md ผ่านช่องทางทางการที่ทีมเลือก เก็บคำตอบและขอบเขตสาขา/วันที่
+3. ทีมอ่านหลักฐานรายเมนูและลงชื่อ/เหตุผลก่อนใช้ team_reviewed หากร้านไม่ยืนยัน ห้ามเปลี่ยนเป็น confirmed เอง ห้ามลบแท็กสารที่อาจมีเพียงเพราะร้านไม่ตอบ
+4. สไลด์/Word/PDF จัดส่งแยกเพื่อดาวน์โหลด ไม่อัปโหลด GitHub ระบบแชตผู้บริโภคไม่แสดง trace หรือรายละเอียดเทคนิคเหล่านี้

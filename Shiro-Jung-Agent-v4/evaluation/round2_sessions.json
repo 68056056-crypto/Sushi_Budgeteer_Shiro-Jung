@@ -4,21 +4,28 @@
     "mode": "strict",
     "turns": [
       {
-        "message": "จัดชุดงบ 300 บาท สำหรับ 2 คน ไม่มีแพ้อาหารหรือของที่ไม่ชอบ ชอบแซลมอน รับชาเขียวร้อน 2 แก้ว รวมในงบ ไม่รับของหวาน",
+        "message": "จัดชุดงบ 300 บาท สำหรับ 2 คน ไม่มีแพ้อาหารหรือของที่ไม่ชอบ ชอบแซลมอน รับชาเขียวร้อน 2 แก้ว รวมในงบ ไม่รับของหวาน ไม่กินหมู",
         "expected": "recommendation",
-        "budget": 300
+        "budget": 300,
+        "hard_exclude_keywords": [
+          "หมู"
+        ]
       },
       {
         "message": "เพิ่มงบอีก 100 บาท เงื่อนไขอื่นเหมือนเดิม",
         "expected": "recommendation",
-        "budget": 400
+        "budget": 400,
+        "hard_exclude_keywords": [
+          "หมู"
+        ]
       },
       {
         "message": "ขอห้ามมีของดิบเลย เงื่อนไขอื่นเหมือนเดิม",
         "expected": "recommendation",
         "budget": 400,
         "hard_exclude_keywords": [
-          "ดิบ"
+          "ดิบ",
+          "หมู"
         ]
       }
     ]

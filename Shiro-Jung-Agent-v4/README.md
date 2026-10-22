@@ -1,10 +1,21 @@
 # 🍣 Shiro-Jung 4.0 — AI Agent + MCP + SQLite + OPA
 
+## แก้ไขข้อเสนอแนะรอบติดตาม (4.2.1)
+
+- **ไม่กิน/ไม่ทาน/งด/ห้าม** ตามด้วยชื่ออาหารเป็น hard exclusion เสมอ มี deterministic guard หลังการสกัด ไม่ขึ้นกับว่า LLM ส่งเป็น dislike หรือไม่ เช่น ไม่กินหมู → ตัดรายการที่มีแท็ก pork; ไม่ทานของดิบ → raw; งดไก่ → chicken ส่วน “ไม่ค่อยชอบหมู” ยังคงเป็น soft dislike
+- ชุดที่สองต้องไม่มีอย่างน้อย **30% ของชื่อเมนูอาหารที่ไม่ซ้ำในชุดแรก** ไม่นับน้ำ/ของหวาน ไม่ใช่ 30% ของจำนวนจานรวม ลองตัดกลุ่มเมนูคะแนนสูงก่อน สูงสุด 3 กลุ่ม โดยคงงบ การแพ้ ข้อห้าม และส่วนเพิ่มเดิม หากทำไม่ได้แสดงชุดเดียว ทุกชุดยังตรวจใหม่ก่อนแสดง
+- เพิ่ม [Live LLM evaluation workflow](../.github/workflows/live-llm-evaluation.yml) แบบ manual dispatch ใช้ `OPENAI_API_KEY` จาก GitHub Actions Secrets และ `gpt-4o-mini` รัน 5 sessions / 12 gold turns; corpus มี “ไม่กินหมู” ต่อเนื่องกับเพิ่มงบ/ห้ามดิบแล้ว ตรวจทั้ง state และผลชุดอาหาร
+- job ต้องมี success rate 100%, `live_llm_tested=true` และ `model_selected_recommendations>0` จึงผ่าน ส่ง JSON และ `live-trace.md` เป็น artifact 90 วันแม้ job ล้มเหลว ไม่ push ผลหรือ key กลับ repository
+- รองรับ `team_reviewed` ที่มีเหตุผลรายเมนู ผู้ตรวจ และวันที่ แต่ยังไม่ถือว่าร้านยืนยัน/ไม่ปลด strict; ไม่มีการเปลี่ยนสถานะเมนูเดิมอัตโนมัติ [แบบขอข้อมูล 15 เมนู](RESTAURANT_VERIFICATION.md)
+- State ยังอยู่ใน `st.session_state` และอายุของ session; **ยังไม่มี persistence หลัง browser refresh/session หมดอายุ** ไม่อ้างว่า SQLite catalog เก็บบทสนทนาให้แล้ว
+
+สถานะหลักฐาน: เครื่องนี้ไม่มี OpenAI key และ token ที่มีใช้เรียก GitHub Actions ไม่ได้ จึงยัง **live=false / model-selected live=0** การทดสอบ Streamlit ที่ผู้ใช้รายงานช่วยยืนยัน extraction ใน session นั้น แต่ยังไม่ใช่ trace ที่พิสูจน์ LLM เลือก build/verify ให้รัน workflow ด้วย GitHub account ที่มีสิทธิ์หลังเพิ่ม secret (ไม่ส่ง key ในแชต)
+
 ผู้ช่วยจัดชุดซูชิจาก **ฐานข้อมูล SQLite ที่นำเข้าจาก CSV จริง** มีเว็บ Streamlit และ CLI โดย Agent เลือก MCP tools อ่านผล แล้วเลือกทำต่อภายในวงจรที่จำกัดจำนวนรอบ คำแนะนำชุดอาหารจะถูกแสดงเฉพาะหลังผ่าน Python policy validator และตรวจฐานข้อมูลซ้ำก่อนตอบ
 
 > **ข้อมูลเพื่อการศึกษา:** 42 เมนูที่แนบ (รวมน้ำเปล่า 20 บาท ราคาจากผู้ใช้) ยังไม่ได้ตรวจยืนยันราคาปัจจุบันหรือ allergen รายเมนูกับร้าน ไม่รับประกันส่วนผสมและการปนเปื้อนจริง ผู้แพ้อาหารต้องตรวจสอบกับพนักงานร้านโดยตรง
 
-## สถานะระบบปัจจุบัน (package 4.2.0)
+## สถานะระบบปัจจุบัน (package 4.2.1)
 
 | ประเด็น | สถานะและหลักฐานปัจจุบัน |
 |---|---|
@@ -15,15 +26,15 @@
 | Live LLM | ยัง `live_llm_tested=false`: ไม่มี credentials ใน environment นี้; เพิ่ม corpus 5 consumer sessions รวมเลือกเนื้อ/opt-in และตรวจ runner แบบ offline โดยไม่อ้างเป็นผล live |
 | หลักฐานร้าน | allergen unknown 42/42, ราคา unverified 42/42; `scripts/catalog_audit.py` ส่งออก checklist ให้เติมหลักฐานจริง ไม่ตั้ง confirmed เอง |
 
-หลักฐานรอบนี้เก็บแยกใน `artifacts/review-round2/` ผลรอบ 1 เก็บเป็นประวัติ ไม่แก้ผลเก่าให้ดูเหมือนผลใหม่ ดู [คำตอบข้อประเมินรอบ 2](ROUND2_RESPONSE.md) สำหรับสถานะรายข้อและงานที่ต้องใช้หลักฐานภายนอก
+หลักฐานรอบนี้เก็บแยกใน `artifacts/review-round2-followup/` ผลรอบ 1 เก็บเป็นประวัติ ไม่แก้ผลเก่าให้ดูเหมือนผลใหม่ ดู [คำตอบข้อประเมินรอบ 2](ROUND2_RESPONSE.md) สำหรับสถานะรายข้อและงานที่ต้องใช้หลักฐานภายนอก
 
 ## โมเดลและขอบเขตรุ่นปัจจุบัน
 
-ชื่อโครงงานคงเป็น Shiro-Jung Agent 4.0 ส่วนเอกสารนี้ตรงกับ implementation รอบแก้ไข 2, package **4.2.0** ตรวจวันที่ 22 ตุลาคม 2569 โมเดล default คือ OpenAI **`gpt-4o-mini`** ผ่าน LangChain `ChatOpenAI` ตั้ง `temperature=0`, timeout 30 วินาที และ `max_retries=1` เปลี่ยนได้ด้วย `OPENAI_MODEL` หรือ Streamlit secrets ตาม logic ใน `app.py` ให้ตรวจชื่อที่เรียกจริงจาก `agent.run_report()['model']` ไม่อนุมานจากค่า default ว่า deployment ใช้โมเดลนั้นเสมอ
+ชื่อโครงงานคงเป็น Shiro-Jung Agent 4.0 ส่วนเอกสารนี้ตรงกับ implementation รอบแก้ไข 2, package **4.2.1** ตรวจวันที่ 22 ตุลาคม 2569 โมเดล default คือ OpenAI **`gpt-4o-mini`** ผ่าน LangChain `ChatOpenAI` ตั้ง `temperature=0`, timeout 30 วินาที และ `max_retries=1` เปลี่ยนได้ด้วย `OPENAI_MODEL` หรือ Streamlit secrets ตาม logic ใน `app.py` ให้ตรวจชื่อที่เรียกจริงจาก `agent.run_report()['model']` ไม่อนุมานจากค่า default ว่า deployment ใช้โมเดลนั้นเสมอ
 
 หน้าเว็บใช้ `consumer_flow=True`: ข้อมูลมื้อ → สรุปยืนยัน → LLM เลือก MCP tools → ตรวจผล → เลือกอาหาร → เพิ่มรายการตามต้องการ → ยืนยันจบ คำตอบสั้น การเลือกชุด และการอ่านชื่อย่อพร้อมจำนวนใช้โค้ดโดยตรง การสร้างทางเลือกที่สองและตรวจซ้ำอยู่ใน orchestration โมเดลมีหน้าที่สกัดข้อมูลและเลือก tool ส่วน DP คำนวณชุดและ validator/OPA บังคับข้อจำกัด ไม่มีการฝึกหรือ fine-tune weights ของโมเดลในโครงการนี้
 
-หลักฐานล่าสุดเป็น **139 regression tests, 25 Rego tests, smoke 61 ต่อโหมด และ offline gold 40/40** โดย Agent tests ใช้ scripted model ไม่ใช่ผล live OpenAI ดูขอบเขตที่ [CODE_REVIEW.md](CODE_REVIEW.md) และ [EVALUATION.md](EVALUATION.md)
+หลักฐานล่าสุดเป็น **156 regression tests, 25 Rego tests, smoke 61 ต่อโหมด และ offline gold 40/40** โดย Agent tests ใช้ scripted model ไม่ใช่ผล live OpenAI ดูขอบเขตที่ [CODE_REVIEW.md](CODE_REVIEW.md) และ [EVALUATION.md](EVALUATION.md)
 
 ## ไปต่อหลังแจ้งแพ้อาหารโดยไม่ลบการแพ้
 
@@ -35,7 +46,7 @@
 
 ## Dataset ตามทะเบียนสารก่อภูมิแพ้ 10 กลุ่ม
 
-นำ CSV พร้อม mapping audit ที่ผู้ใช้ส่งวันที่22ตุลาคม2569มารวมกับชุดข้อมูลเดิม เก็บบันทึกและคำแนะนำเดิมไว้ตรวจย้อนหลัง และเพิ่มคอลัมน์กลุ่มครบ10: **ธัญพืชมีกลูเตน, สัตว์น้ำเปลือกแข็ง, ไข่, ปลา, ถั่วลิสง, ถั่วเหลือง, นมรวมแลคโตส, ถั่วเปลือกแข็ง, ซัลไฟต์ตั้งแต่10มก./กก., หอยและหมึก** ดู [`artifacts/review-round2/thai-allergen-groups.json`](artifacts/review-round2/thai-allergen-groups.json) และ `sushi_budgeteer/regulatory_allergens.py`
+นำ CSV พร้อม mapping audit ที่ผู้ใช้ส่งวันที่22ตุลาคม2569มารวมกับชุดข้อมูลเดิม เก็บบันทึกและคำแนะนำเดิมไว้ตรวจย้อนหลัง และเพิ่มคอลัมน์กลุ่มครบ10: **ธัญพืชมีกลูเตน, สัตว์น้ำเปลือกแข็ง, ไข่, ปลา, ถั่วลิสง, ถั่วเหลือง, นมรวมแลคโตส, ถั่วเปลือกแข็ง, ซัลไฟต์ตั้งแต่10มก./กก., หอยและหมึก** ดู [`artifacts/review-round2-followup/thai-allergen-groups.json`](artifacts/review-round2-followup/thai-allergen-groups.json) และ `sushi_budgeteer/regulatory_allergens.py`
 
 - คอลัมน์ `thai_allergen_<tag>` ทั้ง10กลุ่มเป็น `possible` หากแท็กเดิมรายงานไว้ หรือ `unknown` เมื่อยังไม่มีข้อมูล **ไม่มีค่า absent และช่องว่างไม่หมายถึงปลอดสาร**
 - `thai_allergen_10_unverified` เป็นชื่อกลุ่มไทยที่คำนวณจาก `allergen_tags`; งา/หมู/วัว/ไก่/seafood/echinoderm เป็นข้อจำกัดเพิ่มเติมนอกทะเบียน10กลุ่ม ไม่ตัดออกจากระบบเพียงเพราะไม่อยู่ในทะเบียน
@@ -270,7 +281,7 @@ Validator คำนวณราคา × จำนวนจาก catalog จร
 
 การเรียก library `dp_knapsack` แบบเดิมยังมี `objective="score"` เป็นค่าเริ่มต้นเพื่อคง baseline สำหรับการวิเคราะห์ ส่วน `build_optimal_set` ใช้ `objective="budget", diversity=True` และการจัดอาหารเริ่มต้นบนเว็บส่ง `spend_ratio=0.8`; checkout ตรวจส่วนเพิ่มด้วยงบเต็ม MCP/direct tools มีค่าเริ่มต้น `spend_ratio=1.0` สำหรับผู้เรียกเดิม จึงต้องระบุ 0.8 เมื่อต้องการจำลองเงื่อนไขเว็บ
 
-Benchmark ล่าสุดใช้ค่าเดียวกับ production: **objective=budget, diversity=true, spend_ratio=0.8, max_items=60, repeat_cap=3** เปรียบเทียบ DP, greedy density, greedy score และ Random บน safe pool เดียวกัน 12 สถานการณ์ (งบ 300/1,000/3,000/6,000 × 3 เงื่อนไข) และ Random 100 seeds ต่อสถานการณ์ รวม 1,200 runs รายงานใน `artifacts/review-round2/benchmark-production.json`
+Benchmark ล่าสุดใช้ค่าเดียวกับ production: **objective=budget, diversity=true, spend_ratio=0.8, max_items=60, repeat_cap=3** เปรียบเทียบ DP, greedy density, greedy score และ Random บน safe pool เดียวกัน 12 สถานการณ์ (งบ 300/1,000/3,000/6,000 × 3 เงื่อนไข) และ Random 100 seeds ต่อสถานการณ์ รวม 1,200 runs รายงานใน `artifacts/review-round2-followup/benchmark-production.json`
 
 DP ใช้งบเฉลี่ย **76.25% ของงบเต็ม / 95.3125% ของวงเงินอาหาร**, เมนูไม่ซ้ำเฉลี่ย 16.5 และ 7.42 หมวด คะแนนลดซ้ำเฉลี่ย 110.77; greedy density ได้คะแนน 117.44 และ 7.92 หมวด แต่ใช้งบเต็ม 72.06% จึง **ไม่อ้างว่า DP ชนะทุกตัวชี้วัด** ตรวจ dominance ตาม objective แบบ lexicographic เดียวกับ production ไม่ใช่ raw score; ไม่มี dominance failure และ feasibility failure ในชุดนี้ การใช้เงินอาจต่ำกว่าเป้าเมื่อเพดานจำนวน/ข้อจำกัดทำให้ทำไม่ได้ เวลา benchmark เป็น algorithm time ไม่ใช่เวลาตอบแชต
 
@@ -281,17 +292,17 @@ DP ใช้งบเฉลี่ย **76.25% ของงบเต็ม / 95.3
 ```bash
 python scripts/run_checks.py --output-dir artifacts/review-round2
 python mcp_client_demo.py
-python scripts/benchmark.py --output artifacts/review-round2/benchmark-production.json
+python scripts/benchmark.py --output artifacts/review-round2-followup/benchmark-production.json
 python scripts/capture_demo.py
-python scripts/evaluate.py --mode offline --output artifacts/review-round2/offline-evaluation.json
+python scripts/evaluate.py --mode offline --output artifacts/review-round2-followup/offline-evaluation.json
 python scripts/evaluate.py --mode live --limit 3
-python scripts/live_sessions.py --scenarios evaluation/round2_sessions.json --output artifacts/review-round2/live-status.json
+python scripts/live_sessions.py --scenarios evaluation/round2_sessions.json --output artifacts/review-round2-followup/live-status.json
 python scripts/build_report.py
 ```
 
 ผลตรวจในชุดนี้:
 
-- Regression/integration **139 tests** รวม DP เทียบ exhaustive search 35 fixtures, ทศนิยม, tampering, session isolation, unknown allergen, strict/simulation, DB เปลี่ยน, Agent gate และ Streamlit page
+- Regression/integration **156 tests** รวม DP เทียบ exhaustive search 35 fixtures, ทศนิยม, tampering, session isolation, unknown allergen, strict/simulation, DB เปลี่ยน, Agent gate และ Streamlit page
 - OPA/Rego **25 tests** ตรวจ allow/deny แยกจาก Python
 - Evaluation **40 กรณี** ผ่าน MCP/SQLite/OPA จริง โดยไม่เรียก LLM; แยกจาก regression tests
 - Smoke **61 checks ต่อโหมด** ผ่านทั้ง strict และ simulation
@@ -299,7 +310,7 @@ python scripts/build_report.py
 - ติดตั้งจาก lockfile พร้อมตรวจ hashes ใน venv ใหม่บน Linux/Python 3.12 ผ่าน
 - Agent tests ใช้ **scripted fake model + MCP/SQLite จริง** ยังไม่ได้เรียก OpenAI จริงเพราะไม่มี API key
 
-Artifacts ล่าสุด: `artifacts/review-round2/validation-report.json`, `artifacts/review-round2/opa-tests.json`, smoke logs ทั้งสองโหมด, `artifacts/review-round2/offline-evaluation.json`, `artifacts/review-round2/live-status.json`, `artifacts/review-round2/scripted-consumer-trace.json`, `artifacts/review-round2/benchmark-production.json` และ HTML ที่สร้างด้วย `scripts/build_report.py` ส่วน snapshot รอบ1และชื่อเดิมนอกกลุ่มนี้เป็นหลักฐานรุ่นก่อน ดูขอบเขตและวันรันใน [EVALUATION.md](EVALUATION.md)
+Artifacts ล่าสุด: `artifacts/review-round2-followup/validation-report.json`, `artifacts/review-round2-followup/opa-tests.json`, smoke logs ทั้งสองโหมด, `artifacts/review-round2-followup/offline-evaluation.json`, `artifacts/review-round2-followup/live-status.json`, `artifacts/review-round2-followup/scripted-consumer-trace.json`, `artifacts/review-round2-followup/benchmark-production.json` และ HTML ที่สร้างด้วย `scripts/build_report.py` ส่วน snapshot รอบ1และชื่อเดิมนอกกลุ่มนี้เป็นหลักฐานรุ่นก่อน ดูขอบเขตและวันรันใน [EVALUATION.md](EVALUATION.md)
 
 `python scripts/collect_evidence.py --offline` เป็นคำสั่งรวมที่ **import CSV แบบ replace catalog ด้วย** หากมีข้อมูลร้านที่แก้ใน SQLite ให้สำรองก่อน หรือใช้คำสั่งแยกด้านบนเพื่อไม่ replace ข้อมูล การสร้าง report ไม่ได้รันทดสอบใหม่
 

@@ -17,7 +17,7 @@ from dotenv import load_dotenv
 load_dotenv(ROOT / ".env", override=False)
 COLUMNS = ('item_id','name_th','name_en','category','plate_color','price_baht',
            'description_th','keywords','allergen_tags','source_url','price_status',
-           'allergen_status','allergen_source_url','checked_at','dietary_tags','dietary_status') + THAI_MAPPING_COLUMNS
+           'allergen_status','allergen_source_url','checked_at','dietary_tags','dietary_status','allergen_review_reason','allergen_reviewed_by') + THAI_MAPPING_COLUMNS
 FDA_SOURCE = 'https://food.fda.moph.go.th/media.php?id=654869394207416320&name=P450.pdf'
 
 def database_path() -> Path:
@@ -59,12 +59,14 @@ def import_csv(source: str | Path, target: str | Path | None = None) -> dict:
         row['price_baht'] = cents(row['price_baht']) / 100
         row['price_status'] = row['price_status'] or 'unverified'
         row['allergen_status'] = row['allergen_status'] or 'unknown'
-        if row['price_status'] not in {'confirmed','unverified'} or row['allergen_status'] not in {'confirmed','unknown'}:
+        if row['price_status'] not in {'confirmed','unverified'} or row['allergen_status'] not in {'confirmed','unknown','team_reviewed'}:
             raise ValueError('สถานะ provenance ไม่ถูกต้อง')
         if row['allergen_status'] == 'confirmed' and not (row['allergen_source_url'] and row['checked_at']):
             raise ValueError('confirmed allergen ต้องมีแหล่งข้อมูลรายเมนูและวันที่ตรวจ')
-        if row['price_status'] == 'confirmed' and not row['checked_at']:
-            raise ValueError('confirmed price ต้องมีวันที่ตรวจ')
+        if row['allergen_status']=='team_reviewed' and not all(row[key] for key in ('allergen_review_reason','allergen_reviewed_by','checked_at')):
+            raise ValueError('team_reviewed ต้องมีเหตุผลรายเมนู ผู้ตรวจ และวันที่ ไม่ใช่ร้านยืนยัน')
+        if row['price_status'] == 'confirmed' and not (row['checked_at'] and row['source_url']):
+            raise ValueError('confirmed price ต้องมีหลักฐานราคาและวันที่ตรวจ')
         values.append(tuple(row[k] for k in COLUMNS))
     path = Path(target).resolve() if target else database_path()
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -79,7 +81,7 @@ def import_csv(source: str | Path, target: str | Path | None = None) -> dict:
         if 'allergen_tags' not in existing and 'allergens_verified' in existing:
             conn.execute('ALTER TABLE menu RENAME COLUMN allergens_verified TO allergen_tags')
             existing.add('allergen_tags')
-        for column in ('dietary_tags','dietary_status',*THAI_MAPPING_COLUMNS):
+        for column in ('dietary_tags','dietary_status','allergen_review_reason','allergen_reviewed_by',*THAI_MAPPING_COLUMNS):
             if column not in existing:
                 conn.execute(f"ALTER TABLE menu ADD COLUMN {column} TEXT NOT NULL DEFAULT ''")
         conn.execute('CREATE TABLE IF NOT EXISTS metadata (key TEXT PRIMARY KEY, value TEXT NOT NULL)')
@@ -105,12 +107,12 @@ def ensure_database() -> Path:
         # Upgrade only when necessary; serialize migrations, not normal catalog reads.
         with sqlite3.connect(path) as conn:
             columns={row[1] for row in conn.execute('PRAGMA table_info(menu)')}
-            if not {'allergen_tags','dietary_tags','dietary_status',*THAI_MAPPING_COLUMNS} <= columns:
+            if not {'allergen_tags','dietary_tags','dietary_status','allergen_review_reason','allergen_reviewed_by',*THAI_MAPPING_COLUMNS} <= columns:
                 conn.execute('BEGIN IMMEDIATE')
                 columns={row[1] for row in conn.execute('PRAGMA table_info(menu)')}
                 if 'allergen_tags' not in columns and 'allergens_verified' in columns:
                     conn.execute('ALTER TABLE menu RENAME COLUMN allergens_verified TO allergen_tags')
-                for column in ('dietary_tags','dietary_status',*THAI_MAPPING_COLUMNS):
+                for column in ('dietary_tags','dietary_status','allergen_review_reason','allergen_reviewed_by',*THAI_MAPPING_COLUMNS):
                     if column not in columns:
                         conn.execute(f"ALTER TABLE menu ADD COLUMN {column} TEXT NOT NULL DEFAULT ''")
                 source=Path(os.getenv('SUSHI_MENU_CSV_PATH', str(ROOT / 'sushiro_menu_dataset.csv')))

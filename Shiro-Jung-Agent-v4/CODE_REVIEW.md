@@ -1,6 +1,19 @@
-# Code Review — Shiro-Jung 4.2.0
+# Code Review — Shiro-Jung 4.2.1
 
-ตรวจ implementation รอบแก้ไข 2 วันที่ 22 ตุลาคม 2569 ครอบคลุมการเลือกชนิดเนื้อสัตว์บกและการแยกโมดูล Agent เอกสารนี้แทนคำอธิบายโครงสร้างรุ่นก่อน ผลรันใหม่แยกใน `artifacts/review-round2/` ส่วนผลเดิมไม่ถูกเขียนทับ
+## ข้อแก้ไขเร่งด่วนหลังทดสอบเว็บจริง
+
+| จุดตรวจ | ผลแก้ไข / ขอบเขต |
+|---|---|
+| Hard refusal | `restrictions.py` ถูกเรียกจาก sanitizer รวม narrow-context/direct extraction paths; ไม่กิน/ไม่ทาน/งด/ห้าม สร้าง hard keywords แม้โมเดลส่ง dislike; `BudgeteerState` ลบ soft alias ซ้ำกับ hard เดิม |
+| Soft preference | “ไม่ค่อยชอบหมู” ยังเป็น dislike ไม่สร้าง hard ใหม่และไม่ล้างข้อห้ามเดิมโดยปริยาย |
+| Alternative | `MenuService.alternative` ตัด `ceil(0.30 × distinct original food dishes)` เริ่มกลุ่มคะแนนสูงสุด ลอง ≤3 กลุ่ม ตรวจสัดส่วนชื่อเดิมที่หายไปจริง ไม่รวม fixed extras; ไม่มีชุดที่ผ่านให้ unavailable แทนชุดใกล้ซ้ำ |
+| Live evidence gate | workflow manual, secret ผ่าน env เฉพาะ live step; runner ตรวจ state/budget/allergy เพิ่มเติม นับ model-selected recommendation เฉพาะ successful real-provider run; exporter ปฏิเสธ scripted/fallback |
+| Evidence status | importer รองรับ team_reviewed พร้อมเหตุผล ผู้ตรวจ วันที่; strict ยังคงต้อง confirmed; confirmed price ต้องมี source/date |
+| Persistence | ยังไม่ทำ เก็บเป็นข้อจำกัดใน README/EVALUATION/สไลด์; SQLite ปัจจุบันเก็บ menu catalog ไม่ใช่ durable conversation |
+
+10 regression cases ใหม่ใน `test_explicit_refusals.py` รวมข้อความที่ผู้ใช้ทดสอบบนเว็บ, 4 cases ใน `test_evidence_status.py` และ 3 cases ใน `test_live_trace_export.py` (synthetic fixtures ไม่ใช่ live evidence) ผลทั้งหมดดู validation JSON ล่าสุด
+
+ตรวจ implementation รอบแก้ไข 2 วันที่ 22 ตุลาคม 2569 ครอบคลุมกฎปฏิเสธอาหารแบบ hard ที่ไม่ขึ้นกับ LLM, ความต่างของชุดอาหาร ≥30%, workflow หลักฐาน live, สถานะ team_reviewed และโครงสร้าง Agent เอกสารนี้แทนคำอธิบายโครงสร้างรุ่นก่อน ผลรันใหม่แยกใน `artifacts/review-round2-followup/` ส่วนผลเดิมไม่ถูกเขียนทับ
 
 ## โมเดลและขอบเขตการตัดสินใจ
 
@@ -24,7 +37,7 @@
 | `intake.py` / `IntakeMixin` | Extraction schema, missing fields, สรุปยืนยัน, เลือกชนิดเนื้อ และข้อความอธิบายข้อจำกัด |
 | `planning.py` / `PlanningMixin` | bounded LLM/MCP loop, fallback, alternative generation และ verify ก่อนแสดง |
 | `checkout.py` / `CheckoutMixin` | extra menu parsing, ตะกร้า, เลือกชุด, รวมยอด และยืนยัน |
-| `meat_scope.py`, `dietary.py` | แยกความหมายคำกว้างและชนิดเนื้อจากการจับคำและการกรอง tags |
+| `restrictions.py`, `meat_scope.py`, `dietary.py` | แยกความหมายคำกว้างและชนิดเนื้อจากการจับคำและการกรอง tags |
 
 `BudgeteerAgent` ยังเป็น API เดิมที่รวม mixins และถือ session state จุดเดียว ไม่สร้าง global conversation store ไม่อ้างว่าลดความซับซ้อนทั้งหมดด้วยการย้ายไฟล์ มี regression เดิมครบและเพิ่มกรณี meat clarification/clinical ingredient guards
 
@@ -56,18 +69,18 @@
 
 กฎ 80/20 เป็นข้อกำหนดผลิตภัณฑ์เพื่อเหลือเงินเพิ่มรายการ ไม่ใช่ข้อพิสูจน์ว่าอร่อย อิ่ม หรือคุ้มที่สุดทุกมิติ Checkout ตรวจยอดกับงบเต็มอีกครั้ง อาหารไม่เกิน 60 น้ำไม่เกิน 60 และขนมไม่เกิน 60 เมื่อไม่ได้มีเพดานรวมที่ผู้ใช้กำหนดเอง
 
-ดู `artifacts/review-round2/benchmark-production.json`: 12 สถานการณ์, Random 1,200 ครั้ง, ไม่มี feasibility หรือ objective-dominance failure ในชุดนี้ DP ใช้งบเต็มเฉลี่ย 76.25% / วงเงินอาหาร 95.3125% ขณะที่ Greedy density ได้คะแนนและจำนวนหมวดเฉลี่ยสูงกว่า จึงไม่อ้าง raw-score หรือ diversity dominance ผลนี้วัดอาหารเริ่มต้น ไม่รวม LLM, allergy, extras หรือความพึงพอใจจริง
+ดู `artifacts/review-round2-followup/benchmark-production.json`: 12 สถานการณ์, Random 1,200 ครั้ง, ไม่มี feasibility หรือ objective-dominance failure ในชุดนี้ DP ใช้งบเต็มเฉลี่ย 76.25% / วงเงินอาหาร 95.3125% ขณะที่ Greedy density ได้คะแนนและจำนวนหมวดเฉลี่ยสูงกว่า จึงไม่อ้าง raw-score หรือ diversity dominance ผลนี้วัดอาหารเริ่มต้น ไม่รวม LLM, allergy, extras หรือความพึงพอใจจริง
 
 ## หลักฐานปัจจุบัน
 
 | หลักฐาน | ผล / แหล่งข้อมูล |
 |---|---|
-| Regression / integration | 139 tests, failures 0, errors 0 — `artifacts/review-round2/validation-report.json` |
-| OPA / Rego | 25 tests ผ่าน — `artifacts/review-round2/opa-tests.json` |
-| Smoke | strict 61 และ simulation 61 ผ่าน — log ใน `artifacts/review-round2/` |
-| Offline gold | 40/40 — `artifacts/review-round2/offline-evaluation.json`; ไม่มี LLM |
-| Consumer planning trace | `artifacts/review-round2/scripted-consumer-trace.json`; scripted model + real MCP/SQLite/OPA |
-| Live consumer sessions | `artifacts/review-round2/live-status.json`: `blocked_missing_credentials`, 0 turns |
+| Regression / integration | 156 tests, failures 0, errors 0 — `artifacts/review-round2-followup/validation-report.json` |
+| OPA / Rego | 25 tests ผ่าน — `artifacts/review-round2-followup/opa-tests.json` |
+| Smoke | strict 61 และ simulation 61 ผ่าน — log ใน `artifacts/review-round2-followup/` |
+| Offline gold | 40/40 — `artifacts/review-round2-followup/offline-evaluation.json`; ไม่มี LLM |
+| Consumer planning trace | `artifacts/review-round2-followup/scripted-consumer-trace.json`; scripted model + real MCP/SQLite/OPA |
+| Live consumer sessions | `artifacts/review-round2-followup/live-status.json`: `blocked_missing_credentials`, 0 turns |
 
 รอบนี้รัน regression และ benchmark ใหม่หลังแก้โค้ด ดูเวลาจริงจาก `checked_at` / `created_at` ใน artifacts ดูคำสั่งและขอบเขตใน [EVALUATION.md](EVALUATION.md)
 

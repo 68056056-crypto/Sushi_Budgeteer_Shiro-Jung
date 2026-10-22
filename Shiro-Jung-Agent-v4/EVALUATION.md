@@ -1,4 +1,29 @@
-# Evaluation — Shiro-Jung 4.2.0
+# Evaluation — Shiro-Jung 4.2.1
+
+## เกณฑ์เพิ่มหลังข้อเสนอแนะจากเว็บจริง
+
+เพิ่ม regression 17 เคส: hard refusal ที่โมเดลจัดผิด/หลายข้อห้าม/alias ใน state เดิม/strict→opt-in จริงผ่าน MCP, soft dislike, ตัวเลือกต่าง ≥30%, team-reviewed import/migration/strict gate และ live-trace exporter ที่ไม่รับ scripted/fallback
+
+สัดส่วนความต่าง = จำนวน **ชื่อเมนูอาหารไม่ซ้ำของชุดแรกที่ไม่อยู่ชุดสอง** ÷ จำนวนชื่อเมนูอาหารไม่ซ้ำในชุดแรก ต้อง ≥0.30; ไม่ใช่ Jaccard และไม่ใช่จำนวนจานรวมหรือความชอบเชิงผู้ใช้ เครื่องดื่ม/ของหวานไม่นับในตัวหาร ใช้ fixed allocation เดิม ไม่มีชุดที่ต่างเพียงพอจะเสนอชุดเดียว ผลนี้ไม่ใช่ user preference study
+
+หลักฐาน live ยัง false ในเครื่องนี้ ไม่มี API key และ GitHub Actions token ใช้งานไม่ได้ จึงไม่เปลี่ยนสถานะจากคำรายงานการใช้งานเว็บเพียงอย่างเดียว งาน persistence ยังไม่ได้ทำ: state อยู่ใน Streamlit session เท่านั้น ไม่รับประกันว่าข้อมูลจะอยู่หลังรีเฟรช/เริ่ม session ใหม่
+
+### รันบน GitHub Actions
+
+1. เพิ่ม `OPENAI_API_KEY` ใน repository Settings → Secrets and variables → Actions ด้วยบัญชีที่มีสิทธิ์
+2. Actions → **Live LLM evaluation** → Run workflow บน main ใช้ [workflow](../.github/workflows/live-llm-evaluation.yml)
+3. ตรวจ success rate 1.0, live true, model-selected recommendations >0; ตรวจ JSON ว่ามี successful `route=model_selected` สำหรับ build_set และ verify_set ใน live run เดียวกัน ไม่ใช้ fallback แทน
+4. ดาวน์โหลด artifact อายุ 90 วันรวม `live-sessions.json` และ `live-trace.md` นำ trace จริงหนึ่ง session ไปแทนหน้าสถานะรอหลักฐานในสไลด์ ไฟล์ artifact ไม่ถูก push กลับ repo
+
+คำสั่ง local เทียบเท่า (ตั้ง key ผ่าน environment อย่างปลอดภัยก่อน):
+
+```bash
+python scripts/live_sessions.py --scenarios evaluation/round2_sessions.json --output artifacts/live-actions/live-sessions.json --require-model-selected
+python scripts/summarize_live.py --input artifacts/live-actions/live-sessions.json
+python scripts/export_live_trace.py --input artifacts/live-actions/live-sessions.json --output artifacts/live-actions/live-trace.md
+```
+
+`--require-model-selected` ทำให้ runner ล้มเหลวแม้ทุก gold turn ผ่านถ้าไม่มี successful real-provider model-selected recommendation และไม่เปลี่ยน scripted output เป็น live การสรุป/อัปโหลด artifacts ใช้ `if: always()` เพื่อเก็บหลักฐานตอน failure
 
 อ้างอิง implementation รอบแก้ไข 2 และ artifacts ล่าสุดที่ระบุด้านล่าง ตรวจความสอดคล้องเอกสารวันที่ 22 ตุลาคม 2569 รัน regression, offline evaluation และ benchmark ใหม่หลังแก้โค้ด โดยไม่สร้างผล live แทนการเรียก provider
 
@@ -8,7 +33,7 @@
 
 | ชั้นการประเมิน | สิ่งที่รัน / ผลล่าสุด | ขอบเขต |
 |---|---|---|
-| Regression / integration | 139 tests ผ่าน | scripted model + real MCP subprocess, SQLite, OPA และ Streamlit AppTest |
+| Regression / integration | 156 tests ผ่าน | scripted model + real MCP subprocess, SQLite, OPA และ Streamlit AppTest |
 | OPA / Rego | 25/25 | ตรวจกฎแยก รวม raw-tag conflicts และ fail closed |
 | Smoke | strict 61/61, simulation 61/61 | โหมด strict ต้องปฏิเสธการแพ้เมื่อ evidence ไม่พอ ไม่ลดโหมดเพื่อให้ผ่าน |
 | Offline gold | 40/40 | ไม่มีโมเดล; ทดสอบ tools/constraints บน seed catalog |
@@ -17,21 +42,21 @@
 | Live consumer sessions | `blocked_missing_credentials`, 0 turns | runner พร้อม 5 sessions / 12 gold turns; intake อาจเพิ่ม confirmation calls |
 | Consumer allergy opt-in | 6 regression tests ผ่าน | ยังไม่มีผล live opt-in session |
 
-ผล regression รอบแก้ไข 2 ดูวันเวลา `checked_at` จาก JSON (UTC; เวลาไทย UTC+7) อยู่ใน `artifacts/review-round2/validation-report.json` จำนวน tests และผล scripted ไม่รับรองคุณภาพภาษาไทยของ live model หรือความปลอดภัยของสูตรร้าน
+ผล regression รอบแก้ไข 2 ดูวันเวลา `checked_at` จาก JSON (UTC; เวลาไทย UTC+7) อยู่ใน `artifacts/review-round2-followup/validation-report.json` จำนวน tests และผล scripted ไม่รับรองคุณภาพภาษาไทยของ live model หรือความปลอดภัยของสูตรร้าน
 
 ## แหล่งหลักฐานที่ใช้
 
 | ไฟล์ | หน้าที่ |
 |---|---|
-| `artifacts/review-round2/validation-report.json` | จำนวน tests, failures/errors, Python/platform, smoke modes และสถานะ live |
-| `artifacts/review-round2/opa-tests.json` | ผล Rego 25 กรณี |
-| `artifacts/review-round2/smoke-strict.log`, `smoke-simulation.log` | ผล smoke รายโหมด |
-| `artifacts/review-round2/offline-evaluation.json` | 40 gold outcomes, catalog revision และ offline metrics |
-| `artifacts/review-round2/benchmark-production.json` | config, ผลทุกวิธี, Random seeds และตัวชี้วัดรายกรณี |
-| `artifacts/review-round2/scripted-consumer-trace.json` | หลักฐานต่อวงจร consumer planning/replan ด้วย scripted model; ไม่ใช่ live |
-| `artifacts/review-round2/live-status.json` | สถานะ live consumer sessions |
+| `artifacts/review-round2-followup/validation-report.json` | จำนวน tests, failures/errors, Python/platform, smoke modes และสถานะ live |
+| `artifacts/review-round2-followup/opa-tests.json` | ผล Rego 25 กรณี |
+| `artifacts/review-round2-followup/smoke-strict.log`, `smoke-simulation.log` | ผล smoke รายโหมด |
+| `artifacts/review-round2-followup/offline-evaluation.json` | 40 gold outcomes, catalog revision และ offline metrics |
+| `artifacts/review-round2-followup/benchmark-production.json` | config, ผลทุกวิธี, Random seeds และตัวชี้วัดรายกรณี |
+| `artifacts/review-round2-followup/scripted-consumer-trace.json` | หลักฐานต่อวงจร consumer planning/replan ด้วย scripted model; ไม่ใช่ live |
+| `artifacts/review-round2-followup/live-status.json` | สถานะ live consumer sessions |
 | `artifacts/live-evaluation.json` | สถานะ/ผลของ single-turn live runner เมื่อรันจริง |
-| `artifacts/review-round2-report.html` | รายงานที่สร้างจาก JSON ข้างต้น; ไม่รันทดสอบเอง |
+| `artifacts/review-round2-followup-report.html` | รายงานที่สร้างจาก JSON ข้างต้น; ไม่รันทดสอบเอง |
 
 `artifacts/validation-report.json`, `opa-tests.json`, `offline-evaluation.json`, `live-sessions.json` และ `benchmark.json` ชื่อเดิมเป็น snapshot รุ่นก่อน อย่านำตัวเลขมารวมกับผลล่าสุดโดยไม่ตรวจวันที่ ขอบเขต และ revision หน้าแชตไม่แสดงตาราง technical evidence หรือปุ่มดาวน์โหลด trace; ใช้ backend `agent.run_report()` และสคริปต์รายงาน
 
@@ -42,12 +67,12 @@
 ```bash
 python scripts/install_opa.py
 python scripts/run_checks.py --output-dir artifacts/review-round2
-python scripts/evaluate.py --mode offline --output artifacts/review-round2/offline-evaluation.json
-python scripts/benchmark.py --output artifacts/review-round2/benchmark-production.json
+python scripts/evaluate.py --mode offline --output artifacts/review-round2-followup/offline-evaluation.json
+python scripts/benchmark.py --output artifacts/review-round2-followup/benchmark-production.json
 python scripts/build_report.py
 ```
 
-เปิด `artifacts/review-round2-report.html` ใน browser เพื่อดูผลและเลือก benchmark รายสถานการณ์ การสร้าง HTML อ่าน artifacts ที่มีอยู่ ไม่อัปเดตผลทดสอบหรือเติมผลที่ยังไม่มี
+เปิด `artifacts/review-round2-followup-report.html` ใน browser เพื่อดูผลและเลือก benchmark รายสถานการณ์ การสร้าง HTML อ่าน artifacts ที่มีอยู่ ไม่อัปเดตผลทดสอบหรือเติมผลที่ยังไม่มี
 
 อีกทางคือ `python scripts/collect_evidence.py --offline` ซึ่งรวมหลายขั้น **แต่จะ import CSV ทับ runtime catalog ด้วย** Import เป็น replace ไม่ใช่ merge หากฐานข้อมูลมีราคา/หลักฐานร้านที่ปรับเอง ให้สำรองและใช้คำสั่งแยกข้างต้นแทนเมื่อไม่ต้องการ replace catalog
 
@@ -73,7 +98,7 @@ python scripts/build_report.py
 ```bash
 python scripts/evaluate.py --mode live --limit 3
 python scripts/evaluate.py --mode live --limit 40
-python scripts/live_sessions.py --scenarios evaluation/round2_sessions.json --output artifacts/review-round2/live-status.json
+python scripts/live_sessions.py --scenarios evaluation/round2_sessions.json --output artifacts/review-round2-followup/live-status.json
 python scripts/build_report.py
 ```
 

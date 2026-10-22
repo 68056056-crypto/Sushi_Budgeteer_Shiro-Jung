@@ -1,6 +1,7 @@
 """Thai intent extraction prompt and deterministic slot guards."""
 from typing import Any, Dict, Optional
 import re
+from .restrictions import enforce_restrictions
 
 _NARROW_SLOT_FIELDS = {
     "num_people", "drinks", "drink_quantity", "drinks_budget_mode",
@@ -33,13 +34,13 @@ def _sanitize_extraction(
         extracted = {**extracted, "preferred_keywords": [
             k for k in extracted["preferred_keywords"] if str(k).strip().lower() not in drink_names]}
     if last_asked_field not in _NARROW_SLOT_FIELDS:
-        return extracted
+        return enforce_restrictions(extracted,user_message)
     lowered = user_message.lower()
     if extracted.get("must_include_keywords") and not any(t in lowered for t in _MUST_INCLUDE_TRIGGERS):
         extracted = {**extracted, "must_include_keywords": []}
     if extracted.get("hard_exclude_keywords") and not any(t in lowered for t in _HARD_EXCLUDE_TRIGGERS):
         extracted = {**extracted, "hard_exclude_keywords": []}
-    return extracted
+    return enforce_restrictions(extracted,user_message)
 
 
 
@@ -68,7 +69,7 @@ EXTRACT_PROMPT = """คุณคือระบบสกัดข้อมูล
   "allergens": [<string จากกลุ่มนี้เท่านั้น: fish, crustacean, molluscs, echinoderm, egg, milk, gluten, soy, peanut, tree_nuts, sulphites, sesame, pork, beef, chicken, seafood — ใช้เฉพาะการแพ้อาหารจริงทางการแพทย์>],
   "dislikes": [<string keyword ที่ผู้ใช้บอกว่าไม่ค่อยชอบ/เฉยๆ — แค่ลดคะแนน ไม่ตัดออก>],
   "preferred_keywords": [<string keyword ที่ผู้ใช้บอกว่าชอบ/อยากได้ — บวกคะแนนเท่านั้น>],
-  "hard_exclude_keywords": [<string คำหลักที่ "สั้นและกระชับที่สุด" ที่น่าจะปรากฏอยู่จริงในชื่อ/หมวดหมู่เมนู เมื่อผู้ใช้บอกว่า "ห้ามมีเลย"/"ไม่กินเด็ดขาด"/"งด" แบบเด็ดขาด แต่ไม่ใช่การแพ้อาหารทางการแพทย์ — ตัดคำฟุ่มเฟือยออก เช่น "ของดิบ" ให้ใช้ "ดิบ", "เนื้อหมู" ให้ใช้ "หมู", "ไม่กินเนื้อ"/"ไม่ชอบเนื้อ"/"แพ้เนื้อ" ที่ไม่ระบุชนิดให้รอผู้ใช้เลือกชนิด ไม่เดาว่าเป็นวัว, "ไม่กินเนื้อวัว" ให้ใช้ "เนื้อวัว", "อาหารทะเล" ให้แยกเป็น "กุ้ง","ปู","หอย","ปลา" — ตัดออกทั้งหมดเหมือน allergen>],
+  "hard_exclude_keywords": [<string คำหลักที่ "สั้นและกระชับที่สุด" ที่น่าจะปรากฏอยู่จริงในชื่อ/หมวดหมู่เมนู เมื่อผู้ใช้บอกว่า "ไม่กิน"/"ไม่ทาน"/"งด"/"ห้าม" ต้องเป็นข้อห้ามเสมอ แม้ไม่มีคำว่าเด็ดขาด แต่ไม่ใช่การแพ้อาหารทางการแพทย์ — ตัดคำฟุ่มเฟือยออก เช่น "ของดิบ" ให้ใช้ "ดิบ", "เนื้อหมู" ให้ใช้ "หมู", "ไม่กินเนื้อ"/"ไม่ชอบเนื้อ"/"แพ้เนื้อ" ที่ไม่ระบุชนิดให้รอผู้ใช้เลือกชนิด ไม่เดาว่าเป็นวัว, "ไม่กินเนื้อวัว" ให้ใช้ "เนื้อวัว", "อาหารทะเล" ให้แยกเป็น "กุ้ง","ปู","หอย","ปลา" — ตัดออกทั้งหมดเหมือน allergen>],
   "must_include_keywords": [<string keyword เมื่อผู้ใช้บอกว่า "กินแค่", "เอาเฉพาะ", "only" — ตัดทุกอย่างที่ไม่ตรงกับคำเหล่านี้ออกทั้งหมด>],
   "min_items": <number หรือ null>,
   "max_items": <number หรือ null>,

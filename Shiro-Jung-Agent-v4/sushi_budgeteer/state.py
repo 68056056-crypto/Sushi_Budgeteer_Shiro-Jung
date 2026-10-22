@@ -147,6 +147,11 @@ class BudgeteerState:
             if kw and kw not in self.hard_exclude_keywords:
                 self.hard_exclude_keywords.append(kw)
 
+        # A hard refusal supersedes a soft dislike, including from earlier turns.
+        from .restrictions import same_food
+        self.dislikes=[word for word in self.dislikes
+                       if not any(same_food(word,hard) for hard in self.hard_exclude_keywords)]
+
         # must_include is a full restriction that replaces the previous one
         # (not accumulated) — "เอาแค่กุ้ง" then "เอาแค่ปลา" means "only fish"
         # now, not "fish AND shrimp" — unless the user's new list clearly

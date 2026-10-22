@@ -1,0 +1,50 @@
+name: Live LLM evaluation
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: live-llm-evaluation
+  cancel-in-progress: false
+jobs:
+  live-evaluation:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    defaults:
+      run:
+        working-directory: Shiro-Jung-Agent-v4
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: Shiro-Jung-Agent-v4/requirements.lock
+      - name: Install locked dependencies and policy engine
+        run: |
+          python -m pip install --require-hashes -r requirements.lock
+          python scripts/install_opa.py
+          python -m sushi_budgeteer.database import
+      - name: Evaluate five real consumer sessions
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          OPENAI_MODEL: gpt-4o-mini
+          SUSHI_DATA_MODE: strict
+        run: >-
+          python scripts/live_sessions.py
+          --scenarios evaluation/round2_sessions.json
+          --output artifacts/live-actions/live-sessions.json
+          --require-model-selected
+      - name: Write evidence summary
+        if: always()
+        run: |
+          python scripts/summarize_live.py --input artifacts/live-actions/live-sessions.json
+          python scripts/export_live_trace.py --input artifacts/live-actions/live-sessions.json --output artifacts/live-actions/live-trace.md
+      - name: Upload evidence even when checks fail
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: live-llm-evidence-${{ github.run_id }}
+          path: Shiro-Jung-Agent-v4/artifacts/live-actions/
+          if-no-files-found: warn
+          retention-days: 90

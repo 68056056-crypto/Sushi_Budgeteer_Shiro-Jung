@@ -1,0 +1,43 @@
+{
+  "checked_at": "2026-10-22T12:25:55.265191+00:00",
+  "python": "3.12.14",
+  "platform": "linux",
+  "release": "4.2.1",
+  "regression": {
+    "run": 156,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "legacy_smoke": {
+    "exit_code": 0,
+    "passed_checks": 61,
+    "mode": "simulation"
+  },
+  "smoke_modes": {
+    "strict": {
+      "exit_code": 0,
+      "passed_checks": 61
+    },
+    "simulation": {
+      "exit_code": 0,
+      "passed_checks": 61
+    }
+  },
+  "real_mcp_subprocess_tested": true,
+  "agent_model": "scripted fake model in tests; real MCP tools",
+  "opa": {
+    "exit_code": 0,
+    "rego_tests": 25
+  },
+  "live_llm_api_tested": false,
+  "official_sources_verified": false,
+  "targeted_followup": {
+    "checked_at": "2026-10-22T12:29:55.530204+00:00",
+    "command": "python -m unittest discover -s tests -p test_explicit_refusals.py",
+    "run": 10,
+    "failures": 0,
+    "errors": 0,
+    "reason": "final parser checks: negated allergy clause boundary and soft dislike with optional eating verb"
+  }
+}

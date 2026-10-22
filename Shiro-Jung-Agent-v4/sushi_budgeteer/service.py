@@ -2,6 +2,7 @@
 from __future__ import annotations
 import copy
 import json
+import math
 from .database import records
 from .policy import validate_result, DISCLAIMER
 from .tools import build_optimal_set
@@ -34,12 +35,31 @@ class MenuService:
         if original is None or not self.verify(result_id)['passed']:
             return {'status':'unavailable'}
         food=[x for x in original['selected'] if x['category'] not in {'เครื่องดื่ม','ของหวาน'}]
-        # A bounded search; fixed drinks/desserts and all preferences stay unchanged.
-        for item in food[:3]:
+        # At least 30% of the first set's DISTINCT FOOD DISHES must disappear.
+        # Fixed extras do not inflate this denominator. Try at most three subsets;
+        # never return a near-duplicate merely to fill a second card.
+        if not food:
+            return {'status':'unavailable'}
+        ranked=sorted(food,key=lambda row:(-float(row.get('score',0)),row['item_id']))
+        required=math.ceil(len(food)*0.30)
+        original_ids={row['item_id'] for row in food}
+        for offset in range(min(3,len(food)-required+1)):
+            removed=[row['item_id'] for row in ranked[offset:offset+required]]
             args=copy.deepcopy(original['constraints'])
-            args['excluded_item_ids']=list(dict.fromkeys([*args.get('excluded_item_ids',[]),item['item_id']]))
+            args['excluded_item_ids']=list(dict.fromkeys([*args.get('excluded_item_ids',[]),*removed]))
             built=self.build(**args)
-            if built['status']=='candidate':
+            if built['status']!='candidate':
+                continue
+            new_ids={row['item_id'] for row in built['result']['selected']
+                     if row['category'] not in {'เครื่องดื่ม','ของหวาน'}}
+            changed=len(original_ids-new_ids)/len(original_ids)
+            if changed>=0.30:
+                comparison={'basis':'distinct_food_dishes_in_first_set',
+                            'removed_count':len(original_ids-new_ids),
+                            'original_count':len(original_ids),'changed_ratio':changed,
+                            'minimum_ratio':0.30}
+                built['result']['alternative_comparison']=comparison
+                self.results[built['result_id']]['alternative_comparison']=copy.deepcopy(comparison)
                 return built
         return {'status':'unavailable'}
 
