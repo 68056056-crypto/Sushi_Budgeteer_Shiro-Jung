@@ -15,6 +15,12 @@ def redact(value):
             if secret:
                 value=value.replace(secret,'[REDACTED]')
                 if secret.strip():value=value.replace(secret.strip(),'[REDACTED]')
+                from .credentials import clean_api_key, InvalidAPIKeyFormat
+                try:
+                    normalized=clean_api_key(secret)
+                    if normalized:value=value.replace(normalized,'[REDACTED]')
+                except InvalidAPIKeyFormat:
+                    pass
         value=re.sub(r'\bsk-[A-Za-z0-9_-]{12,}','[REDACTED]',value)
         value=re.sub(r'(?i)Bearer\s+[^\s"\']+','Bearer [REDACTED]',value)
     return value

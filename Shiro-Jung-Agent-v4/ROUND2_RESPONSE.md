@@ -37,4 +37,7 @@
 เพิ่ม 5 diagnostic regression tests ด้วย synthetic exceptions ไม่เรียก API จริง แยก authentication/quota/transport และ JSON validation failure เก็บ metadata ปลอดภัยใน run report/job summary เพื่อให้แก้ปัญหาจากหลักฐานแทนเดา ค่า live ยังต้องพิจารณาจากผล workflow ของ commit ที่รันจริง
 
 
-เพิ่ม credential format preflight: trim หัวท้าย, reject control characters/embedded whitespace/config syntax ก่อน HTTP request โดยไม่เผย secret การทดสอบนี้ยืนยันการตรวจรูปแบบ ไม่ใช่ผลเรียก API จริง
+เพิ่ม credential format preflight: trim หัวท้าย, reject internal control characters/embedded whitespace/multiple settings ก่อน HTTP request โดยไม่เผย secret การทดสอบนี้ยืนยันการตรวจรูปแบบ ไม่ใช่ผลเรียก API จริง
+
+
+ปรับตัวตรวจคีย์ให้แกะ clipboard wrappers เช่น quotes/prefix ที่ขอบได้ โดยยังปฏิเสธหลายบรรทัดหรือเนื้อหาภายในผิดรูปแบบ และเพิ่มชื่อสาเหตุใน job summary เพื่อไม่ให้ผู้ใช้ลองแก้ Secret แบบไม่มีข้อมูล ไม่แสดงคีย์หรืออักขระจริง

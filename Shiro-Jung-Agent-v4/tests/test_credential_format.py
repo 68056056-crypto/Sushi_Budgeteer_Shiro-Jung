@@ -16,12 +16,16 @@ class CredentialFormatTest(unittest.TestCase):
     def test_outer_whitespace_is_trimmed_but_not_exposed(self):
         self.assertEqual(clean_api_key(' \nfixture-key\r\n'),'fixture-key')
         self.assertIsNone(clean_api_key(' \n'))
+        for wrapped in ('"fixture-key"',"'fixture-key'",'“fixture-key”','OPENAI_API_KEY="fixture-key"','Bearer fixture-key','\ufefffixture-key','"fixture-key'):
+            self.assertEqual(clean_api_key(wrapped),'fixture-key')
+            with patch.dict(os.environ,{'OPENAI_API_KEY':wrapped}):
+                self.assertEqual(redact('fixture-key'),'[REDACTED]')
         with patch.dict(os.environ,{'OPENAI_API_KEY':' \nfixture-key\n'}):
             self.assertEqual(redact('fixture-key'),'[REDACTED]')
 
-    def test_internal_newlines_hidden_characters_and_config_syntax_are_rejected(self):
+    def test_internal_corruption_and_multiple_settings_are_rejected(self):
         for key in ('fixture\nkey','fixture\rkey','fixture key','fixture\x00key',
-                    '\ufefffixture-key','OPENAI_API_KEY=fixture-key','"fixture-key"',"'fixture-key'",'Bearer fixture-key'):
+                    'fixture\u200bkey','fixture\nOPENAI_MODEL=gpt-4o-mini'):
             with self.subTest(key=repr(key)),self.assertRaises(InvalidAPIKeyFormat) as caught:
                 clean_api_key(key)
             self.assertNotIn(key,str(caught.exception))
@@ -42,6 +46,7 @@ class CredentialFormatTest(unittest.TestCase):
             constructor.assert_not_called()
             text=path.read_text();report=json.loads(text)
             self.assertEqual(report['status'],'blocked_invalid_credential_format')
+            self.assertEqual(report['credential_format_issues'],['multiple_lines'])
             self.assertEqual(report['executed_turns'],0)
             self.assertFalse(report['live_llm_tested'])
             self.assertNotIn('fixture',text)

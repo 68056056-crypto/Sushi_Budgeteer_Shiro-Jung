@@ -23,6 +23,14 @@ def main():
            'invalid_model_response':'A response was received but extraction validation failed; inspect the turn trace.'}
     for category,count in report.get('error_categories',{}).items():
         lines+=['',f'- Error category: `{category}` ({count})',hints.get(category,'Inspect the safe error fields in the JSON artifact and job log.')]
+    issue_hints={'multiple_lines':'พบหลายบรรทัดใน Secret: วางเพียงคีย์เดียว ไม่รวมบรรทัดโมเดลหรือคีย์อื่น',
+                 'internal_whitespace':'พบช่องว่างภายในคีย์: คัดลอกใหม่ด้วยปุ่ม Copy ของ OpenAI',
+                 'hidden_or_non_ascii':'พบอักขระแฝงหรืออักขระนอก ASCII ภายในคีย์: คัดลอกใหม่จาก OpenAI',
+                 'embedded_quotes':'พบเครื่องหมายคำพูดภายในค่า: วางเฉพาะคีย์หนึ่งค่า',
+                 'extra_settings':'พบข้อความตั้งค่าอื่นรวมกับคีย์: แยก OPENAI_MODEL ออกจาก Secret นี้',
+                 'not_text':'ค่า Secret ต้องเป็นข้อความ'}
+    for issue in report.get('credential_format_issues',[]):
+        lines+=['',f'- {issue_hints.get(issue,"ตรวจรูปแบบ Secret อีกครั้ง")}']
     lines+=['','executed_turns counts conversation attempts, not successful API responses.',
             'A scripted run is not live evidence. Review the JSON trace before presenting.','']
     summary='\n'.join(lines)

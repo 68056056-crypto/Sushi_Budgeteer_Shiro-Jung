@@ -2,11 +2,11 @@
 
 ## ตรวจรูปแบบ API key ก่อนเรียก provider
 
-`credentials.clean_api_key` ตัด whitespace หัวท้ายร่วมกันทั้ง Agent และ live runner แต่ไม่แก้เนื้อหาคีย์ภายใน หากมี newline/ช่องว่างแทรก อักขระควบคุม/non-ASCII เครื่องหมายคำพูดครอบ `Bearer ` หรือ `OPENAI_API_KEY=` จะหยุดก่อนส่ง HTTP request ด้วย `blocked_invalid_credential_format` โดยไม่บันทึกคีย์ลง report/log การตรวจนี้ตรวจรูปแบบเท่านั้น ไม่พิสูจน์สิทธิ์หรือเครดิต API
+`credentials.clean_api_key` ตัด whitespace และอักขระ clipboard ที่ขอบ พร้อมแกะเครื่องหมายคำพูดครอบ (รวม smart quotes/ข้างเดียว), `Bearer ` หรือ `OPENAI_API_KEY=` ที่นำหน้าคีย์ค่าเดียว ร่วมกันทั้ง Agent และ live runner ไม่ต่อหลายบรรทัดเข้าด้วยกันหรือแก้เนื้อหาคีย์ภายใน หากยังมี newline/ช่องว่างแทรก/อักขระแฝง/ข้อความตั้งค่าอื่น จะหยุดก่อน HTTP ด้วย `blocked_invalid_credential_format` และแสดง `credential_format_issues` เฉพาะชื่อสาเหตุ ไม่แสดงคีย์ การตรวจนี้ไม่พิสูจน์สิทธิ์หรือเครดิต API
 
 หาก job log มี `Illegal header value` ให้แก้ repository Secret `OPENAI_API_KEY` เป็นค่าคีย์บรรทัดเดียว ไม่รวมชื่อ environment variable หรือเครื่องหมายคำพูด จากนั้นเริ่ม **Run workflow ใหม่บน main** เพื่อใช้ commit ล่าสุด ค่า `***` ใน GitHub log เป็นการ mask secret ไม่ใช่หลักฐานว่าค่าคีย์จริงคือดอกจัน
 
-เพิ่ม regression 4 เคส: trim และ redaction, reject malformed input, provider constructor ได้ trimmed key, และ runner หยุดด้วย 0 turns ก่อนสร้าง Agent เมื่อ secret ผิดรูปแบบ รวม focused provider diagnostics/harness อีก 7 เคสผ่านโดยไม่เรียก provider จริง
+ตรวจ targeted 11 เคส: credential normalization/redaction 4, provider diagnostics 5, consumer live-runner harness 2 ผ่านโดยไม่เรียก API จริง โดย full-suite snapshot ล่าสุดยังเป็น 165 เคสก่อนเพิ่ม clipboard normalization; รอบปรับนี้ตรวจ focused 11 เคสซ้ำ รายละเอียดใน artifacts/review-round2-credential-check/clipboard-targeted-checks.json
 
 ## วินิจฉัยการเรียก provider ใน GitHub Actions
 

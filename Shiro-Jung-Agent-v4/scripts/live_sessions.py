@@ -28,12 +28,13 @@ def main():
             'scenario_file':args.scenarios.name,'live_llm_tested':False}
     try:
         key=clean_api_key(os.getenv('OPENAI_API_KEY') or os.getenv('SUSHI_OPENAI_API_KEY'))
-    except InvalidAPIKeyFormat:
+    except InvalidAPIKeyFormat as error:
         report.update(status='blocked_invalid_credential_format',model_error_count=1,
-                      successful_model_responses=0,error_categories={'credential_format':1})
+                      successful_model_responses=0,error_categories={'credential_format':1},
+                      credential_format_issues=list(error.issues))
         args.output.parent.mkdir(parents=True,exist_ok=True)
         args.output.write_text(json.dumps(report,indent=2))
-        print('Blocked: update OPENAI_API_KEY secret with only the key on one line, without quotes or hidden characters.')
+        print('Blocked credential format:', ', '.join(error.issues))
         return 2
     if not key:
         report.update(status='blocked_missing_credentials',live_llm_tested=False)
