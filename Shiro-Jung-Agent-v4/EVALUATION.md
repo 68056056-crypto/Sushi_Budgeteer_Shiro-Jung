@@ -105,7 +105,7 @@ python scripts/live_sessions.py --output artifacts/review-round1-live-status.jso
 
 คำสั่งสุดท้ายเรียก provider จริงเมื่อมี key ที่ตั้งไว้อย่างปลอดภัย ถ้าไม่มีจะออกด้วยรหัส2และสถานะblocked_missing_credentials ไม่แทนที่ด้วยผลจำลอง สคริปต์ใช้ consumer_flow=True และยืนยัน intake ก่อนจัดชุด ครอบคลุม3sessionsใน evaluation/sessions.json เก็บทั้ง intake/confirmation run, route=model_selected และmodel_calls_by_phase เพื่อแยกการเรียกตัวสกัดออกจากการเลือก tool
 
-Regression **121 tests**, Rego **24 tests**, smoke strict **61** และsimulation **61**, offline gold **40/40** ยังไม่ใช่ผล live LLM; ดู `artifacts/review-round1/validation-report.json` การต่อวงจร consumer ที่โมเดลเลือกfilter/build/verifyและreplanทดสอบด้วยscripted modelใน test_review_round1.py พร้อม realMCP/SQLite/OPA โดยไม่อ้างว่าเป็นคุณภาพการตัดสินใจของโมเดลจริง
+Regression **127 tests**, Rego **24 tests**, smoke strict **61** และsimulation **61**, offline gold **40/40** ยังไม่ใช่ผล live LLM; ดู `artifacts/review-round1/validation-report.json` การต่อวงจร consumer ที่โมเดลเลือกfilter/build/verifyและreplanทดสอบด้วยscripted modelใน test_review_round1.py พร้อม realMCP/SQLite/OPA โดยไม่อ้างว่าเป็นคุณภาพการตัดสินใจของโมเดลจริง
 
 OPA input schema2ส่งrawallergen_tags, user_allergens, dietary_tagsและstatusให้Regoเทียบเอง ตรวจขัดแย้งได้แม้Pythonflagsเป็นfalse แต่Pythonยังเป็นผู้สร้างfactsและpolicyยังdenyเมื่อpython_issuesไม่ว่าง ไม่อ้างว่าเป็นระบบอิสระโดยสมบูรณ์
 
@@ -121,3 +121,8 @@ OPA input schema2ส่งrawallergen_tags, user_allergens, dietary_tagsแล�
 
 
 ชุดทดสอบ `test_thai_allergen_groups.py` ตรวจทะเบียน10กลุ่ม, การแยกข้อจำกัดอื่น, ไม่มีการตีunknownเป็นabsent, ไม่ลบแท็กซอสจากคำแนะนำที่อิงชื่อ, เพิ่มpossiblemilk/fishตามaudit, S007ไม่ใช่mollusc, strictบล็อกเมื่อไม่มีหลักฐานทั้ง10กลุ่ม และmigrationที่คงราคาเดิม ไฟล์อ้างอิงกฎหมายไม่ใช่ข้อมูลยืนยันร้าน
+
+
+## Explicit allergy planning opt-in
+
+`test_allergy_simulation_optin.py` เพิ่ม6กรณี: strictไม่ลดมาตรฐานเอง, ผู้ใช้กดดูชุดจำลองแล้วตัดแท็กแพ้ออกจากทั้งสองทางเลือก, unknownallergenไม่เปิดopt-in, resetกลับโหมดdeployment, ส่วนเพิ่มยังรักษาการแพ้ และStreamlitAppTestกดปุ่มจนยืนยันจบได้ การต่อเพื่อวางแผนไม่ใช่หลักฐานว่าสูตรร้านปลอดภัย และไม่เปลี่ยนunknownเป็นconfirmed

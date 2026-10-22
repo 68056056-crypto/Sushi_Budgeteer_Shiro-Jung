@@ -113,18 +113,26 @@ GREETING_MESSAGE = (
 )
 
 if api_key:
-    # Switching strict/simulation keeps the conversation: only the data mode of the next turn changes.
+    # A per-meal opt-in survives reruns; a deployment mode change clears it.
     if "agent" in st.session_state and st.session_state.get("_agent_key", (None, None, None))[:2] == (api_key, model_name):
-        if st.session_state["agent"].data_mode != mode:
-            st.session_state["agent"].clear_choices()
-        st.session_state["agent"].data_mode = mode
-        st.session_state["_agent_key"] = (api_key, model_name, mode)
+        existing_agent=st.session_state["agent"]
+        config_changed=st.session_state["_agent_key"][2] != mode
+        if config_changed or not existing_agent.allergy_simulation_consent:
+            if existing_agent.data_mode != mode:
+                existing_agent.clear_choices()
+            existing_agent.data_mode=mode
+        if config_changed:
+            existing_agent.allergy_simulation_consent=False
+            existing_agent.allergy_simulation_available=False
+        existing_agent.configured_data_mode=mode
+        st.session_state["_agent_key"]=(api_key, model_name, mode)
     if "agent" not in st.session_state or st.session_state.get("_agent_key") != (api_key, model_name, mode):
         loaded_agent = _load_agent(api_key, model_name)
         if loaded_agent:
             st.session_state["agent"] = loaded_agent
             st.session_state["_agent_key"] = (api_key, model_name, mode)
             loaded_agent.data_mode = mode
+            loaded_agent.configured_data_mode = mode
             if not st.session_state.get("chat_history"):
                 st.session_state["chat_history"] = [{"role": "assistant", "content": GREETING_MESSAGE}]
 
@@ -212,6 +220,11 @@ if "agent" in st.session_state:
                         {"role": "assistant", "content": answer})
                     st.rerun()
         st.caption("การเลือกชุดเป็นเพียงสรุปสำหรับแจ้งร้าน ยังไม่มีการส่งคำสั่งซื้อหรือชำระเงิน")
+    if current_agent.allergy_simulation_available and not current_agent.order_closed:
+        if st.button("ดูชุดจำลองจากข้อมูลเมนู",key="allergy_simulation"):
+            st.session_state["pending_message"]="ดูชุดจำลองจากข้อมูลเมนู"
+            st.rerun()
+
     if current_agent.pending_confirmation and not current_agent.order_closed:
         allergies=[a for a in current_agent.state.allergens if a not in current_agent.pending_allergy_removals]
         confirm_label="ยืนยันข้อมูลและจัดชุด" if allergies else "ยืนยันว่าไม่แพ้และจัดชุด"

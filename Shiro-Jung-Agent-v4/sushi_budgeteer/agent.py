@@ -104,6 +104,9 @@ class BudgeteerAgent:
         self.session_id=str(uuid4())
         self.last_trace=[]
         self.data_mode=os.getenv('SUSHI_DATA_MODE','strict')
+        self.configured_data_mode=self.data_mode
+        self.allergy_simulation_consent=False
+        self.allergy_simulation_available=False
 
     def _extract_intent(self, message):
         if getattr(self,"_picker_update",None) is not None:
@@ -164,6 +167,9 @@ class BudgeteerAgent:
         return [key for key,missing in checks if missing]
 
     def reset_order(self):
+        self.data_mode=self.configured_data_mode
+        self.allergy_simulation_consent=False
+        self.allergy_simulation_available=False
         self.state.reset()
         self.clear_choices()
         self.extra_category=None
@@ -258,6 +264,7 @@ class BudgeteerAgent:
         return render_menu(result)
 
     def clear_choices(self):
+        self.allergy_simulation_available=False
         self.last_options=[]
         self.confirmed_option=None
         self.state.last_result=None
@@ -775,8 +782,15 @@ class BudgeteerAgent:
         issues=[str(i) for i in (issues or [])]
         if self.data_mode=='strict' and self.state.allergens and any(
                 'allergen' in i or 'ไม่มีอาหารหลัก' in i or 'unknown_evidence' in i for i in issues):
-            return ('ยังจัดชุดให้ไม่ได้ครับ เพราะไม่มีข้อมูลส่วนผสมที่ยืนยันเพียงพอสำหรับอาการแพ้ของคุณ '
-                    'กรุณาให้พนักงานร้านช่วยเลือกเมนูและตรวจส่วนผสมก่อนครับ\n\n'+ALLERGY_WARNING)
+            from .state import KNOWN_ALLERGENS
+            self.allergy_simulation_available=(self.consumer_flow and self.details_confirmed
+                and set(self.state.allergens)<=KNOWN_ALLERGENS)
+            message='ข้อมูลส่วนผสมยังไม่ยืนยันกับร้าน จึงยังจัดชุดสำหรับการสั่งจริงไม่ได้ครับ'
+            if self.allergy_simulation_available:
+                message+=' หากต้องการวางแผน สามารถกด «ดูชุดจำลองจากข้อมูลเมนู» ระบบจะตัดเมนูที่มีแท็กสารที่คุณแพ้ออก โดยยังต้องให้ร้านตรวจส่วนผสมก่อนรับประทาน ไม่ใช้ชุดจำลองตัดสินใจกรณีแพ้รุนแรง'
+            else:
+                message+=' กรุณาให้พนักงานร้านช่วยเลือกเมนูและตรวจส่วนผสมก่อนครับ'
+            return message+'\n\n'+ALLERGY_WARNING
         if any('opa_unavailable' in i for i in issues):
             return 'ระบบตรวจรายการไม่พร้อมชั่วคราว กรุณาลองใหม่ครับ'
         if any('เครื่องดื่ม' in i or 'ของหวาน' in i for i in issues):
@@ -791,6 +805,17 @@ class BudgeteerAgent:
         if self.order_closed:
             return CLOSING_MESSAGE
         text=re.sub(r'\s*(?:ครับ|ค่ะ|คะ)[!? ]*$','',user_message.strip())
+        if text=='ดูชุดจำลองจากข้อมูลเมนู':
+            from .state import KNOWN_ALLERGENS
+            if (not self.allergy_simulation_available or not self.details_confirmed
+                    or not self.state.allergens or not set(self.state.allergens)<=KNOWN_ALLERGENS):
+                return 'กรุณายืนยันงบและข้อมูลการแพ้ก่อนครับ'
+            self.allergy_simulation_consent=True
+            self.allergy_simulation_available=False
+            self.data_mode='simulation'
+            self.last_run['allergy_simulation_consent']=True
+            self.last_trace=[]
+            return self._confirm_order()
         desserts={'ของหวาน','ขนม','เมนูของหวาน','ขอดูเมนูของหวาน','รับของหวาน','เอาของหวาน','เพิ่มของหวาน','เมนูขนม','ขนมมีอะไรบ้าง'}
         drinks={'เครื่องดื่ม','น้ำ','เมนูน้ำ','เมนูเครื่องดื่ม','ขอดูเมนูน้ำ','ขอดูเมนูเครื่องดื่ม','รับน้ำ','รับเครื่องดื่ม','เพิ่มน้ำ','น้ำมีอะไรบ้าง','เครื่องดื่มมีอะไรบ้าง'}
         if self.consumer_flow and text in desserts|drinks:
@@ -942,6 +967,8 @@ class BudgeteerAgent:
         answer=self._chat(user_message)
         if self.state.allergens and ALLERGY_WARNING not in answer:
             answer+='\n\n'+ALLERGY_WARNING
+        self.last_run['data_mode']=self.data_mode
+        self.last_run['allergy_simulation_consent']=self.allergy_simulation_consent
         self.last_run['elapsed_ms']=round((time.perf_counter()-started)*1000,3)
         self.last_run['tool_calls']=len(self.last_trace)+len(self.last_run.get('option_checks',[]))
         self.last_run['token_usage_complete']=self.last_run['usage_responses']==self.last_run['model_calls'] and self.last_run['model_calls']>0

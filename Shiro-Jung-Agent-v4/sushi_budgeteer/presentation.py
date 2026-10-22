@@ -22,6 +22,8 @@ def render_menu(result):
     if result.get('data_mode')=='simulation':
         lines.extend(['', '🧑‍🍳 ชุดทดลองเพื่อช่วยวางแผนมื้ออาหาร ยังไม่ใช่การสั่งซื้อ'])
     if result.get('allergens_requested'):
+        if result.get('data_mode')=='simulation':
+            lines.extend(['', 'ตัดเมนูที่มีแท็กสารที่คุณแพ้ตามข้อมูลเมนูแล้ว แต่ยังไม่ยืนยันส่วนผสมจริง ไม่ใช้ชุดจำลองตัดสินใจกรณีแพ้รุนแรง'])
         lines.extend(['', ALLERGY_WARNING])
     else:
         lines.extend(['', MENU_NOTICE])
