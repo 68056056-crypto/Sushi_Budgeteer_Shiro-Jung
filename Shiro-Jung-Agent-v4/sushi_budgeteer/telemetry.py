@@ -12,7 +12,9 @@ def redact(value):
     if isinstance(value,str):
         for name in ('OPENAI_API_KEY','SUSHI_OPENAI_API_KEY'):
             secret=os.getenv(name)
-            if secret: value=value.replace(secret,'[REDACTED]')
+            if secret:
+                value=value.replace(secret,'[REDACTED]')
+                if secret.strip():value=value.replace(secret.strip(),'[REDACTED]')
         value=re.sub(r'\bsk-[A-Za-z0-9_-]{12,}','[REDACTED]',value)
         value=re.sub(r'(?i)Bearer\s+[^\s"\']+','Bearer [REDACTED]',value)
     return value

@@ -12,7 +12,8 @@ def main():
     report=json.loads(args.input.read_text()) if args.input.exists() else {'status':'report_missing'}
     keys=('status','live_llm_tested','success_rate','model_selected_recommendations','executed_turns','successful_model_responses','model_error_count')
     lines=['## Live LLM evidence','']+[f'- {key}: `{report.get(key,"not recorded")}`' for key in keys]
-    hints={'authentication':'Check repository secret OPENAI_API_KEY; verify the key is valid and belongs to the intended API project.',
+    hints={'credential_format':'Edit the repository secret: paste only the API key on one line, without quotes, assignment or hidden characters.',
+           'authentication':'Check repository secret OPENAI_API_KEY; verify the key is valid and belongs to the intended API project.',
            'quota_or_billing':'Check API project credits, billing and spending limits; ChatGPT subscriptions do not fund API usage.',
            'rate_limit':'Check API rate limits and retry after the provider wait period.',
            'model_access':'Check that the API project can access the configured model.',

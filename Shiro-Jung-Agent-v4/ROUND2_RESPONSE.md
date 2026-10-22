@@ -22,7 +22,7 @@
 
 ## ผลตรวจหลังแก้
 
-161 regression/integration tests, 25 Rego tests, smoke 61 ต่อโหมด, offline gold 40/40 ดู checked_at/release จาก artifacts/review-round2-diagnostics/validation-report.json ไม่ใช้ผลเหล่านี้รับรองสูตรร้าน ความพึงพอใจจริง หรือ live-model quality
+165 regression/integration tests, 25 Rego tests, smoke 61 ต่อโหมด, offline gold 40/40 ดู checked_at/release จาก artifacts/review-round2-credential-check/validation-report.json ไม่ใช้ผลเหล่านี้รับรองสูตรร้าน ความพึงพอใจจริง หรือ live-model quality
 
 ## สิ่งที่ทีมต้องเติมจากหลักฐานจริง
 
@@ -35,3 +35,6 @@
 ## เพิ่มการวินิจฉัย provider
 
 เพิ่ม 5 diagnostic regression tests ด้วย synthetic exceptions ไม่เรียก API จริง แยก authentication/quota/transport และ JSON validation failure เก็บ metadata ปลอดภัยใน run report/job summary เพื่อให้แก้ปัญหาจากหลักฐานแทนเดา ค่า live ยังต้องพิจารณาจากผล workflow ของ commit ที่รันจริง
+
+
+เพิ่ม credential format preflight: trim หัวท้าย, reject control characters/embedded whitespace/config syntax ก่อน HTTP request โดยไม่เผย secret การทดสอบนี้ยืนยันการตรวจรูปแบบ ไม่ใช่ผลเรียก API จริง

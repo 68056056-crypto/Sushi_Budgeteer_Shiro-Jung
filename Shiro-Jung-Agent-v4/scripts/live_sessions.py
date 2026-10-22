@@ -8,6 +8,7 @@ import sys
 ROOT=Path(__file__).resolve().parents[1]
 sys.path.insert(0,str(ROOT))
 from sushi_budgeteer.agent import BudgeteerAgent
+from sushi_budgeteer.credentials import clean_api_key, InvalidAPIKeyFormat
 from sushi_budgeteer.database import records
 from sushi_budgeteer.policy import validate_result
 from sushi_budgeteer.telemetry import redact
@@ -25,12 +26,23 @@ def main():
             'model_source':'live OpenAI requested','source_commit':os.getenv('GITHUB_SHA'),
             'sessions':[],'executed_turns':0,'success_rate':0,'model_selected_recommendations':0,
             'scenario_file':args.scenarios.name,'live_llm_tested':False}
-    if not (os.getenv('OPENAI_API_KEY') or os.getenv('SUSHI_OPENAI_API_KEY')):
+    try:
+        key=clean_api_key(os.getenv('OPENAI_API_KEY') or os.getenv('SUSHI_OPENAI_API_KEY'))
+    except InvalidAPIKeyFormat:
+        report.update(status='blocked_invalid_credential_format',model_error_count=1,
+                      successful_model_responses=0,error_categories={'credential_format':1})
+        args.output.parent.mkdir(parents=True,exist_ok=True)
+        args.output.write_text(json.dumps(report,indent=2))
+        print('Blocked: update OPENAI_API_KEY secret with only the key on one line, without quotes or hidden characters.')
+        return 2
+    if not key:
         report.update(status='blocked_missing_credentials',live_llm_tested=False)
         args.output.parent.mkdir(parents=True,exist_ok=True)
         args.output.write_text(json.dumps(report,indent=2))
         print('Blocked: configure API key securely; no live model calls executed.')
         return 2
+    # The same normalized value is used by the Agent and subprocess environment.
+    os.environ['OPENAI_API_KEY']=key
     for scenario in json.loads(args.scenarios.read_text()):
         agent=BudgeteerAgent(consumer_flow=True)
         agent.data_mode=scenario['mode']

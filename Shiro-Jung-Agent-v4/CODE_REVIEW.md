@@ -1,5 +1,13 @@
 # Code Review — Shiro-Jung 4.2.1
 
+## ตรวจรูปแบบ API key ก่อนเรียก provider
+
+`credentials.clean_api_key` ตัด whitespace หัวท้ายร่วมกันทั้ง Agent และ live runner แต่ไม่แก้เนื้อหาคีย์ภายใน หากมี newline/ช่องว่างแทรก อักขระควบคุม/non-ASCII เครื่องหมายคำพูดครอบ `Bearer ` หรือ `OPENAI_API_KEY=` จะหยุดก่อนส่ง HTTP request ด้วย `blocked_invalid_credential_format` โดยไม่บันทึกคีย์ลง report/log การตรวจนี้ตรวจรูปแบบเท่านั้น ไม่พิสูจน์สิทธิ์หรือเครดิต API
+
+หาก job log มี `Illegal header value` ให้แก้ repository Secret `OPENAI_API_KEY` เป็นค่าคีย์บรรทัดเดียว ไม่รวมชื่อ environment variable หรือเครื่องหมายคำพูด จากนั้นเริ่ม **Run workflow ใหม่บน main** เพื่อใช้ commit ล่าสุด ค่า `***` ใน GitHub log เป็นการ mask secret ไม่ใช่หลักฐานว่าค่าคีย์จริงคือดอกจัน
+
+เพิ่ม regression 4 เคส: trim และ redaction, reject malformed input, provider constructor ได้ trimmed key, และ runner หยุดด้วย 0 turns ก่อนสร้าง Agent เมื่อ secret ผิดรูปแบบ รวม focused provider diagnostics/harness อีก 7 เคสผ่านโดยไม่เรียก provider จริง
+
 ## วินิจฉัยการเรียก provider ใน GitHub Actions
 
 `executed_turns` นับรอบสนทนาที่ runner ลองทำ ไม่ใช่จำนวนคำตอบที่ API ส่งกลับสำเร็จ ดู `successful_model_responses`, `model_error_count` และ `error_categories` เพิ่มเติม `live_llm_tested` ยังต้องมี successful real-provider response จึงเป็น true; ไม่ตั้ง true จากการมี API key เพียงอย่างเดียว
@@ -83,8 +91,8 @@ Agent บันทึกเฉพาะ phase, exception type, HTTP status แ�
 
 | หลักฐาน | ผล / แหล่งข้อมูล |
 |---|---|
-| Regression / integration | 161 tests, failures 0, errors 0 — `artifacts/review-round2-diagnostics/validation-report.json` |
-| OPA / Rego | 25 tests ผ่าน — `artifacts/review-round2-diagnostics/opa-tests.json` |
+| Regression / integration | 165 tests, failures 0, errors 0 — `artifacts/review-round2-credential-check/validation-report.json` |
+| OPA / Rego | 25 tests ผ่าน — `artifacts/review-round2-credential-check/opa-tests.json` |
 | Smoke | strict 61 และ simulation 61 ผ่าน — log ใน `artifacts/review-round2-followup/` |
 | Offline gold | 40/40 — `artifacts/review-round2-followup/offline-evaluation.json`; ไม่มี LLM |
 | Consumer planning trace | `artifacts/review-round2-followup/scripted-consumer-trace.json`; scripted model + real MCP/SQLite/OPA |

@@ -5,7 +5,7 @@ ROOT=Path(__file__).resolve().parents[1]
 def read(name):
     p=ROOT/'artifacts'/name
     return json.loads(p.read_text()) if p.exists() else {'status':'not_run'}
-data={key:read(name) for key,name in {'validation':'review-round2-diagnostics/validation-report.json','offline':'review-round2-followup/offline-evaluation.json',
+data={key:read(name) for key,name in {'validation':'review-round2-credential-check/validation-report.json','offline':'review-round2-followup/offline-evaluation.json',
     'live':'live-evaluation.json','sessions':'review-round2-followup/live-status.json','benchmark':'review-round2-followup/benchmark-production.json'}.items()}
 encoded=json.dumps(data,ensure_ascii=False).replace('</','<\\/')
 html='''<!doctype html><html lang="th"><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">

@@ -14,6 +14,7 @@ from uuid import uuid4
 from dotenv import load_dotenv
 from langchain_openai import ChatOpenAI
 from .state import BudgeteerState
+from .credentials import clean_api_key, InvalidAPIKeyFormat
 from .extraction import _sanitize_extraction, requested_allergy_corrections
 from .database import cents
 from .meat_scope import MEAT_CHOICES, meat_relation
@@ -37,7 +38,9 @@ GREETING_MESSAGE='สวัสดีครับ ผม Shiro-Jung ช่วย�
 class BudgeteerAgent(IntakeMixin, PlanningMixin, CheckoutMixin):
     def __init__(self, api_key=None, model=None, llm=None, consumer_flow=False):
         load_dotenv()
-        self._api_key=api_key or os.getenv('OPENAI_API_KEY') or os.getenv('SUSHI_OPENAI_API_KEY')
+        self._api_key=clean_api_key(api_key or os.getenv('OPENAI_API_KEY') or os.getenv('SUSHI_OPENAI_API_KEY'))
+        if llm is None and self._api_key is None:
+            raise InvalidAPIKeyFormat('Configure a non-empty API key secret before calling the provider.')
         self.llm=llm if llm is not None else ChatOpenAI(
             api_key=self._api_key,
             model=model or os.getenv('OPENAI_MODEL','gpt-4o-mini'),temperature=0,
