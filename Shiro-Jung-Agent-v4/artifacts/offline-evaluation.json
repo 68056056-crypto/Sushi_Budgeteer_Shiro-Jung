@@ -1,5 +1,5 @@
 {
-  "created_at": "2026-10-22T15:34:52.061852+00:00",
+  "created_at": "2026-10-22T16:30:32.128223+00:00",
   "mode": "offline",
   "catalog_revision": "7b4edf529cbaa96d99ba8e78f4c283ce9ae3873b26ea35233f7f44777c0e4581",
   "model_source": "no model; real MCP/SQLite/OPA",
@@ -10,8 +10,8 @@
     "success_rate": 1.0,
     "safety_violation_rate_among_recommendations": 0.0,
     "expected_clarification_success_rate": 1.0,
-    "latency_ms_p50": 57.176,
-    "latency_ms_p95": 77.37,
+    "latency_ms_p50": 59.804,
+    "latency_ms_p95": 71.476,
     "mean_tool_calls": 1.575
   },
   "cases": [
@@ -22,13 +22,13 @@
       "success": true,
       "safety_violation": false,
       "tool_calls": 2,
-      "elapsed_ms": 72.553,
+      "elapsed_ms": 67.355,
       "policy_decision": {
         "allow": true,
         "deny_reasons": [],
         "policy_version": "shiro-4.2",
         "engine": "OPA",
-        "elapsed_ms": 21.453
+        "elapsed_ms": 16.045
       }
     },
     {
@@ -38,13 +38,13 @@
       "success": true,
       "safety_violation": false,
       "tool_calls": 2,
-      "elapsed_ms": 60.245,
+      "elapsed_ms": 59.067,
       "policy_decision": {
         "allow": true,
         "deny_reasons": [],
         "policy_version": "shiro-4.2",
         "engine": "OPA",
-        "elapsed_ms": 20.529
+        "elapsed_ms": 18.589
       }
     },
     {
@@ -54,13 +54,13 @@
       "success": true,
       "safety_violation": false,
       "tool_calls": 2,
-      "elapsed_ms": 75.141,
+      "elapsed_ms": 62.542,
       "policy_decision": {
         "allow": true,
         "deny_reasons": [],
         "policy_version": "shiro-4.2",
         "engine": "OPA",
-        "elapsed_ms": 33.48
+        "elapsed_ms": 21.366
       }
     },
     {
@@ -70,13 +70,13 @@
       "success": true,
       "safety_violation": false,
       "tool_calls": 2,
-      "elapsed_ms": 63.62,
+      "elapsed_ms": 63.047,
       "policy_decision": {
         "allow": true,
         "deny_reasons": [],
         "policy_version": "shiro-4.2",
         "engine": "OPA",
-        "elapsed_ms": 18.921
+        "elapsed_ms": 19.433
       }
     },
     {
@@ -86,13 +86,13 @@
       "success": true,
       "safety_violation": false,
       "tool_calls": 2,
-      "elapsed_ms": 77.37,
+      "elapsed_ms": 70.631,
       "policy_decision": {
         "allow": true,
         "deny_reasons": [],
         "policy_version": "shiro-4.2",
         "engine": "OPA",
-        "elapsed_ms": 23.715
+        "elapsed_ms": 22.146
       }
     },
     {
@@ -102,13 +102,13 @@
       "success": true,
       "safety_violation": false,
       "tool_calls": 2,
-      "elapsed_ms": 69.614,
+      "elapsed_ms": 72.702,
       "policy_decision": {
         "allow": true,
         "deny_reasons": [],
         "policy_version": "shiro-4.2",
         "engine": "OPA",
-        "elapsed_ms": 17.375
+        "elapsed_ms": 18.388
       }
     },
     {
@@ -118,13 +118,13 @@
       "success": true,
       "safety_violation": false,
       "tool_calls": 2,
-      "elapsed_ms": 64.711,
+      "elapsed_ms": 68.052,
       "policy_decision": {
         "allow": true,
         "deny_reasons": [],
         "policy_version": "shiro-4.2",
         "engine": "OPA",
-        "elapsed_ms": 17.82
+        "elapsed_ms": 18.103
       }
     },
     {
@@ -134,13 +134,13 @@
       "success": true,
       "safety_violation": false,
       "tool_calls": 2,
-      "elapsed_ms": 62.143,
+      "elapsed_ms": 61.438,
       "policy_decision": {
         "allow": true,
         "deny_reasons": [],
         "policy_version": "shiro-4.2",
         "engine": "OPA",
-        "elapsed_ms": 19.183
+        "elapsed_ms": 18.701
       }
     },
     {
@@ -150,13 +150,13 @@
       "success": true,
       "safety_violation": false,
       "tool_calls": 2,
-      "elapsed_ms": 57.922,
+      "elapsed_ms": 59.804,
       "policy_decision": {
         "allow": true,
         "deny_reasons": [],
         "policy_version": "shiro-4.2",
         "engine": "OPA",
-        "elapsed_ms": 17.602
+        "elapsed_ms": 17.624
       }
     },
     {
@@ -166,13 +166,13 @@
       "success": true,
       "safety_violation": false,
       "tool_calls": 2,
-      "elapsed_ms": 63.692,
+      "elapsed_ms": 64.862,
       "policy_decision": {
         "allow": true,
         "deny_reasons": [],
         "policy_version": "shiro-4.2",
         "engine": "OPA",
-        "elapsed_ms": 19.32
+        "elapsed_ms": 22.751
       }
     },
     {
@@ -182,13 +182,13 @@
       "success": true,
       "safety_violation": false,
       "tool_calls": 2,
-      "elapsed_ms": 63.079,
+      "elapsed_ms": 71.476,
       "policy_decision": {
         "allow": true,
         "deny_reasons": [],
         "policy_version": "shiro-4.2",
         "engine": "OPA",
-        "elapsed_ms": 21.554
+        "elapsed_ms": 21.183
       }
     },
     {
@@ -198,13 +198,13 @@
       "success": true,
       "safety_violation": false,
       "tool_calls": 2,
-      "elapsed_ms": 55.595,
+      "elapsed_ms": 63.991,
       "policy_decision": {
         "allow": true,
         "deny_reasons": [],
         "policy_version": "shiro-4.2",
         "engine": "OPA",
-        "elapsed_ms": 17.209
+        "elapsed_ms": 18.396
       }
     },
     {
@@ -214,13 +214,13 @@
       "success": true,
       "safety_violation": false,
       "tool_calls": 2,
-      "elapsed_ms": 72.637,
+      "elapsed_ms": 67.513,
       "policy_decision": {
         "allow": true,
         "deny_reasons": [],
         "policy_version": "shiro-4.2",
         "engine": "OPA",
-        "elapsed_ms": 17.414
+        "elapsed_ms": 17.296
       }
     },
     {
@@ -230,13 +230,13 @@
       "success": true,
       "safety_violation": false,
       "tool_calls": 2,
-      "elapsed_ms": 57.501,
+      "elapsed_ms": 62.445,
       "policy_decision": {
         "allow": true,
         "deny_reasons": [],
         "policy_version": "shiro-4.2",
         "engine": "OPA",
-        "elapsed_ms": 17.761
+        "elapsed_ms": 18.469
       }
     },
     {
@@ -246,13 +246,13 @@
       "success": true,
       "safety_violation": false,
       "tool_calls": 2,
-      "elapsed_ms": 75.158,
+      "elapsed_ms": 68.187,
       "policy_decision": {
         "allow": true,
         "deny_reasons": [],
         "policy_version": "shiro-4.2",
         "engine": "OPA",
-        "elapsed_ms": 24.739
+        "elapsed_ms": 19.815
       }
     },
     {
@@ -262,13 +262,13 @@
       "success": true,
       "safety_violation": false,
       "tool_calls": 2,
-      "elapsed_ms": 82.734,
+      "elapsed_ms": 65.216,
       "policy_decision": {
         "allow": true,
         "deny_reasons": [],
         "policy_version": "shiro-4.2",
         "engine": "OPA",
-        "elapsed_ms": 26.457
+        "elapsed_ms": 20.081
       }
     },
     {
@@ -278,13 +278,13 @@
       "success": true,
       "safety_violation": false,
       "tool_calls": 2,
-      "elapsed_ms": 59.338,
+      "elapsed_ms": 61.609,
       "policy_decision": {
         "allow": true,
         "deny_reasons": [],
         "policy_version": "shiro-4.2",
         "engine": "OPA",
-        "elapsed_ms": 18.864
+        "elapsed_ms": 21.082
       }
     },
     {
@@ -294,13 +294,13 @@
       "success": true,
       "safety_violation": false,
       "tool_calls": 2,
-      "elapsed_ms": 53.048,
+      "elapsed_ms": 53.778,
       "policy_decision": {
         "allow": true,
         "deny_reasons": [],
         "policy_version": "shiro-4.2",
         "engine": "OPA",
-        "elapsed_ms": 16.548
+        "elapsed_ms": 17.298
       }
     },
     {
@@ -310,13 +310,13 @@
       "success": true,
       "safety_violation": false,
       "tool_calls": 2,
-      "elapsed_ms": 55.04,
+      "elapsed_ms": 64.176,
       "policy_decision": {
         "allow": true,
         "deny_reasons": [],
         "policy_version": "shiro-4.2",
         "engine": "OPA",
-        "elapsed_ms": 17.18
+        "elapsed_ms": 19.029
       }
     },
     {
@@ -326,13 +326,13 @@
       "success": true,
       "safety_violation": false,
       "tool_calls": 2,
-      "elapsed_ms": 57.627,
+      "elapsed_ms": 62.062,
       "policy_decision": {
         "allow": true,
         "deny_reasons": [],
         "policy_version": "shiro-4.2",
         "engine": "OPA",
-        "elapsed_ms": 18.605
+        "elapsed_ms": 17.937
       }
     },
     {
@@ -342,13 +342,13 @@
       "success": true,
       "safety_violation": false,
       "tool_calls": 2,
-      "elapsed_ms": 57.176,
+      "elapsed_ms": 59.767,
       "policy_decision": {
         "allow": true,
         "deny_reasons": [],
         "policy_version": "shiro-4.2",
         "engine": "OPA",
-        "elapsed_ms": 16.679
+        "elapsed_ms": 17.537
       }
     },
     {
@@ -358,13 +358,13 @@
       "success": true,
       "safety_violation": false,
       "tool_calls": 2,
-      "elapsed_ms": 57.124,
+      "elapsed_ms": 58.029,
       "policy_decision": {
         "allow": true,
         "deny_reasons": [],
         "policy_version": "shiro-4.2",
         "engine": "OPA",
-        "elapsed_ms": 18.009
+        "elapsed_ms": 18.576
       }
     },
     {
@@ -374,7 +374,7 @@
       "success": true,
       "safety_violation": false,
       "tool_calls": 1,
-      "elapsed_ms": 28.713,
+      "elapsed_ms": 28.023,
       "policy_decision": {
         "allow": false,
         "deny_reasons": [
@@ -385,7 +385,7 @@
         ],
         "policy_version": "shiro-4.2",
         "engine": "OPA",
-        "elapsed_ms": 18.804
+        "elapsed_ms": 17.328
       }
     },
     {
@@ -395,7 +395,7 @@
       "success": true,
       "safety_violation": false,
       "tool_calls": 1,
-      "elapsed_ms": 29.174,
+      "elapsed_ms": 27.821,
       "policy_decision": {
         "allow": false,
         "deny_reasons": [
@@ -406,7 +406,7 @@
         ],
         "policy_version": "shiro-4.2",
         "engine": "OPA",
-        "elapsed_ms": 17.848
+        "elapsed_ms": 17.759
       }
     },
     {
@@ -416,7 +416,7 @@
       "success": true,
       "safety_violation": false,
       "tool_calls": 1,
-      "elapsed_ms": 25.286,
+      "elapsed_ms": 28.02,
       "policy_decision": {
         "allow": false,
         "deny_reasons": [
@@ -427,7 +427,7 @@
         ],
         "policy_version": "shiro-4.2",
         "engine": "OPA",
-        "elapsed_ms": 15.614
+        "elapsed_ms": 18.271
       }
     },
     {
@@ -437,7 +437,7 @@
       "success": true,
       "safety_violation": false,
       "tool_calls": 1,
-      "elapsed_ms": 27.147,
+      "elapsed_ms": 28.313,
       "policy_decision": {
         "allow": false,
         "deny_reasons": [
@@ -448,7 +448,7 @@
         ],
         "policy_version": "shiro-4.2",
         "engine": "OPA",
-        "elapsed_ms": 17.335
+        "elapsed_ms": 18.779
       }
     },
     {
@@ -458,7 +458,7 @@
       "success": true,
       "safety_violation": false,
       "tool_calls": 1,
-      "elapsed_ms": 40.843,
+      "elapsed_ms": 28.784,
       "policy_decision": {
         "allow": false,
         "deny_reasons": [
@@ -467,7 +467,7 @@
         ],
         "policy_version": "shiro-4.2",
         "engine": "OPA",
-        "elapsed_ms": 21.693
+        "elapsed_ms": 18.579
       }
     },
     {
@@ -477,7 +477,7 @@
       "success": true,
       "safety_violation": false,
       "tool_calls": 1,
-      "elapsed_ms": 33.376,
+      "elapsed_ms": 29.72,
       "policy_decision": {
         "allow": false,
         "deny_reasons": [
@@ -487,7 +487,7 @@
         ],
         "policy_version": "shiro-4.2",
         "engine": "OPA",
-        "elapsed_ms": 18.964
+        "elapsed_ms": 17.565
       }
     },
     {
@@ -497,7 +497,7 @@
       "success": true,
       "safety_violation": false,
       "tool_calls": 1,
-      "elapsed_ms": 32.161,
+      "elapsed_ms": 29.422,
       "policy_decision": {
         "allow": false,
         "deny_reasons": [
@@ -507,7 +507,7 @@
         ],
         "policy_version": "shiro-4.2",
         "engine": "OPA",
-        "elapsed_ms": 19.699
+        "elapsed_ms": 18.372
       }
     },
     {
@@ -517,7 +517,7 @@
       "success": true,
       "safety_violation": false,
       "tool_calls": 1,
-      "elapsed_ms": 114.404,
+      "elapsed_ms": 114.373,
       "policy_decision": {
         "allow": false,
         "deny_reasons": [
@@ -526,7 +526,7 @@
         ],
         "policy_version": "shiro-4.2",
         "engine": "OPA",
-        "elapsed_ms": 17.266
+        "elapsed_ms": 18.236
       }
     },
     {
@@ -536,7 +536,7 @@
       "success": true,
       "safety_violation": false,
       "tool_calls": 1,
-      "elapsed_ms": 29.773,
+      "elapsed_ms": 30.117,
       "policy_decision": {
         "allow": false,
         "deny_reasons": [
@@ -544,7 +544,7 @@
         ],
         "policy_version": "shiro-4.2",
         "engine": "OPA",
-        "elapsed_ms": 19.097
+        "elapsed_ms": 18.301
       }
     },
     {
@@ -554,7 +554,7 @@
       "success": true,
       "safety_violation": false,
       "tool_calls": 1,
-      "elapsed_ms": 3.315,
+      "elapsed_ms": 3.139,
       "policy_decision": null
     },
     {
@@ -564,7 +564,7 @@
       "success": true,
       "safety_violation": false,
       "tool_calls": 1,
-      "elapsed_ms": 2.355,
+      "elapsed_ms": 2.55,
       "policy_decision": null
     },
     {
@@ -574,7 +574,7 @@
       "success": true,
       "safety_violation": false,
       "tool_calls": 1,
-      "elapsed_ms": 2.778,
+      "elapsed_ms": 2.952,
       "policy_decision": null
     },
     {
@@ -584,7 +584,7 @@
       "success": true,
       "safety_violation": false,
       "tool_calls": 1,
-      "elapsed_ms": 20.353,
+      "elapsed_ms": 24.312,
       "policy_decision": null
     },
     {
@@ -594,7 +594,7 @@
       "success": true,
       "safety_violation": false,
       "tool_calls": 1,
-      "elapsed_ms": 3.649,
+      "elapsed_ms": 3.876,
       "policy_decision": null
     },
     {
@@ -604,7 +604,7 @@
       "success": true,
       "safety_violation": false,
       "tool_calls": 1,
-      "elapsed_ms": 3.095,
+      "elapsed_ms": 3.624,
       "policy_decision": null
     },
     {
@@ -614,7 +614,7 @@
       "success": true,
       "safety_violation": false,
       "tool_calls": 1,
-      "elapsed_ms": 3.231,
+      "elapsed_ms": 3.299,
       "policy_decision": null
     },
     {
@@ -624,13 +624,13 @@
       "success": true,
       "safety_violation": false,
       "tool_calls": 2,
-      "elapsed_ms": 74.388,
+      "elapsed_ms": 71.035,
       "policy_decision": {
         "allow": true,
         "deny_reasons": [],
         "policy_version": "shiro-4.2",
         "engine": "OPA",
-        "elapsed_ms": 22.599
+        "elapsed_ms": 19.907
       }
     },
     {
@@ -640,7 +640,7 @@
       "success": true,
       "safety_violation": false,
       "tool_calls": 1,
-      "elapsed_ms": 35.641,
+      "elapsed_ms": 40.287,
       "policy_decision": {
         "allow": false,
         "deny_reasons": [
@@ -648,7 +648,7 @@
         ],
         "policy_version": "shiro-4.2",
         "engine": "OPA",
-        "elapsed_ms": 20.245
+        "elapsed_ms": 22.863
       }
     }
   ]

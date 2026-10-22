@@ -72,13 +72,13 @@
   "limitations": [
     "Gold success is the runner assessment, not a human preference study or restaurant certification.",
     "Original live report per-turn state lists can reflect later turns. Use matching build_set arguments. Raw live report remains byte-for-byte; original trace is archived at commit3af6b28.",
-    "Live result applies to source_commit 426b48a; subsequent snapshot/parser/exporter fixes are offline-tested, not a new live run."
+    "Live result belongs to source426b48a. Subsequent reporting/parser fixes and the 100-baht-per-person intake guard are offline-tested, not a new live API run."
   ],
   "submission_layout": {
     "evidence_files": 7,
     "main_file_path": "Shiro-Jung-Agent-v4/app.py",
     "current_live_corpus": "evaluation/sessions.json",
-    "live_corpus_content_unchanged": true,
+    "live_corpus_content_unchanged": false,
     "archive_commit": "3af6b28",
     "archived_original_trace_url": "https://github.com/68056056-crypto/Sushi_Budgeteer_Shiro-Jung/blob/3af6b28/Shiro-Jung-Agent-v4/artifacts/live-confirmed-39799552734/original-live-trace.md",
     "runtime_files_verified_unchanged": {
@@ -96,14 +96,30 @@
     },
     "public_url": "https://shiro-jung.streamlit.app/",
     "public_url_verification": "Not verified from this execution network; outbound proxy blocks access. Local startup/AppTest and runtime file hashes were checked.",
-    "checks_created_at": "2026-10-22T15:34:51.019745+00:00"
+    "checks_created_at": "2026-10-22T16:30:31.180941+00:00",
+    "current_package": "4.2.2",
+    "live_corpus_change": "Replaced 1-baht/1-person optimizer-block expectation with 50-baht/3-person intake budget_revision before planning; original live source426b48a does not test this new guard."
   },
   "current_file_sha256": {
-    "benchmark.json": "faabd489ce6a3081eab3401ac9e77d4d6ab9d29d05cf2c1626b49f1d1f867a8a",
-    "offline-evaluation.json": "9e97539f781912548282eb2f3d4a8069c7b559a78a86a4759d84ee6b0e087cd6",
-    "checks.json": "bac6ac98e52981db86acefa49da115490b050b2f5295c5ce1c3eb7ea319e1930",
-    "catalog-audit.json": "586726ce3c4bc29cada32ce4c0aa68180ebc420cdccdbd5d6aef7e516a441c69",
+    "benchmark.json": "92c975e21f223cbf417ba10b3edc0052e99679e4c22e5cf6bece33abaeaad187",
+    "offline-evaluation.json": "903ae977ac3d3cefb55d6ff2d1acbcbc779a846803c624e19aa2961d5246c909",
+    "checks.json": "ee5ec9e0bbf682a96e270d6fab148b08f0a4788bb386174e2989840dacd45295",
+    "catalog-audit.json": "6997cf2e330853d2a544fc2abc8703b8a0bd7a3d010b9db3f3aec96b7d71937f",
     "live-sessions.json": "cfb28e2a536178de17be43dc081da9f1217e5309d81ca7b2666c6aae72ae2bca",
     "live-trace.md": "133e240f555be8da67e778d92996b883a5f17ee98208a1d820338f1a17268abd"
+  },
+  "intake_budget_policy": {
+    "minimum_full_budget_per_person_baht": 100,
+    "example": {
+      "budget": 50,
+      "num_people": 3,
+      "minimum_budget": 300
+    },
+    "consumer_only": true,
+    "budget_auto_increased": false,
+    "allows_confirmation_bypass": false,
+    "preserves_allergies_and_preferences": true,
+    "offline_regression_tests": 7,
+    "live_api_rerun_for_this_guard": false
   }
 }

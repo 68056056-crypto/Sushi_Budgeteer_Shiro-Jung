@@ -1,4 +1,4 @@
-# Code Review — Shiro-Jung 4.0 / package 4.2.1
+# Code Review — Shiro-Jung 4.0 / package 4.2.2
 
 เอกสารนี้รวมคำอธิบาย implementation และการตอบข้อเสนอแนะรอบ 1–2 สำหรับชุดส่งตรวจปัจจุบัน ไม่ใช่การให้คะแนนใหม่แก่โครงงาน
 
@@ -31,6 +31,7 @@ LLM เลือก tool สูงสุด10รอบ/ไม่เกิน8 ca
 
 | ประเด็นจากการตรวจ | พฤติกรรมปัจจุบันและหลักฐาน |
 |---|---|
+| งบต่ำมากเทียบจำนวนคน | intakeบังคับงบรวม ≥100บาท×จำนวนคน ก่อนแสดงปุ่มยืนยัน/เรียกplanning; 50บาท3คนเตือน300บาท คงมื้อเดิม — [tests](tests/test_intake_budget.py) |
 | “ไม่กินหมู” ถูกจัดเป็น dislike | กฎหลัง extraction บังคับ ไม่กิน/ไม่ทาน/งด/ห้าม → hard และลบ soft alias เดียวกันจาก state; “ไม่ค่อยชอบหมู” ยัง soft — [tests](tests/test_explicit_refusals.py) |
 | “ไม่กินเนื้อ” ไม่ตัดรายการ | ถามหมู/วัว/ไก่/สัตว์บกทั้งหมดครั้งเดียว คงความหมายไม่ชอบ/ไม่กิน/แพ้ ไม่ตัดปลาเพียงเพราะเลือกสัตว์บก — [tests](tests/test_meat_scope.py) |
 | สองชุดใกล้ซ้ำ | ตัด `ceil(0.30 × ชื่ออาหารไม่ซ้ำชุดแรก)` เริ่มกลุ่มคะแนนสูง ลองได้สูงสุด3กลุ่ม ตรวจสัดส่วนที่หายจริง คง extras/constraints; ทำไม่ได้แสดงชุดเดียว |
@@ -54,6 +55,14 @@ Bounded exact DP ใช้ state `(count, cost_satang)`, immutable backtracking,
 Python สร้าง trusted facts จาก SQLite; Rego policy `shiro-4.2` schema2 เทียบ raw allergen/dietary sets แม้ Python flagsเป็นfalse แต่ OPA ยังใช้ facts จาก Pythonและdenyเมื่อ python_issues ไม่ว่าง จึงไม่ได้เป็นระบบอิสระจากกันโดยสมบูรณ์ OPA หาย/timeout/outputผิด → fail closed
 
 `strict` รับผู้แพ้เฉพาะรายการที่ allergen_status confirmed และไม่ชนแท็ก; unknown/team_reviewed ไม่ปลด strict การดูชุดจำลองต้อง opt-in เองและยังมีคำเตือน ไม่ใช้ชื่อเมนูแทนหลักฐานสูตรหรือรับประกันปนเปื้อนข้าม
+
+## Action plan: งบต่ำเมื่อเทียบกับจำนวนคน — แก้แล้ว
+
+เกณฑ์ผลิตภัณฑ์ใน `optimization_config.py` คือ `MIN_INTAKE_BUDGET_PER_PERSON=100.0` เทียบ **งบเต็ม ÷ จำนวนคน** ไม่ใช่ยอดหลังกันสำรอง และไม่ใช่การรับรองความอิ่ม/ราคา อาหารที่แบ่งกัน/ปริมาณไม่ถูกประมาณในกฎนี้
+
+`IntakeMixin.intake_budget_warning()` ทำงานหลังทราบงบ/คน ก่อนสรุปยืนยัน และตรวจซ้ำใน `_confirm_order`/planning entry; หากต่ำกว่าเกณฑ์จะปิด confirmation, clear choices, ตั้ง last_asked_field=budget และบันทึก safe intake_check โดยคงงบเดิม/คน/แพ้/ชอบ/ไม่ชอบ/ข้อห้าม พิมพ์ตัวเลขงบใหม่ได้โดยไม่เรียก extractionซ้ำ ยืนยันอย่างเดียวข้ามกฎไม่ได้
+
+การคัดกรองนี้ใช้ใน consumer intake ไม่แก้ positive-budget schemaของ direct MCP หรือ objectiveของ DP ซึ่งยังใช้ทดสอบ numeric feasibilityแยกได้ ไม่ใช่การเพิ่มราคาข้อมูลร้านให้เป็นconfirmed ผล liveที่เก็บไว้ยังเป็น commit426b48aก่อนกฎนี้ ต้องใช้ workflowรอบใหม่หากต้องการหลักฐานproviderของกฎใหม่
 
 ## ข้อจำกัดที่ยังเหลือ
 

@@ -57,7 +57,13 @@ def main():
                 runs.append(agent.run_report())
             result=agent.state.last_result
             expected_mode=gold.get('expected_mode',scenario['mode'])
-            if gold['expected']=='clarification':
+            intake=agent.last_run.get('intake_check',{})
+            if gold['expected']=='budget_revision':
+                success=(intake.get('status')=='needs_budget_revision'
+                         and intake.get('code')=='budget_per_person_below_minimum'
+                         and result is None and not agent.pending_confirmation
+                         and all(not run.get('trace') and not run.get('option_checks') for run in runs))
+            elif gold['expected']=='clarification':
                 success=bool(agent.pending_meat_scope or agent.pending_confirmation or agent.state.last_asked_field)
             elif result:
                 trusted={**result['constraints'],'budget':gold['budget'],
@@ -78,6 +84,8 @@ def main():
             success=(success and agent.data_mode==expected_mode and hard_state_ok
                      and agent.state.budget==gold['budget']
                      and set(gold.get('allergens',[]))<=set(agent.state.allergens))
+            if gold.get('num_people') is not None:
+                success=success and agent.state.num_people==gold['num_people']
             if gold.get('simulation_consent'):
                 success=success and agent.allergy_simulation_consent
             selected={step['tool'] for step in agent.last_trace if step.get('route')=='model_selected'}

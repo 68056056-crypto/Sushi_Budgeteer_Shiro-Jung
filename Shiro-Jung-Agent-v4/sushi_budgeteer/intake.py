@@ -12,7 +12,7 @@ from pydantic import BaseModel, Field, ConfigDict
 from langchain_core.messages import SystemMessage
 from .extraction import EXTRACT_PROMPT, _sanitize_extraction, contextual_answer
 from .presentation import ALLERGY_WARNING
-from .optimization_config import INITIAL_SPEND_RATIO
+from .optimization_config import INITIAL_SPEND_RATIO, MIN_INTAKE_BUDGET_PER_PERSON
 from .dietary import exclusion_label
 from .meat_scope import MEAT_CHOICES, MEAT_WORDS, defer_meat_guess
 from .telemetry import model_error
@@ -72,6 +72,29 @@ class IntakeMixin:
         return Extraction.model_validate(raw).model_dump()
 
 
+    def intake_budget_warning(self):
+        """Stop consumer planning early while preserving all stated meal details."""
+        s=self.state
+        if not self.consumer_flow or s.budget is None or s.num_people is None:
+            return None
+        from .database import cents
+        minimum=cents(MIN_INTAKE_BUDGET_PER_PERSON)*s.num_people
+        if cents(s.budget)>=minimum:
+            return None
+        self.pending_confirmation=False
+        self.details_confirmed=False
+        self.clear_choices()
+        s.last_asked_field='budget'
+        self.last_run['intake_check']={'status':'needs_budget_revision',
+            'code':'budget_per_person_below_minimum','budget':s.budget,'num_people':s.num_people,
+            'budget_per_person':round(s.budget/s.num_people,2),
+            'minimum_budget':minimum/100,'minimum_per_person':MIN_INTAKE_BUDGET_PER_PERSON}
+        return (f'งบ {s.budget:,.2f} บาทสำหรับ {s.num_people} คน เฉลี่ยคนละ {s.budget/s.num_people:,.2f} บาท '
+                'อาจน้อยเกินไปสำหรับจัดอาหารให้ทุกคนครับ '
+                f'แนะนำงบเริ่มต้นอย่างน้อย {minimum/100:,.2f} บาท หรือปรับจำนวนคนได้เลย '
+                'พิมพ์งบใหม่หรือจำนวนคนที่ต้องการได้ครับ ผมจำการแพ้และความชอบเดิมไว้ให้')
+
+
     def missing_fields(self):
         s=self.state
         if self.consumer_flow:
@@ -123,6 +146,9 @@ class IntakeMixin:
         s=self.state
         if s.budget is None or s.num_people is None:
             return 'ขอทราบงบและจำนวนคนก่อนจัดชุดครับ'
+        warning=self.intake_budget_warning()
+        if warning:
+            return warning
         s.allergens=[a for a in s.allergens if a not in self.pending_allergy_removals]
         self.pending_allergy_removals=[]
         s.allergy_check_done=True
@@ -230,5 +256,8 @@ class IntakeMixin:
         if self.state.budget is None or self.state.num_people is None:
             missing=[label for label,value in [('งบรวม',self.state.budget),('จำนวนคน',self.state.num_people)] if value is None]
             return 'รับทราบครับ ขอทราบ'+'และ'.join(missing)+'เพื่อสรุปมื้อให้ครับ'
+        warning=self.intake_budget_warning()
+        if warning:
+            return warning
         self.pending_confirmation=True
         return self.order_summary()

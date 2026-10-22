@@ -31,18 +31,26 @@
     ]
   },
   {
-    "id": "infeasible_then_user_changes_budget",
+    "id": "low_budget_intake_then_user_changes_budget",
     "mode": "strict",
     "turns": [
       {
-        "message": "จัดชุดอาหารงบ 1 บาท สำหรับ 1 คน ไม่มีแพ้อาหารหรือไม่ชอบ รับชาเขียวร้อน 1 แก้ว รวมในงบ ไม่รับของหวาน",
-        "expected": "blocked",
-        "budget": 1
+        "message": "งบ 50 บาท สำหรับ 3 คน ไม่มีแพ้อาหาร ชอบแซลมอน ไม่กินหมู ไม่รับของหวาน",
+        "expected": "budget_revision",
+        "budget": 50,
+        "num_people": 3,
+        "hard_exclude_keywords": [
+          "หมู"
+        ]
       },
       {
-        "message": "ตกลง เปลี่ยนงบเป็น 300 บาท เงื่อนไขอื่นคงเดิม",
+        "message": "ปรับงบเป็น 300 บาท เงื่อนไขอื่นเหมือนเดิม",
         "expected": "recommendation",
-        "budget": 300
+        "budget": 300,
+        "num_people": 3,
+        "hard_exclude_keywords": [
+          "หมู"
+        ]
       }
     ]
   },

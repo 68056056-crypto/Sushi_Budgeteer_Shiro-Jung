@@ -79,6 +79,9 @@ class PlanningMixin:
 
 
     async def _run(self, user_message, unclear=False):
+        warning=self.intake_budget_warning()
+        if warning:
+            return warning
         # langchain_openai caches one async HTTP client per process, but every turn runs in a
         # fresh event loop (asyncio.run). Reusing pooled connections from a closed loop raises
         # "RuntimeError: Event loop is closed", so live turns get their own client in this loop.

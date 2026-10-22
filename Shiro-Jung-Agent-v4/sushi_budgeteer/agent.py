@@ -277,6 +277,10 @@ class BudgeteerAgent(IntakeMixin, PlanningMixin, CheckoutMixin):
                 answer='ขอทราบ'+ ' และ '.join(missing)+'ครับ บอกการแพ้อาหาร ความชอบ และเครื่องดื่มพร้อมกันได้เลย ไม่รับของหวานจะไม่เพิ่มให้ครับ'
                 self.state.add_message('assistant',answer)
                 return answer
+            warning=self.intake_budget_warning()
+            if warning:
+                self.state.add_message('assistant',warning)
+                return warning
             if self.state.wants_dessert and not self.state.dessert_selection:
                 self.pending_confirmation=False
                 self.state.last_asked_field='dessert_selection'

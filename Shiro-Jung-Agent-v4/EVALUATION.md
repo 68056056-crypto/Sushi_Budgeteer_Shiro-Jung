@@ -1,4 +1,4 @@
-# Evaluation — Shiro-Jung 4.0 / package 4.2.1
+# Evaluation — Shiro-Jung 4.0 / package 4.2.2
 
 เอกสารนี้แยก **offline regression / gold tools / benchmark / live LLM** ไม่รวมจำนวนหรืออ้างผลแทนกัน วันที่และ revision ดูจาก JSON ของแต่ละการรัน
 
@@ -6,7 +6,7 @@
 
 | ชั้นการประเมิน | ผล | ขอบเขต |
 |---|---|---|
-| Regression/integration | 165ผ่าน, failures0/errors0/skips0 | scripted model + real MCP subprocess, SQLite, OPA และ Streamlit AppTest |
+| Regression/integration | 172ผ่าน, failures0/errors0/skips0 | scripted model + real MCP subprocess, SQLite, OPA และ Streamlit AppTest |
 | Rego | 25/25 | กฎ allow/deny รวม raw-tag conflicts และ Python flagsfalse |
 | Smoke | strict61/61 และ simulation61/61 | ตรวจทั้งสองโหมด ไม่ลด strict เพื่อให้ผ่าน |
 | Offline gold | 40/40 | ใช้ tools โดยไม่เรียก LLM; ไม่วัดคุณภาพ extraction/provider |
@@ -54,6 +54,14 @@ python scripts/build_report.py
 
 ไฟล์ report.html เป็นผลสร้างในเครื่อง ไม่ต้องเก็บบน GitHub ส่วน CSV import เป็น replace operation จึงควรสำรอง SQLite หากทีมเพิ่มหลักฐาน/ราคาเองก่อนใช้ `python -m sushi_budgeteer.database import`
 
+## Action plan: ตรวจงบขั้นต่ำตั้งแต่ intake
+
+ใช้เกณฑ์งบเต็ม **100บาทต่อคน**: ต่ำกว่าเกณฑ์เตือนและรอแก้ข้อมูลก่อนยืนยันหรือเปิด planning/MCP เท่ากับเกณฑ์ถือว่าผ่านด่าน intake เช่น300บาท/3คน แต่ยังต้องผ่านการแพ้/ข้อห้าม/งบจริงของชุดในขั้นถัดไป ไม่ตีความว่าเกณฑ์นี้รับประกันความอิ่มหรือความเป็นไปได้ทุกเมนู
+
+`test_intake_budget.py` เพิ่ม7เคส: 50/3เตือนพร้อมคงข้อจำกัด, กดยืนยัน/เรียกplanningข้ามไม่ได้, ตอบเฉพาะงบใหม่, ขอบเขต299.99/300/300.01สำหรับ3คนและเปลี่ยนจำนวนคน, รับข้อมูลทีละส่วน/ลดงบหลังเคยจัดชุด, ปุ่มUIไม่เปิดจนงบผ่าน และ scripted runnerผ่านการเตือน→แก้งบ→จัดชุด โดยไม่อ้างเป็น live
+
+corpusปัจจุบัน5sessions/12goldมี `budget_revision` 1กรณี ซึ่งต้องมี intake_checkที่ถูกต้อง ไม่มีcandidate/confirmation/MCPcalls และรักษาคน/ข้อห้ามไว้ ส่วน artifact liveต้นฉบับยังคงเป็น source426b48aก่อนเพิ่มกฎนี้และไม่ถูกแก้ให้ดูเหมือนทดสอบกฎใหม่แล้ว
+
 ## รัน Live LLM ใหม่
 
 [workflow](../.github/workflows/live-llm-evaluation.yml) เป็น manual dispatch ใช้ Python3.12, requirements.lock, OPA1.0.1 และ `gpt-4o-mini` ไม่มีการเรียก API แบบเสียเงินทุกครั้งที่ push
@@ -72,7 +80,7 @@ python scripts/export_live_trace.py --input artifacts/generated/live-sessions.js
 python scripts/build_report.py --live-report artifacts/generated/live-sessions.json
 ```
 
-`evaluation/sessions.json` มี5sessions/12goldturns: จำมื้อและเพิ่มงบ/ห้ามดิบ/ไม่กินหมู, งบทำไม่ได้แล้วผู้ใช้แก้, ขอข้าม verifyขณะแพ้ปลา, เลือกชนิดเนื้อสัตว์บก, แพ้เนื้อ→strictblock→explicit simulation opt-in เนื้อหาตรงกับ round2_sessions.json ที่ใช้ใน live commitเดิม เปลี่ยนชื่อเพื่อเหลือ corpusเดียว
+`evaluation/sessions.json` มี5sessions/12goldturns: จำมื้อและเพิ่มงบ/ห้ามดิบ/ไม่กินหมู, งบทำไม่ได้แล้วผู้ใช้แก้, ขอข้าม verifyขณะแพ้ปลา, เลือกชนิดเนื้อสัตว์บก, แพ้เนื้อ→strictblock→explicit simulation opt-in corpusเดิมมาจาก round2_sessions.json ของ live commit426b48a; รอบปัจจุบันเปลี่ยนกรณีงบ1บาทเป็น50บาท/3คนและคาดหวัง budget_revision ก่อน planning ผล liveเดิมจึงไม่ใช่ผลทดสอบกฎใหม่นี้
 
 ## วิธีอ่านผลและข้อจำกัด trace
 

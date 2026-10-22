@@ -1,6 +1,6 @@
 # Shiro-Jung 4.0
 
-ผู้ช่วยวางแผนมื้อซูชิด้วย **OpenAI gpt-4o-mini + MCP + SQLite + bounded exact DP + OPA** — implementation package `4.2.1`
+ผู้ช่วยวางแผนมื้อซูชิด้วย **OpenAI gpt-4o-mini + MCP + SQLite + bounded exact DP + OPA** — implementation package `4.2.2`
 
 **แอป:** https://shiro-jung.streamlit.app/
 
@@ -43,6 +43,7 @@ flowchart LR
 | ไม่กิน/ไม่ทาน/งด/ห้าม | เป็น **hard exclusion** เสมอ มีกฎหลัง extraction แม้ LLM จัดเป็น dislike เช่น ไม่กินหมู → ตัด pork |
 | ไม่ค่อยชอบ/ไม่ชอบ | เป็น soft dislike หักคะแนน ไม่สร้าง allergy หรือ hard constraint ใหม่ |
 | “เนื้อ” ไม่ระบุชนิด | ถามให้เลือกหมู/วัว/ไก่/สัตว์บกทั้งหมด โดยปลา/อาหารทะเลยังเลือกได้ตามข้อจำกัดอื่น |
+| ตรวจงบก่อนจัดชุด | งบรวมต้องไม่น้อยกว่า **100บาท × จำนวนคน**; เช่น50บาท/3คนเตือนให้ปรับเป็นอย่างน้อย300บาทก่อนยืนยัน คงการแพ้/ความชอบ ไม่เรียก planning/MCP จนแก้ข้อมูล |
 | งบอาหารเริ่มต้น | ใช้วงเงิน 80% เพื่อเหลือเพิ่มน้ำ/ขนมภายหลัง; เป็นนโยบายหลังบ้าน ไม่แสดงตัวเลขนโยบายในแชต |
 | ชุดที่สอง | ต้องไม่มีอย่างน้อย 30% ของ **ชื่อเมนูอาหารไม่ซ้ำในชุดแรก** ไม่นับน้ำ/ขนม; ถ้าทำไม่ได้เสนอชุดเดียว |
 | จำนวนอาหาร | ค่า consumer ไม่เกิน 60 จาน ซ้ำไม่เกิน 3 ต่อเมนู; เพดานที่ผู้ใช้กำหนดเองยังมีผล |
@@ -120,7 +121,7 @@ python scripts/collect_evidence.py
 
 คำสั่งนี้ตรวจ OPA, regression, smoke, offline40, benchmark, catalog audit และสร้าง `artifacts/report.html` สำหรับเปิดตรวจใน browser **ไม่เรียก API แบบเสียเงิน ไม่เขียนทับหลักฐาน live ที่ส่งตรวจ และไม่ import ทับ SQLite ที่มีอยู่** รายละเอียดผลและคำสั่งแยกอยู่ใน [EVALUATION.md](EVALUATION.md)
 
-ผลที่ยืนยันแล้ว: **165 regression tests, 25 Rego tests, smoke61ต่อโหมด, offline40/40**; Live LLM ผ่าน 12/12 gold turns ใน 5 sessions, model-selected recommendations6, successful responses31 และ errors0 จาก [Actions run39799552734](https://github.com/68056056-crypto/Sushi_Budgeteer_Shiro-Jung/actions/runs/39799552734) ที่ source commit426b48a
+ผลหลังเพิ่ม intake guard: **172 regression tests, 25 Rego tests, smoke61ต่อโหมด, offline40/40**; Live LLM ผ่าน 12/12 gold turns ใน 5 sessions, model-selected recommendations6, successful responses31 และ errors0 จาก [Actions run39799552734](https://github.com/68056056-crypto/Sushi_Budgeteer_Shiro-Jung/actions/runs/39799552734) ที่ source commit426b48a ซึ่งเป็น corpusก่อนเพิ่ม budget guard100บาท/คน กฎใหม่นี้ตรวจ offlineแล้ว ยังไม่ได้รัน liveใหม่
 
 หากต้องการรัน live อีกครั้ง ใช้ **Actions → Live LLM evaluation → Run workflow → main**; GitHub Actions Secret ชื่อ `OPENAI_API_KEY` ใส่เฉพาะค่าคีย์หนึ่งค่า ไม่รวม `OPENAI_MODEL` มีค่าใช้จ่ายตาม API และผลใหม่เป็น artifact แยกจากหลักฐานเดิม
 

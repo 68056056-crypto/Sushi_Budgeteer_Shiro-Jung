@@ -17,7 +17,7 @@ encoded=json.dumps(data,ensure_ascii=False).replace('</','<\\/')
 html='''<!doctype html><html lang="th"><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Shiro-Jung — Evidence Report</title><style>
 body{font:16px/1.6 system-ui,sans-serif;max-width:1150px;margin:36px auto;padding:0 20px;background:#fffaf6;color:#25303b}h1,h2{color:#a52e26}.cards{display:flex;flex-wrap:wrap;gap:16px}.card{background:white;padding:18px;border:1px solid #ddd;border-radius:12px;min-width:180px}.value{font-size:30px;font-weight:bold}table{border-collapse:collapse;width:100%;background:white;margin-top:15px}th,td{padding:9px;border-bottom:1px solid #ddd;text-align:left}select,button{font:inherit;padding:6px}.notice{padding:15px;background:#fff0c4;border-radius:8px}.bar{height:13px;margin:3px 0;background:#b5352a}.greedy{background:#4489ab}.random{background:#aaa}small{color:#555}details{margin:12px 0}pre{white-space:pre-wrap;overflow-wrap:anywhere}
-</style><h1>Shiro-Jung 4.2.1 — หลักฐานการทำงาน</h1>
+</style><h1>Shiro-Jung 4.2.2 — หลักฐานการทำงาน</h1>
 <p class="notice">Offline ใช้ MCP + SQLite + OPA จริง ส่วนการตัดสินใจด้วย OpenAI แสดงแยกตามสถานะ live ด้านล่าง ไม่ใช้ผลโมเดลจำลองแทนผลจริง ข้อมูลเมนู/ราคา/allergen ยังไม่ยืนยันกับร้าน</p>
 <div id="cards" class="cards"></div><h2>สถานะ LLM จริง</h2><p id="live"></p>
 <h2>Evaluation 40 กรณี</h2><label>กรองผล <select id="filter"><option value="all">ทั้งหมด</option><option value="pass">ผ่าน</option><option value="fail">ไม่ผ่าน</option></select></label><div id="evaluation"></div>
