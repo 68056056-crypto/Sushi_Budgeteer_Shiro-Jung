@@ -13,4 +13,4 @@
 
 โค้ดอยู่ใน [Shiro-Jung-Agent-v4](Shiro-Jung-Agent-v4) และ entrypoint ของ Streamlit Cloud คงเป็น **`Shiro-Jung-Agent-v4/app.py`** บน `main`
 
-ผล live ที่ตรวจแล้ว: 5 sessions, gold12/12, model-selected recommendations6 จาก [Actions run39799552734](https://github.com/68056056-crypto/Sushi_Budgeteer_Shiro-Jung/actions/runs/39799552734) ผลนี้เป็น source commit เดิม ไม่ใช่ live rerun ของ package4.4.0 ซึ่งเพิ่ม required menu, explicit-cap diversity, intake100บาทต่อคน และ session persistence ดูผลปัจจุบันใน EVALUATION ข้อมูลราคา/สารก่อภูมิแพ้ยังไม่ยืนยันกับร้าน สไลด์/Word/PDF จัดส่งแยกจาก repository
+Live รุ่น4.4.0 ผ่านแล้วบน source`0f0b161`: [Actions run39899787025](https://github.com/68056056-crypto/Sushi_Budgeteer_Shiro-Jung/actions/runs/39899787025) corpus6sessions/14gold และบังคับมี model-selected build/verify อย่างน้อย1ครั้ง ยืนยันจากสถานะงาน/ขั้นประเมินและ exit contract; ยังดาวน์โหลดraw artifactรอบใหม่จากเครื่องนี้ไม่ได้ จึงเก็บJSON/traceเก่าsource426b48aเป็นหลักฐานประวัติที่แยกชัดเจน ดูรายละเอียดใน EVALUATION ข้อมูลร้านยังไม่ยืนยันและยกเว้นการเก็บหลักฐานในรอบนี้ สไลด์/Word/PDFไม่อยู่ในrepository

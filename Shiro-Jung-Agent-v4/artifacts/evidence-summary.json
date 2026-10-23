@@ -72,7 +72,7 @@
   "limitations": [
     "Gold success is the runner assessment, not a human preference study or restaurant certification.",
     "Original live report per-turn state lists can reflect later turns. Use matching build_set arguments. Raw live report remains byte-for-byte; original trace is archived at commit3af6b28.",
-    "Historical live result belongs to source426b48a, not package4.4.0. Exact menu matching, generic unknown extras, structured nonpositive-budget validation, intake floor, scoring and persistence are offline-tested; a new workflow result must be checked before updating live claims."
+    "Current package4.4.0 passed live workflow39899787025 at source0f0b161, confirmed via public run/evaluation-step success and fail-closed runner exit contract. Current raw artifact download returned404; exact new calls/tokens/model-selected count and per-turn trace not verified. Bundled raw detailed artifact remains historical source426b48a."
   ],
   "submission_layout": {
     "evidence_files": 7,
@@ -155,11 +155,54 @@
     "restaurant_verification_scope": "waived by user; no confirmation fabricated"
   },
   "requested_live_run": {
-    "status": "prepared_pending_trigger_and_result_verification",
+    "status": "workflow_passed_raw_artifact_unavailable",
     "workflow": "live-llm-evaluation.yml",
     "planned_tag": "live-eval-v4.4.0-20261023",
     "current_package": "4.4.0",
     "scenario_sha256": "c7a5e79736282760dbe5476416780ab08944c8608e32cce2cbd60b45891a0070",
-    "historical_live_evidence_replaced": false
+    "historical_live_evidence_replaced": false,
+    "run_id": 39899787025,
+    "trigger_method": "push_tag_after_actions_api_forbidden",
+    "source_commit": "0f0b16176af1388849b9fddc082a28286fd31783"
+  },
+  "historical_report_scope": "Top-level source426b48a metrics and bundled live-sessions.json/live-trace.md describe the historical raw artifact. latest_live_run below describes public workflow evidence for current code; its raw JSON was not downloaded.",
+  "latest_live_run": {
+    "run_id": 39899787025,
+    "workflow_run_url": "https://github.com/68056056-crypto/Sushi_Budgeteer_Shiro-Jung/actions/runs/39899787025",
+    "source_commit": "0f0b16176af1388849b9fddc082a28286fd31783",
+    "package_version": "4.4.0",
+    "git_tag": "live-eval-v4.4.0-20261023",
+    "workflow_status": "success",
+    "evaluation_step_conclusion": "success",
+    "sessions_in_corpus": 6,
+    "gold_turns_in_corpus": 14,
+    "scenario_sha256": "c7a5e79736282760dbe5476416780ab08944c8608e32cce2cbd60b45891a0070",
+    "evidence_basis": "Public GitHub run and evaluation-step HTML, matched to source/tag. Zero exit from --require-model-selected implies success_rate 1, live_llm_tested true, at least one real model-selected build/verify; exact aggregates unavailable without raw JSON.",
+    "exit_contract_confirmed": {
+      "live_llm_tested": true,
+      "success_rate": 1.0,
+      "model_selected_recommendations_minimum": 1
+    },
+    "exact_model_selected_recommendations": null,
+    "exact_model_calls": null,
+    "usage_tokens": null,
+    "artifact_id": 12478024625,
+    "artifact_name": "live-llm-evidence-39899787025",
+    "published_artifact_digest": "sha256:7ba9d1a584a02860a967dd05c6f29a379ef0d52d1f612a3fd51e8e13af09ca2e",
+    "artifact_url": "https://github.com/68056056-crypto/Sushi_Budgeteer_Shiro-Jung/actions/runs/39899787025/artifacts/12478024625",
+    "raw_artifact_downloaded": false,
+    "raw_artifact_verification": "Download returned HTTP404 from this execution environment; no new per-turn trace or exact aggregate counts asserted.",
+    "completed_at_bangkok": "2026-10-23T11:22:12+07:00",
+    "runtime_source_files_unchanged_since_live_commit": true,
+    "runtime_comparison_paths": [
+      "app.py",
+      "mcp_server.py",
+      "sushi_budgeteer",
+      "policies",
+      "sushiro_menu_dataset.csv",
+      "requirements.txt",
+      "requirements.lock",
+      "evaluation/sessions.json"
+    ]
   }
 }

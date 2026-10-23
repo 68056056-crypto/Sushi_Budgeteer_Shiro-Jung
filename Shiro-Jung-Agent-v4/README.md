@@ -102,7 +102,7 @@ Linux มี `scripts/setup.sh` และ `scripts/start.sh` สำหรับ�
 - งบ ≤0 ตรวจค่าตัวเลขหลัง extraction/contextual parsing ทุกสำนวน เก็บคน/การแพ้/ความชอบ แล้วถามเฉพาะงบใหม่ ไม่มี regex เฉพาะประโยค “งบ0”
 - ชื่อเพิ่มเติมที่ไม่พบ เช่น เบียร์ แฟนต้า บราวนี่ กาแฟดำ ใช้ตัวตรวจชื่อร่วมกัน ตอบ `ไม่มี X ในเมนู` และไม่เพิ่มบางส่วนในข้อความที่มีรายการไม่รู้จัก
 - Live เรียกได้จาก Run workflow หรือ push tag `live-eval-*` เพื่อรันเฉพาะครั้ง; push branchทั่วไปไม่เรียกAPI ชุดรอบนี้ใช้tag `live-eval-v4.4.0-20261023`
-- Live corpus ใหม่มี6sessions/14gold เพิ่มงบศูนย์และตรวจ `required_item_ids=[S015]` กับ LLM จริง ผล live ที่แนบยังเป็น source426b48a จนกว่าจะมี artifact จากรอบใหม่
+- Live corpus ใหม่มี6sessions/14gold เพิ่มงบศูนย์และตรวจ `required_item_ids=[S015]` กับ LLM จริง รอบใหม่ผ่านแล้วที่ [run39899787025](https://github.com/68056056-crypto/Sushi_Budgeteer_Shiro-Jung/actions/runs/39899787025) บนsource0f0b161; raw JSON/traceที่แนบยังเป็นsource426b48a เพราะดาวน์โหลดartifactรอบใหม่จากเครื่องนี้ได้404 จึงแยกสถานะล่าสุดกับข้อมูลประวัติ
 - การเก็บหลักฐานจากร้านยกเว้นในรอบนี้ตามขอบเขตที่ผู้ใช้ระบุ จึงคงสถานะ price unverified/allergen unknown โดยไม่สร้างการยืนยันขึ้นเอง
 
 ## เงื่อนไขหลังแก้ review
@@ -141,7 +141,10 @@ python scripts/collect_evidence.py
 
 คำสั่งนี้ตรวจ OPA, regression, smoke, offline40, benchmark, catalog audit และสร้าง `artifacts/report.html` สำหรับเปิดตรวจใน browser **ไม่เรียก API แบบเสียเงิน ไม่เขียนทับหลักฐาน live ที่ส่งตรวจ และไม่ import ทับ SQLite ที่มีอยู่** รายละเอียดผลและคำสั่งแยกอยู่ใน [EVALUATION.md](EVALUATION.md)
 
-ผลปัจจุบันหลังแก้ review: **193 regression tests, 25 Rego tests, smoke61ต่อโหมด, offline40/40**; Live LLM ผ่าน 12/12 gold turns ใน 5 sessions, model-selected recommendations6, successful responses31 และ errors0 จาก [Actions run39799552734](https://github.com/68056056-crypto/Sushi_Budgeteer_Shiro-Jung/actions/runs/39799552734) ที่ source commit426b48a ซึ่งเป็น corpusก่อนเพิ่ม budget guard100บาท/คน กฎ intake, required menu, ความหลากหลายเมื่อจำกัดจาน และ persistence ปัจจุบันตรวจ offlineแล้ว ยังไม่ได้รัน liveใหม่
+ผลปัจจุบัน: **193 regression tests, 25 Rego tests, smoke61ต่อโหมด และ offline40/40 ผ่าน**
+
+Live รุ่น4.4.0: [run39899787025](https://github.com/68056056-crypto/Sushi_Budgeteer_Shiro-Jung/actions/runs/39899787025) ผ่านบนsource`0f0b161` กับcorpus6sessions/14gold; exit contractบังคับLLMจริงและmodel-selected build/verify≥1 ยังดาวน์โหลดraw artifactล่าสุดจากเครื่องนี้ไม่ได้ จึงไม่รายงานcalls/tokensใหม่โดยคาดเดา JSON/traceที่แนบยังเป็นประวัติsource426b48a ดูขอบเขตหลักฐานใน EVALUATION
+
 
 หากต้องการรัน live อีกครั้ง ใช้ **Actions → Live LLM evaluation → Run workflow → main**; GitHub Actions Secret ชื่อ `OPENAI_API_KEY` ใส่เฉพาะค่าคีย์หนึ่งค่า ไม่รวม `OPENAI_MODEL` มีค่าใช้จ่ายตาม API และผลใหม่เป็น artifact แยกจากหลักฐานเดิม
 

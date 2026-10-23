@@ -10,7 +10,8 @@ def read(name):
     p=ROOT/'artifacts'/name
     return json.loads(p.read_text()) if p.exists() else {'status':'not_run'}
 data={'validation':read('checks.json').get('validation',{}),'offline':read('offline-evaluation.json'),
-      'sessions':read('live-sessions.json'),'benchmark':read('benchmark.json')}
+      'sessions':read('live-sessions.json'),'benchmark':read('benchmark.json'),
+      'latest_live':read('evidence-summary.json').get('latest_live_run',{})}
 parser=argparse.ArgumentParser(description=__doc__)
 parser.add_argument('--live-report',type=Path,help='Override imported verified live report with a newer run')
 args=parser.parse_args()
@@ -31,6 +32,7 @@ function node(tag,text){const n=document.createElement(tag);n.textContent=text;r
 function card(label,value){const c=node('div','');c.className='card';c.append(node('div',label));const v=node('div',value);v.className='value';c.append(v);document.querySelector('#cards').append(c)}
 card('Regression tests',data.validation.regression?.run??'ยังไม่รัน');card('Rego tests',data.validation.opa?.rego_tests??'ยังไม่รัน');card('Offline cases',data.offline.executed_cases??0);card('Offline success',data.offline.metrics?((data.offline.metrics.success_rate*100).toFixed(1)+'%'):'ยังไม่รัน');
 document.querySelector('#live').textContent='Live consumer sessions: '+data.sessions.status+' ('+(data.sessions.executed_turns??0)+' turns); Live: '+data.sessions.live_llm_tested+'; Gold success: '+data.sessions.success_rate+'; model-selected recommendations: '+data.sessions.model_selected_recommendations+'; Source: '+data.sessions.source_commit;
+if(data.latest_live.workflow_status==='success'){document.querySelector('#live').textContent='Current live workflow: SUCCESS; source '+data.latest_live.source_commit+'; corpus '+data.latest_live.sessions_in_corpus+' sessions / '+data.latest_live.gold_turns_in_corpus+' gold. Exit contract confirms live/model-selected >= 1. Raw current artifact not downloaded; bundled per-turn trace is historical source426b48a. See '+data.latest_live.workflow_run_url;}
 function evaluations(){const target=document.querySelector('#evaluation');target.replaceChildren();const t=node('table','');const head=node('tr','');for(const label of ['กรณี','คาดหวัง','ผลจริง','ผ่าน','เวลา ms'])head.append(node('th',label));t.append(head);for(const row of data.offline.cases??[]){const f=document.querySelector('#filter').value;if(f==='pass'&&!row.success||f==='fail'&&row.success)continue;const tr=node('tr','');for(const value of [row.id,row.expected,row.actual,row.success?'ผ่าน':'ไม่ผ่าน',row.elapsed_ms])tr.append(node('td',String(value)));t.append(tr)}target.append(t)}
 document.querySelector('#filter').onchange=evaluations;evaluations();
 const cases=data.benchmark.cases??[];const select=document.querySelector('#scenario');cases.forEach((c,i)=>{const o=node('option',c.full_budget+' บาท / ชอบ '+(c.preferences.join(',')||'ไม่ระบุ')+' / ห้าม '+(c.hard_exclusions.join(',')||'ไม่มี'));o.value=i;select.append(o)});

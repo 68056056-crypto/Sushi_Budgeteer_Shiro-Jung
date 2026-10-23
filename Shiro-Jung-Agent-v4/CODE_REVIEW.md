@@ -40,7 +40,9 @@ LLM เลือก tool สูงสุด10รอบ/ไม่เกิน8 ca
 | ไม่มีหลักฐาน live | ยืนยันจริงจาก [Actions run39799552734](https://github.com/68056056-crypto/Sushi_Budgeteer_Shiro-Jung/actions/runs/39799552734): 5sessions,12/12gold,6model-selected build/verify,31responses,errors0 ที่ commit426b48a |
 | ความถูกต้องของ trace | runner deep-copy state snapshots; exporter จับคู่ candidate/verify passed ด้วย result_id และใช้ build arguments ของรอบนั้น — [tests](tests/test_live_session_harness.py), [exporter](tests/test_live_trace_export.py) |
 
-คำว่า “เงื่อนไขอื่นเหมือนเดิม” เป็นบริบทสนทนา ไม่สร้าง hard food keyword ปะปนอีกต่อไป การแก้ parser/snapshots หลัง live commit มี regression รองรับ แต่ยังไม่อ้างเป็น live rerun ใหม่
+คำว่า “เงื่อนไขอื่นเหมือนเดิม” เป็นบริบทสนทนา ไม่สร้าง hard food keyword ปะปนอีกต่อไป การแก้ parser/snapshots ตรวจ regression แล้ว; สถานะ Live รุ่นปัจจุบันอยู่ในส่วน4.4.0ด้านล่าง ไม่ย้ายตัวเลขจากartifactเก่ามาอ้างเป็นผลใหม่
+
+Live รุ่นปัจจุบัน: [run39899787025](https://github.com/68056056-crypto/Sushi_Budgeteer_Shiro-Jung/actions/runs/39899787025) ผ่านบนsource0f0b161และcorpus6sessions/14gold ยืนยันจากpublic job status+exitcontractที่บังคับLLMจริง/model-selected≥1 ไม่อ้างจำนวนcalls/tokensหรือper-turn traceใหม่ที่ยังดาวน์โหลดไม่ได้ ส่วนรายละเอียดrawเก่ายังคงsource426b48a
 
 ## จุดตรวจเพิ่มเติม 4.4.0
 
@@ -90,7 +92,7 @@ Python สร้าง trusted facts จาก SQLite; Rego policy `shiro-4.2` s
 ## ข้อจำกัดที่ยังเหลือ
 
 - ข้อมูลราคา/ส่วนผสม42รายการยัง unverified/unknown; ไม่มีหลักฐานร้านใหม่ในชุดส่งนี้
-- Live ผ่านเฉพาะ5sessions/12goldที่ระบุ ไม่ใช่ human preference study หรือคุณภาพทุก prompt
+- Live raw ประวัติผ่าน5sessions/12gold; current workflowผ่านcorpus6sessions/14goldตามexitcontract แต่rawล่าสุดยังดาวน์โหลดไม่ได้ ผลทั้งสองไม่ใช่human preference studyหรือคุณภาพทุกprompt
 - Session persistence มีอายุ 24 ชั่วโมงใน SQLite บนเครื่องที่รันแอป; ไม่ใช่บัญชีผู้ใช้หรือ durable storage ข้าม Cloud restart/redeploy
 - MCP เปิด subprocess ต่อ planning turn และมี rechecks หลายรอบ ยังไม่ได้พิสูจน์ latency improvement เชิงควบคุม
 - ไม่คำนวณ portion/ความอิ่ม/ภาษี/service charge และไม่ส่งออเดอร์จริง

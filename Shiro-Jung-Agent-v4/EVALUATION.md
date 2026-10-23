@@ -11,9 +11,10 @@
 | Smoke | strict61/61 และ simulation61/61 | ตรวจทั้งสองโหมด ไม่ลด strict เพื่อให้ผ่าน |
 | Offline gold | 40/40 | ใช้ tools โดยไม่เรียก LLM; ไม่วัดคุณภาพ extraction/provider |
 | Production benchmark | 12สถานการณ์, Random1,200รอบ | objective/configเดียวกับอาหารเริ่มต้นบนเว็บ |
-| Live consumer sessions | gold12/12ใน5sessions | แนะนำ6/block4/clarify2;18actualchatturnsรวม confirmations |
+| Current Live workflow | Success — source0f0b161, corpus6sessions/14gold | [run39899787025](https://github.com/68056056-crypto/Sushi_Budgeteer_Shiro-Jung/actions/runs/39899787025); evaluation-step success บังคับliveและmodel-selected build/verify≥1; ยังไม่ตรวจraw artifactใหม่ |
+| Historical Live raw JSON | gold12/12ใน5sessions | แนะนำ6/block4/clarify2;18actualchatturnsรวม confirmations |
 | Live model selection | 6recommendations | มี route=model_selected ของ build_set และ verify_set passed โดย result_idตรงกัน |
-| Live provider usage | 31responses, errors0 | input113,459 + output2,548 =116,007tokens; ไม่ตีราคาเป็นเงินโดยไม่มีราคาที่ใช้อ้างอิง |
+| Historical Live provider usage | 31responses, errors0 | input113,459 + output2,548 =116,007tokens; ไม่ตีราคาเป็นเงินโดยไม่มีราคาที่ใช้อ้างอิง |
 
 ผล live จาก [GitHub Actions run39799552734](https://github.com/68056056-crypto/Sushi_Budgeteer_Shiro-Jung/actions/runs/39799552734) ที่ **source commit426b48a** ใช้โมเดลที่ตั้งค่า **gpt-4o-mini** รายงานสร้าง22ต.ค.2569เวลา21:53น. (Asia/Bangkok) ตรวจจาก artifact ที่ผู้ใช้ส่ง ไม่ใช่การเรียก API ใหม่ในเครื่องจัดชุด
 
@@ -94,17 +95,21 @@ python scripts/build_report.py --live-report artifacts/generated/live-sessions.j
 
 Live success เป็นผล runnerที่ใช้ validation helpersร่วมกับแอป ไม่มี raw final-menu payloadครบสำหรับ independent replay และยังไม่มี human preference study การแก้ snapshot/exporter/parserภายหลังผ่าน offline regression **ไม่ใช่ live rerun ใหม่** ผล100% จำกัดที่ corpus/commitนี้ ไม่รับรองทุกpromptหรือสูตรร้าน
 
-## Live รุ่นปัจจุบัน: สถานะหลักฐาน
+## Live รุ่นปัจจุบัน: ผ่าน workflow แล้ว
 
-เตรียมรันใหม่ด้วย corpus6sessions/14gold บนpackage4.4.0; หาก Actions API ใช้ไม่ได้ ใช้ tag `live-eval-v4.4.0-20261023` เป็น triggerเฉพาะครั้ง (tagตรงprefixเท่านั้น ไม่รันเมื่อpush branchตามปกติ) GitHub Secrets เป็นผู้ให้OPENAI_API_KEY แก่job ไม่มีการคัดลอกkeyเข้าเครื่องหรือGit
+[Run39899787025](https://github.com/68056056-crypto/Sushi_Budgeteer_Shiro-Jung/actions/runs/39899787025) บนsource`0f0b16176af1388849b9fddc082a28286fd31783` (tag`live-eval-v4.4.0-20261023`, package4.4.0) จบ**Success** วันที่23ต.ค.2569เวลา11:22:12น. (Asia/Bangkok) ขั้น Evaluate current consumer sessions จบsuccessด้วย ตรวจจากหน้าGitHubสาธารณะทั้งrunและjob
 
-หลักฐาน7ไฟล์ที่แนบยังคงรายงานLiveเดิมsource426b48aจนกว่าจะดาวน์โหลดและตรวจartifactรอบใหม่ได้ การส่งtriggerไม่เท่ากับjobผ่าน และไม่เปลี่ยนlive_llm_tested/success_rateเดิมให้ดูเป็นของรุ่นใหม่ ตรวจสถานะที่ [Actions](https://github.com/68056056-crypto/Sushi_Budgeteer_Shiro-Jung/actions/workflows/live-llm-evaluation.yml)
+นี่เป็นการรันใหม่จริง: workflowเรียก `scripts/live_sessions.py --require-model-selected` กับcorpus6sessions/14gold; exit0บังคับsuccess_rate=1.0, live_llm_tested=true และmodel-selected build/verifyอย่างน้อย1 ผลที่สรุปนี้อนุมานจากexit contractของโค้ดที่tagไว้ **ยังไม่มีจำนวนcalls/tokens/จำนวนmodel-selectedที่แน่นอน** เพราะดาวน์โหลด [artifact12478024625](https://github.com/68056056-crypto/Sushi_Budgeteer_Shiro-Jung/actions/runs/39899787025/artifacts/12478024625) จากเครื่องนี้ได้HTTP404 จึงไม่อ้างว่าตรวจper-turn JSONหรือtraceล่าสุดแล้ว
+
+GitHubเผยแพร่ชื่อartifact `live-llm-evidence-39899787025` และdigest `sha256:7ba9d1a584a02860a967dd05c6f29a379ef0d52d1f612a3fd51e8e13af09ca2e` เก็บprovenanceใน `artifacts/evidence-summary.json.latest_live_run` ส่วนJSON/traceรายละเอียดที่อยู่ในrepoยังเป็นของsource426b48aโดยไม่แก้ทับให้ดูเหมือนผลใหม่
+
+Actions APIจากเครื่องนี้ตอบForbidden จึงส่งรันผ่านtagprefixเฉพาะครั้ง; push branchทั่วไปไม่เรียกAPIเพิ่ม ไม่มีการคัดลอกSecretลงGitหรือZIP หากต้องตรวจtraceปัจจุบัน ให้เปิดartifactจากGitHubและจับคู่source_commit/package_version/scenario_sha256ก่อนใช้แทนหลักฐานประวัติ
 
 ## Exact identity และ input validation — 4.4.0
 
 เพิ่ม11เคสใน `tests/test_exact_intake.py`: S015 ต้องปรากฏจริงและ R005 ใช้แทนไม่ได้แม้ตัด S015 ออก, typoแสดงตัวเลือกและรอยืนยันโดยไม่เปลี่ยน allergy, unknown required ไม่หาย, เมนูราคา120บาท/วงเงิน80บาทถามเพิ่มงบโดยไม่เพิ่มเอง, คำตอบจาก service ยังมีราคา, งบ0/ลบหลายสำนวน, contextual numeric budgetไม่เรียกLLM, unknown extrasชื่อทั่วไปและการเพิ่มแบบatomic, unknown dessertผ่านextractionคงข้อมูลอื่น, fuzzyเป็นเพียงข้อเสนอ และ scripted live-harnessตรวจbudget_invalid+required_item_ids
 
-ตัวเลข live เดิมไม่ใช่หลักฐานของ matcher/validator รุ่นนี้ corpusปัจจุบัน6sessions/14gold เพิ่ม `budget_invalid` และการยืนยัน `required_item_ids=[S015]`; runner ใช้ structured status ไม่อาศัยการพบคำเตือนในข้อความ และบันทึก hash ของ corpus/package version ไว้ในรายงานใหม่
+ตัวเลข raw live เดิมไม่ใช่หลักฐานของ matcher/validator รุ่นนี้; รุ่นนี้มีworkflowใหม่ผ่านแล้วตามขอบเขตหลักฐานข้างต้น corpusปัจจุบัน6sessions/14gold เพิ่ม `budget_invalid` และการยืนยัน `required_item_ids=[S015]`; runner ใช้ structured status ไม่อาศัยการพบคำเตือนในข้อความ และบันทึก hash ของ corpus/package version ไว้ในรายงานใหม่
 
 การยืนยันร้าน10–15เมนูถูกยกเว้นตามขอบเขตรอบนี้ ไม่เปลี่ยนสถานะข้อมูลหรืออ้างคะแนนส่วนนี้ว่าเสร็จแล้ว
 
