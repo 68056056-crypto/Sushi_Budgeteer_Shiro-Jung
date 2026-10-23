@@ -74,9 +74,27 @@ class CheckoutMixin:
         if not quantities or any(key not in available or type(qty) is not int or not 1<=qty<=60
                                  for key,qty in quantities.items()):
             return 'ยังเพิ่มไม่ได้ครับ กรุณาบอกชื่อจากเมนูและจำนวน 1–60 ต่อรายการ'
-        self.extras_plan.update(quantities)
+        # Validate a candidate basket before committing it. A rejected request must
+        # never remain hidden in the next request's total (including free drinks).
+        previous=copy.deepcopy(self.extras_plan)
+        notice=''
+        _,previous_error=self.compose_checkout()
+        if previous_error and previous_error.startswith('ยอดรวมเกินงบ'):
+            # Repair sessions saved by versions that kept rejected extras. No
+            # arbitrary subset is chosen on the customer's behalf.
+            removed=', '.join(f"{available[key]['name_th']} ×{qty}" for key,qty in previous.items() if key in available)
+            notice='ยกเลิกรายการเพิ่มเติมเดิมที่ยังเกินงบและไม่ได้ยืนยัน: '+removed+' โปรดเลือกใหม่ได้ครับ\n\n'
+            previous={}
+        self.extras_plan={**previous,**quantities}
         self.sync_checkout_extras()
-        return self.checkout_summary()
+        _,error=self.compose_checkout()
+        if error:
+            self.extras_plan=previous
+            self.sync_checkout_extras()
+            summary=self.checkout_summary()
+            requested=', '.join(f"{available[key]['name_th']} ×{qty} — {available[key]['price_baht']*qty:,.2f} บาท" for key,qty in quantities.items())
+            return notice+error+'\n\nรายการครั้งนี้ยังไม่ถูกเพิ่ม: '+requested+'\n\n'+summary
+        return notice+self.checkout_summary()
 
 
     def sync_checkout_extras(self):

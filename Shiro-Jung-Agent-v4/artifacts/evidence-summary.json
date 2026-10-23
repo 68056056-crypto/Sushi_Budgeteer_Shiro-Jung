@@ -72,7 +72,8 @@
   "limitations": [
     "Gold success is the runner assessment, not a human preference study or restaurant certification.",
     "Original live report per-turn state lists can reflect later turns. Use matching build_set arguments. Raw live report remains byte-for-byte; original trace is archived at commit3af6b28.",
-    "Current package4.4.0 passed live workflow39899787025 at source0f0b161, confirmed via public run/evaluation-step success and fail-closed runner exit contract. Current raw artifact download returned404; exact new calls/tokens/model-selected count and per-turn trace not verified. Bundled raw detailed artifact remains historical source426b48a."
+    "Current package4.4.0 passed live workflow39899787025 at source0f0b161, confirmed via public run/evaluation-step success and fail-closed runner exit contract. Current raw artifact download returned404; exact new calls/tokens/model-selected count and per-turn trace not verified. Bundled raw detailed artifact remains historical source426b48a.",
+    "Package4.4.1 transactional/zero-price checkout hotfix is offline-tested only. Latest recorded live run39899787025 tests package4.4.0 before this hotfix."
   ],
   "submission_layout": {
     "evidence_files": 7,
@@ -94,8 +95,8 @@
     },
     "public_url": "https://shiro-jung.streamlit.app/",
     "public_url_verification": "Not verified from this execution network; outbound proxy blocks access. Local startup/AppTest and runtime file hashes were checked.",
-    "checks_created_at": "2026-10-23T04:18:22.609370+00:00",
-    "current_package": "4.4.0",
+    "checks_created_at": "2026-10-23T04:51:52.672190+00:00",
+    "current_package": "4.4.1",
     "live_corpus_change": "Current corpus6sessions/14gold adds budget_invalid and exact required_item_ids S015; historical live source426b48a remains unchanged and does not cover these rules.",
     "updated_runtime_file_sha256": {
       "app.py": "f8c6691c2e592e6b3856406407f03c3be83fd39c05185eacf3531dca129203ad",
@@ -105,10 +106,10 @@
     "current_live_corpus_gold_turns": 14
   },
   "current_file_sha256": {
-    "benchmark.json": "f175575764486732a74fe8cfd86d4df3eafb1996952e90009ab5bb5e9715b5b6",
-    "offline-evaluation.json": "09c8527b2ebf9a8e621f626129fa1d3d45352210cf405b71d976576dedb52a7a",
-    "checks.json": "408a2b26bde46b94361fe5311a8645be41428e4cbe46e4315da5d21ca4c3d8d8",
-    "catalog-audit.json": "4ddee887cf5d0cea1ecda20c8b6e9dc44730ecdad255c5430698c9eaa047a5d3",
+    "benchmark.json": "f21f3fe1b89c6e83d6d166d3402cbb4ad93f711ecc175cda83afa61cadec92a8",
+    "offline-evaluation.json": "b412838361b595d41ec568da08880c2a6a51616d7eb0c55485ca81c267ebbaa2",
+    "checks.json": "06eb5941094ab88f47ba5a5258f998fdfa82cf15c61ebe2e10f776a3d1f069b3",
+    "catalog-audit.json": "37eb5818dc1d2cf03abe68ee96a87df111f9dc47c5720e65b143ec9d39676b77",
     "live-sessions.json": "cfb28e2a536178de17be43dc081da9f1217e5309d81ca7b2666c6aae72ae2bca",
     "live-trace.md": "133e240f555be8da67e778d92996b883a5f17ee98208a1d820338f1a17268abd"
   },
@@ -127,7 +128,7 @@
     "live_api_rerun_for_this_guard": false
   },
   "review_fixes": {
-    "release": "4.4.0",
+    "release": "4.4.1",
     "required_menu": "exact DP coverage mask, checked again from trusted catalog IDs; never relax exclusions",
     "explicit_plate_cap": "score objective first; maximum 2 repeats per food dish",
     "preference_points_per_keyword": 6,
@@ -152,7 +153,22 @@
     "unknown_extras": "shared alias/quantity catalogue validation; no name-specific beer branch",
     "nonpositive_budget": "structured extraction/contextual validation; no message-specific zero regex",
     "additional_exact_intake_tests": 11,
-    "restaurant_verification_scope": "waived by user; no confirmation fabricated"
+    "restaurant_verification_scope": "waived by user; no confirmation fabricated",
+    "zero_price_checkout": {
+      "transactional_extras": true,
+      "rejected_items_retained": false,
+      "legacy_over_budget_extras": "removed with explicit notice, preserving food/allergies",
+      "example": {
+        "budget": 200,
+        "food": 160,
+        "tea_unit_price": 0,
+        "tea_quantity": 1,
+        "total": 160,
+        "remaining": 40
+      },
+      "regression_tests_added": 3,
+      "live_rerun_for_this_hotfix": false
+    }
   },
   "requested_live_run": {
     "status": "workflow_passed_raw_artifact_unavailable",
@@ -193,7 +209,7 @@
     "raw_artifact_downloaded": false,
     "raw_artifact_verification": "Download returned HTTP404 from this execution environment; no new per-turn trace or exact aggregate counts asserted.",
     "completed_at_bangkok": "2026-10-23T11:22:12+07:00",
-    "runtime_source_files_unchanged_since_live_commit": true,
+    "runtime_source_files_unchanged_since_live_commit": false,
     "runtime_comparison_paths": [
       "app.py",
       "mcp_server.py",
@@ -203,6 +219,11 @@
       "requirements.txt",
       "requirements.lock",
       "evaluation/sessions.json"
+    ],
+    "current_submission_runtime_changes_since_live_commit": [
+      "Shiro-Jung-Agent-v4/sushi_budgeteer/__init__.py",
+      "Shiro-Jung-Agent-v4/sushi_budgeteer/agent.py",
+      "Shiro-Jung-Agent-v4/sushi_budgeteer/checkout.py"
     ]
   }
 }

@@ -74,3 +74,7 @@ S007 หอยเม่นเป็น echinoderm ไม่ใช่ molluscs; S
 ## ข้อมูล session ของแอป
 
 `data/sessions.sqlite3` แยกจาก menu catalog ใช้ JSON snapshot ตาม allowlist ของ `persistence.py`: งบ คน การแพ้ ความชอบ ข้อห้าม เมนูที่ขอให้มี ตัวเลือกอาหารและรายการเพิ่มเติม และบทสนทนาล่าสุด ไม่บันทึก provider key/client/trace มีอายุ24ชั่วโมง ลบ record หมดอายุเมื่อเขียนครั้งถัดไป; reset เขียนสถานะมื้อเริ่มต้นทับ record เดิม ไม่รวมฐานข้อมูลใน Git หรือ ZIP หาก Cloud ล้าง filesystem ข้อมูลนี้อาจหาย URL session เป็น bearer token ห้ามเผยแพร่พร้อมข้อมูลผู้ใช้ ไม่มี account/access-control ข้ามอุปกรณ์
+
+## ตะกร้าและราคา0บาท
+
+B001ชาเขียวร้อนราคา0บาทตามcatalogการศึกษา เป็นค่าราคาที่ถูกต้อง ไม่ใช่missingvalue รายการที่เพิ่มต้องผ่านงบ/จำนวน/การแพ้ก่อนcommitลงsession หากไม่ผ่านให้คงตะกร้าก่อนหน้า ข้อมูลextrasเก่าที่เกินงบยังไม่ถือว่าผู้ใช้ยืนยันและต้องแจ้งการยกเลิกก่อนเพิ่มใหม่ ไม่เปลี่ยนสถานะprice/allergenเป็นconfirmedจากhotfixนี้

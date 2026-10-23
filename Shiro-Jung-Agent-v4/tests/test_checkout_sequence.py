@@ -64,18 +64,17 @@ class CheckoutSequenceTest(unittest.TestCase):
 
     def test_over_budget_extras_cannot_be_confirmed(self):
         agent=self.ready()
+        before=agent.checkout_result['total_price']
         agent.checkout_action('รับเครื่องดื่ม')
-        agent.choose_extra('B002',20)
-        error=agent.checkout_action('ไม่รับของหวาน')
+        error=agent.choose_extra('B002',20)
         self.assertIn('เกินงบ',error)
-        self.assertEqual(agent.checkout_step,'review_error')
-        self.assertIsNone(agent.checkout_result)
-        agent.checkout_action('ยืนยันรายการทั้งหมด')
-        self.assertFalse(agent.order_closed)
-        agent.checkout_action('เปลี่ยนเครื่องดื่ม')
-        agent.choose_extra('B002',1)
+        self.assertIn('รายการครั้งนี้ยังไม่ถูกเพิ่ม',error)
+        self.assertFalse(agent.extras_plan)
+        self.assertEqual(agent.checkout_result['total_price'],before)
         agent.checkout_action('ไม่รับของหวาน')
-        self.assertEqual(agent.checkout_step,'review')
+        agent.checkout_action('ยืนยันรายการทั้งหมด')
+        self.assertTrue(agent.order_closed)
+        self.assertFalse(any(row['item_id']=='B002' for row in agent.checkout_result['selected']))
 
     def test_catalog_change_between_summary_and_confirm_is_blocked(self):
         agent=self.ready()
@@ -109,9 +108,12 @@ class CheckoutSequenceTest(unittest.TestCase):
         agent.chat('ยกเลิกโค้ก')
         self.assertEqual(agent.checkout_result['total_price'],food+45)
         agent.chat('ของหวาน')
-        agent.chat('โมจิ 1 พุดดิ้ง 1')
-        self.assertEqual(agent.checkout_step,'review_error')  # 125 extra > 100 reserve
-        agent.chat('ยกเลิกพุดดิ้ง')
+        answer=agent.chat('โมจิ 1 พุดดิ้ง 1')
+        self.assertIn('เกินงบ',answer)  # 125 extra > 100 reserve; neither new item added.
+        self.assertEqual(agent.checkout_step,'review')
+        self.assertEqual(agent.checkout_result['total_price'],food+45)
+        self.assertEqual(agent.extras_plan,{'B004':1})
+        agent.chat('โมจิ 1')
         self.assertEqual(agent.checkout_result['total_price'],food+85)
         agent.chat('ยืนยันรายการทั้งหมด')
         self.assertTrue(agent.order_closed)
@@ -153,4 +155,52 @@ class CheckoutSequenceTest(unittest.TestCase):
             self.assertFalse(page.exception)
 
 
-if __name__=='__main__': unittest.main()
+
+
+    def test_rejected_paid_drink_does_not_poison_free_tea(self):
+        agent=self.ready()
+        # Build an exact 40-baht remainder using a legitimate fixed food set.
+        from sushi_budgeteer.service import MenuService
+        agent.state.budget=200;agent.state.num_people=2
+        result=MenuService().build(**agent.build_arguments())['result']
+        agent.last_options=[result];agent.select_option(0)
+        self.assertEqual(200-agent.food_choice['food_total_price'],40)
+        food=agent.food_choice.copy()
+        self.assertIn('เกินงบ',agent.chat('ลาเต้ 1'))
+        self.assertFalse(agent.extras_plan)
+        answer=agent.chat('ชาเขียวร้อน 1')
+        self.assertNotIn('ยอดรวมเกินงบ',answer)
+        self.assertEqual(agent.extras_plan,{'B001':1})
+        self.assertEqual(agent.checkout_result['total_price'],160)
+        self.assertIn('เหลือ 40.00 บาท',answer)
+        self.assertEqual(agent.food_choice,food)
+        agent.chat('ชาเขียวร้อน 2')
+        self.assertEqual(agent.checkout_result['total_price'],160)
+        self.assertEqual(agent.extras_plan,{'B001':2})
+
+    def test_legacy_invalid_basket_is_explained_and_repaired_before_free_tea(self):
+        agent=self.ready();agent.state.budget=200
+        from sushi_budgeteer.service import MenuService
+        result=MenuService().build(**agent.build_arguments())['result']
+        agent.last_options=[result];agent.select_option(0)
+        agent.extras_plan={'B003':1};agent.sync_checkout_extras()
+        self.assertIsNone(agent.compose_checkout()[0])
+        answer=agent.chat('ชาเขียวร้อน 1')
+        self.assertIn('ยกเลิกรายการเพิ่มเติมเดิม',answer)
+        self.assertIn('มัทฉะ',answer)
+        self.assertEqual(agent.extras_plan,{'B001':1})
+        self.assertEqual(agent.checkout_result['total_price'],160)
+        self.assertIn('เหลือ 40.00 บาท',answer)
+        self.assertNotIn('ยอดรวมเกินงบ',answer)
+
+    def test_bare_free_tea_names_price_and_preserves_valid_extras(self):
+        agent=self.ready()
+        agent.chat('น้ำเปล่า 1')
+        before=agent.checkout_result['total_price']
+        answer=agent.chat('ชาเขียวร้อน')
+        self.assertIn('0.00 บาท',answer)
+        self.assertIn('ชาเขียวร้อน 1',answer)
+        self.assertEqual(agent.extras_plan,{'B005':1})
+        answer=agent.chat('ชาเขียวร้อน 1')
+        self.assertEqual(agent.extras_plan,{'B005':1,'B001':1})
+        self.assertEqual(agent.checkout_result['total_price'],before)

@@ -1,4 +1,4 @@
-# Evaluation — Shiro-Jung 4.0 / package 4.4.0
+# Evaluation — Shiro-Jung 4.0 / package 4.4.1
 
 เอกสารนี้แยก **offline regression / gold tools / benchmark / live LLM** ไม่รวมจำนวนหรืออ้างผลแทนกัน วันที่และ revision ดูจาก JSON ของแต่ละการรัน
 
@@ -6,12 +6,12 @@
 
 | ชั้นการประเมิน | ผล | ขอบเขต |
 |---|---|---|
-| Regression/integration | 193ผ่าน, failures0/errors0/skips0 | scripted model + real MCP subprocess, SQLite, OPA และ Streamlit AppTest |
+| Regression/integration | 196ผ่าน, failures0/errors0/skips0 | scripted model + real MCP subprocess, SQLite, OPA และ Streamlit AppTest |
 | Rego | 25/25 | กฎ allow/deny รวม raw-tag conflicts และ Python flagsfalse |
 | Smoke | strict61/61 และ simulation61/61 | ตรวจทั้งสองโหมด ไม่ลด strict เพื่อให้ผ่าน |
 | Offline gold | 40/40 | ใช้ tools โดยไม่เรียก LLM; ไม่วัดคุณภาพ extraction/provider |
 | Production benchmark | 12สถานการณ์, Random1,200รอบ | objective/configเดียวกับอาหารเริ่มต้นบนเว็บ |
-| Current Live workflow | Success — source0f0b161, corpus6sessions/14gold | [run39899787025](https://github.com/68056056-crypto/Sushi_Budgeteer_Shiro-Jung/actions/runs/39899787025); evaluation-step success บังคับliveและmodel-selected build/verify≥1; ยังไม่ตรวจraw artifactใหม่ |
+| Latest Live workflow (4.4.0) | Success — source0f0b161, corpus6sessions/14gold | [run39899787025](https://github.com/68056056-crypto/Sushi_Budgeteer_Shiro-Jung/actions/runs/39899787025); evaluation-step success บังคับliveและmodel-selected build/verify≥1; ยังไม่ตรวจraw artifactใหม่ |
 | Historical Live raw JSON | gold12/12ใน5sessions | แนะนำ6/block4/clarify2;18actualchatturnsรวม confirmations |
 | Live model selection | 6recommendations | มี route=model_selected ของ build_set และ verify_set passed โดย result_idตรงกัน |
 | Historical Live provider usage | 31responses, errors0 | input113,459 + output2,548 =116,007tokens; ไม่ตีราคาเป็นเงินโดยไม่มีราคาที่ใช้อ้างอิง |
@@ -95,7 +95,7 @@ python scripts/build_report.py --live-report artifacts/generated/live-sessions.j
 
 Live success เป็นผล runnerที่ใช้ validation helpersร่วมกับแอป ไม่มี raw final-menu payloadครบสำหรับ independent replay และยังไม่มี human preference study การแก้ snapshot/exporter/parserภายหลังผ่าน offline regression **ไม่ใช่ live rerun ใหม่** ผล100% จำกัดที่ corpus/commitนี้ ไม่รับรองทุกpromptหรือสูตรร้าน
 
-## Live รุ่นปัจจุบัน: ผ่าน workflow แล้ว
+## Live รุ่น4.4.0: ผ่าน workflow แล้ว
 
 [Run39899787025](https://github.com/68056056-crypto/Sushi_Budgeteer_Shiro-Jung/actions/runs/39899787025) บนsource`0f0b16176af1388849b9fddc082a28286fd31783` (tag`live-eval-v4.4.0-20261023`, package4.4.0) จบ**Success** วันที่23ต.ค.2569เวลา11:22:12น. (Asia/Bangkok) ขั้น Evaluate current consumer sessions จบsuccessด้วย ตรวจจากหน้าGitHubสาธารณะทั้งrunและjob
 
@@ -104,6 +104,12 @@ Live success เป็นผล runnerที่ใช้ validation helpersร�
 GitHubเผยแพร่ชื่อartifact `live-llm-evidence-39899787025` และdigest `sha256:7ba9d1a584a02860a967dd05c6f29a379ef0d52d1f612a3fd51e8e13af09ca2e` เก็บprovenanceใน `artifacts/evidence-summary.json.latest_live_run` ส่วนJSON/traceรายละเอียดที่อยู่ในrepoยังเป็นของsource426b48aโดยไม่แก้ทับให้ดูเหมือนผลใหม่
 
 Actions APIจากเครื่องนี้ตอบForbidden จึงส่งรันผ่านtagprefixเฉพาะครั้ง; push branchทั่วไปไม่เรียกAPIเพิ่ม ไม่มีการคัดลอกSecretลงGitหรือZIP หากต้องตรวจtraceปัจจุบัน ให้เปิดartifactจากGitHubและจับคู่source_commit/package_version/scenario_sha256ก่อนใช้แทนหลักฐานประวัติ
+
+## Regression hotfix 4.4.1: zero-price extras
+
+เพิ่ม3เคส checkout จริงผ่านMCP/OPA: งบ200ค่าอาหาร160เหลือ40 ลาเต้55ถูกปฏิเสธและไม่ค้าง จากนั้นชาเขียวร้อน1หรือ2ที่ราคา0ยังรวม160เหลือ40; legacyextrasลาเต้ที่ค้างเกินงบถูกยกเลิกพร้อมแจ้งก่อนรับชา; ชื่อชาอย่างเดียวแจ้ง0บาทและตัวอย่างจำนวน โดยเก็บน้ำเปล่าที่รับก่อนหน้าและยอดเดิมไว้
+
+ปรับ expectation เดิมให้รายการที่เกินงบไม่อยู่ในตะกร้า ยืนยันสุดท้ายได้เฉพาะอาหาร/รายการที่ผ่านแล้ว ไม่ใช่ยืนยันรายการที่ถูกปฏิเสธ ผลLiveล่าสุด4.4.0/source0f0b161มาก่อนhotfixนี้ จึงยังไม่ใช่หลักฐานLive4.4.1
 
 ## Exact identity และ input validation — 4.4.0
 

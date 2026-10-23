@@ -1,11 +1,11 @@
 {
   "validation": {
-    "checked_at": "2026-10-23T04:18:22.609370+00:00",
+    "checked_at": "2026-10-23T04:51:52.672190+00:00",
     "python": "3.12.14",
     "platform": "linux",
-    "release": "4.4.0",
+    "release": "4.4.1",
     "regression": {
-      "run": 193,
+      "run": 196,
       "failures": 0,
       "errors": 0,
       "skipped": 0
@@ -43,7 +43,7 @@
       },
       "package": "data.shiro_test",
       "name": "test_allow_valid",
-      "duration": 915714
+      "duration": 1475004
     },
     {
       "location": {
@@ -53,7 +53,7 @@
       },
       "package": "data.shiro_test",
       "name": "test_deny_missing_input",
-      "duration": 127421
+      "duration": 445628
     },
     {
       "location": {
@@ -63,7 +63,7 @@
       },
       "package": "data.shiro_test",
       "name": "test_deny_missing_line_schema",
-      "duration": 124897
+      "duration": 227010
     },
     {
       "location": {
@@ -73,7 +73,7 @@
       },
       "package": "data.shiro_test",
       "name": "test_deny_over_budget_independently",
-      "duration": 503105
+      "duration": 705948
     },
     {
       "location": {
@@ -83,7 +83,7 @@
       },
       "package": "data.shiro_test",
       "name": "test_deny_allergen_independently",
-      "duration": 403145
+      "duration": 570414
     },
     {
       "location": {
@@ -93,7 +93,7 @@
       },
       "package": "data.shiro_test",
       "name": "test_deny_strict_unknown_evidence",
-      "duration": 501292
+      "duration": 481291
     },
     {
       "location": {
@@ -103,7 +103,7 @@
       },
       "package": "data.shiro_test",
       "name": "test_simulation_still_enforces_allergen",
-      "duration": 521922
+      "duration": 373379
     },
     {
       "location": {
@@ -113,7 +113,7 @@
       },
       "package": "data.shiro_test",
       "name": "test_allow_simulation_unknown_only",
-      "duration": 474211
+      "duration": 357345
     },
     {
       "location": {
@@ -123,7 +123,7 @@
       },
       "package": "data.shiro_test",
       "name": "test_deny_hard_exclusion",
-      "duration": 432168
+      "duration": 384926
     },
     {
       "location": {
@@ -133,7 +133,7 @@
       },
       "package": "data.shiro_test",
       "name": "test_deny_price_tampering",
-      "duration": 414712
+      "duration": 467350
     },
     {
       "location": {
@@ -143,7 +143,7 @@
       },
       "package": "data.shiro_test",
       "name": "test_deny_subtotal_tampering",
-      "duration": 357486
+      "duration": 465868
     },
     {
       "location": {
@@ -153,7 +153,7 @@
       },
       "package": "data.shiro_test",
       "name": "test_deny_revision_changed",
-      "duration": 353861
+      "duration": 363034
     },
     {
       "location": {
@@ -163,7 +163,7 @@
       },
       "package": "data.shiro_test",
       "name": "test_deny_count_mismatch",
-      "duration": 412488
+      "duration": 432858
     },
     {
       "location": {
@@ -173,7 +173,7 @@
       },
       "package": "data.shiro_test",
       "name": "test_deny_food_required",
-      "duration": 400951
+      "duration": 471306
     },
     {
       "location": {
@@ -183,7 +183,7 @@
       },
       "package": "data.shiro_test",
       "name": "test_deny_python_issues",
-      "duration": 1483575
+      "duration": 511817
     },
     {
       "location": {
@@ -193,7 +193,7 @@
       },
       "package": "data.shiro_test",
       "name": "test_checkout_expanded_count_bound",
-      "duration": 363936
+      "duration": 712468
     },
     {
       "location": {
@@ -203,7 +203,7 @@
       },
       "package": "data.shiro_test",
       "name": "test_normal_flow_cannot_expand_count_bound",
-      "duration": 417326
+      "duration": 1566346
     },
     {
       "location": {
@@ -213,7 +213,7 @@
       },
       "package": "data.shiro_test",
       "name": "test_checkout_keeps_food_cap",
-      "duration": 322194
+      "duration": 325428
     },
     {
       "location": {
@@ -223,7 +223,7 @@
       },
       "package": "data.shiro_test",
       "name": "test_checkout_keeps_extra_category_cap",
-      "duration": 413310
+      "duration": 411056
     },
     {
       "location": {
@@ -233,7 +233,7 @@
       },
       "package": "data.shiro_test",
       "name": "test_checkout_requires_category_counts",
-      "duration": 121262
+      "duration": 121522
     },
     {
       "location": {
@@ -243,7 +243,7 @@
       },
       "package": "data.shiro_test",
       "name": "test_raw_allergen_denied_when_python_flags_false",
-      "duration": 402663
+      "duration": 390635
     },
     {
       "location": {
@@ -253,7 +253,7 @@
       },
       "package": "data.shiro_test",
       "name": "test_seafood_expands_in_rego_to_echinoderm",
-      "duration": 401602
+      "duration": 360901
     },
     {
       "location": {
@@ -263,7 +263,7 @@
       },
       "package": "data.shiro_test",
       "name": "test_raw_dietary_denied_when_python_flags_false",
-      "duration": 373731
+      "duration": 392288
     },
     {
       "location": {
@@ -273,7 +273,7 @@
       },
       "package": "data.shiro_test",
       "name": "test_raw_unknown_evidence_denied_when_boolean_claims_confirmed",
-      "duration": 424206
+      "duration": 403274
     },
     {
       "location": {
@@ -283,7 +283,7 @@
       },
       "package": "data.shiro_test",
       "name": "test_land_meat_allergy_from_raw_dietary_tags",
-      "duration": 449914
+      "duration": 396845
     }
   ],
   "smoke_logs": {

@@ -1,6 +1,6 @@
 # Shiro-Jung 4.0
 
-ผู้ช่วยวางแผนมื้อซูชิด้วย **OpenAI gpt-4o-mini + MCP + SQLite + bounded exact DP + OPA** — implementation package `4.4.0`
+ผู้ช่วยวางแผนมื้อซูชิด้วย **OpenAI gpt-4o-mini + MCP + SQLite + bounded exact DP + OPA** — implementation package `4.4.1`
 
 **แอป:** https://shiro-jung.streamlit.app/
 
@@ -94,6 +94,12 @@ SQLite ที่ `data/menu.sqlite3` สร้างอัตโนมัติ�
 
 Linux มี `scripts/setup.sh` และ `scripts/start.sh` สำหรับติดตั้ง/เริ่มระบบแบบเดียวกัน ตัว OPA ที่แนบสำหรับ Linux amd64 ตรวจ checksum ก่อนใช้; macOS/Windows ใช้ `scripts/install_opa.py` ดาวน์โหลดรุ่นที่ตรงแพลตฟอร์มและตรวจ SHA256
 
+## แก้ตะกร้าเครื่องดื่มฟรี — 4.4.1
+
+รายการเพิ่มเติมที่เกินงบถูกปฏิเสธทั้งข้อความและไม่ถูกเก็บค้าง; รายการเดิมที่ผ่านแล้วกับอาหารที่เลือกยังอยู่ ชาเขียวร้อน0บาทจึงไม่ทำให้ยอดเพิ่ม แม้เหลืองบเพียง40บาท ระบบรับรายการได้ตามข้อจำกัดเดิม เมื่อเปิดsessionเก่าที่มีextrasเกินงบ จะยกเลิกรายการเพิ่มเติมที่ยังไม่ผ่านพร้อมแจ้งชื่อให้เลือกใหม่ ไม่เลือกเก็บบางรายการแทนผู้ใช้
+
+พิมพ์ชื่ออย่างเดียว เช่น “ชาเขียวร้อน” จะแจ้งราคาและขอจำนวนพร้อมตัวอย่าง ไม่ตีความเป็นยอดไม่พอ แก้checkoutนี้ทดสอบoffline; Liveล่าสุดที่บันทึกยังเป็น4.4.0/source0f0b161 ไม่ใช่การรันLiveใหม่ของ4.4.1
+
 ## การแก้ความถูกต้องรุ่น 4.4.0
 
 - ชื่อเมนูที่ขอเป็นข้อบังคับต้องตรงชื่อไทย/อังกฤษหรือ keyword เต็มใน catalog เช่น `โอโทโร่` → `S015` เท่านั้น ไม่ใช้เนกิโทโร่แทน รายการเพิ่มเติมใช้ทะเบียนชื่อย่อที่กำหนดชัดเจนร่วมกันทั้ง parser/resolver
@@ -141,7 +147,7 @@ python scripts/collect_evidence.py
 
 คำสั่งนี้ตรวจ OPA, regression, smoke, offline40, benchmark, catalog audit และสร้าง `artifacts/report.html` สำหรับเปิดตรวจใน browser **ไม่เรียก API แบบเสียเงิน ไม่เขียนทับหลักฐาน live ที่ส่งตรวจ และไม่ import ทับ SQLite ที่มีอยู่** รายละเอียดผลและคำสั่งแยกอยู่ใน [EVALUATION.md](EVALUATION.md)
 
-ผลปัจจุบัน: **193 regression tests, 25 Rego tests, smoke61ต่อโหมด และ offline40/40 ผ่าน**
+ผลปัจจุบัน: **196 regression tests, 25 Rego tests, smoke61ต่อโหมด และ offline40/40 ผ่าน**
 
 Live รุ่น4.4.0: [run39899787025](https://github.com/68056056-crypto/Sushi_Budgeteer_Shiro-Jung/actions/runs/39899787025) ผ่านบนsource`0f0b161` กับcorpus6sessions/14gold; exit contractบังคับLLMจริงและmodel-selected build/verify≥1 ยังดาวน์โหลดraw artifactล่าสุดจากเครื่องนี้ไม่ได้ จึงไม่รายงานcalls/tokensใหม่โดยคาดเดา JSON/traceที่แนบยังเป็นประวัติsource426b48a ดูขอบเขตหลักฐานใน EVALUATION
 

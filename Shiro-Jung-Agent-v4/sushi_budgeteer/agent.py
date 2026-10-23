@@ -193,6 +193,12 @@ class BudgeteerAgent(IntakeMixin, PlanningMixin, CheckoutMixin):
             parsed=parse_order(text,records(),category=self.extra_category)
             if parsed:
                 return self.accept_extra_order(parsed)
+            from .extra_order import order_aliases,normalize
+            aliases=order_aliases(records(),self.extra_category)
+            ids=aliases.get(normalize(text),[])
+            if len(ids)==1:
+                row=next(row for row in records() if row['item_id']==ids[0])
+                return f"{row['name_th']} ราคา {row['price_baht']:,.2f} บาทครับ รับกี่แก้ว/ชิ้น? พิมพ์ เช่น {row['name_th']} 1"
             if text in {'สรุป','สรุปรายการ','ยอดรวม'}:
                 return self.checkout_summary()
             if text.startswith(('ยกเลิก','ไม่เอา','ลบ')):
