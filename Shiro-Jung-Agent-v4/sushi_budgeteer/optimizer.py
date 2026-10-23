@@ -13,6 +13,7 @@ from threading import local
 from math import gcd, isfinite
 from functools import reduce
 from .database import records, cents
+from .menu_matching import exact_match, normalize
 from .optimization_config import NEAR_BUDGET_PERCENT
 from typing import Any, Callable, Dict, Iterable, List, Optional, Set
 
@@ -53,76 +54,12 @@ def parse_allergen_tags(cell: Any) -> Set[str]:
     return {tag.strip().lower() for tag in str(cell).split(";") if tag.strip()}
 
 
-def _searchable_text(row: Dict[str, Any]) -> str:
-    return " ".join(
-        [
-            str(row.get("name_th", "")),
-            str(row.get("name_en", "")),
-            str(row.get("keywords", "")),
-            str(row.get("category", "")),
-        ]
-    ).lower()
-
-
-def _levenshtein(a: str, b: str) -> int:
-    """Classic edit distance, no external dependency needed for short strings."""
-    if a == b:
-        return 0
-    if not a:
-        return len(b)
-    if not b:
-        return len(a)
-    prev = list(range(len(b) + 1))
-    for i, ca in enumerate(a, 1):
-        curr = [i] + [0] * len(b)
-        for j, cb in enumerate(b, 1):
-            cost = 0 if ca == cb else 1
-            curr[j] = min(prev[j] + 1, curr[j - 1] + 1, prev[j - 1] + cost)
-        prev = curr
-    return prev[-1]
-
-
-def fuzzy_contains(text: str, keyword: str) -> bool:
-    """Substring match with two fallbacks for how people actually phrase things.
-
-    1. A small Levenshtein-distance tolerance over a sliding window — catches
-       typos, e.g. "เซลมอน" instead of "แซลมอน" (a slipped leading vowel).
-    2. A trailing-suffix fallback for Thai compound phrases: Thai has no word
-       boundaries, and a user says "ของดิบ" (raw food/stuff) while the menu's
-       category is "ปลาดิบ" (raw fish) — neither contains the other whole, but
-       both share the meaningful root "ดิบ" (raw) at the end. Without this,
-       "ของดิบ" as a hard_exclude_keyword matches nothing and silently
-       excludes zero items, letting every raw dish straight through.
-    """
-    if not keyword:
-        return False
-    if keyword in text:
-        return True
-    if len(keyword) < 3:
-        return False
-    tolerance = 1 if len(keyword) <= 6 else 2
-    n = len(keyword)
-    for start in range(0, max(1, len(text) - n + 1)):
-        if _levenshtein(keyword, text[start : start + n]) <= tolerance:
-            return True
-    # Compound-word fallback: try the keyword's trailing root (e.g. "ดิบ" out
-    # of "ของดิบ") as a plain substring — exact match only, to keep this from
-    # over-triggering on short generic suffixes.
-    if len(keyword) >= 5:
-        for suffix_len in range(len(keyword) - 1, 2, -1):
-            if keyword[-suffix_len:] in text:
-                return True
-    return False
-
-
 def matches_any_keyword(row: Dict[str, Any], keywords: Iterable[str]) -> bool:
-    """True if any keyword fuzzy-matches (substring, or a small typo away) the row."""
-    text = _searchable_text(row)
-    for kw in keywords or []:
-        kw = str(kw).strip().lower()
-        if kw and fuzzy_contains(text, kw):
-            return True
-    return False
+    """Match complete catalogue aliases or reviewed dietary groups; no fuzzy orders."""
+    from .dietary import exclusion_tags
+    tags=set(str(row.get('dietary_tags','')).split(';'))
+    return any(exact_match(row,kw) or normalize(kw)==normalize(row.get('category','')) or bool(exclusion_tags(kw) & tags) for kw in keywords or [])
+
 
 
 # ----------------------------------------------------------------------
@@ -147,12 +84,11 @@ def score_components(
     preferred_keywords = list(preferred_keywords or [])
     price = float(row.get("price_baht", 0.0))
     category = str(row.get("category", ""))
-    text = _searchable_text(row)
 
     matches = sum(
         1
         for kw in preferred_keywords
-        if str(kw).strip().lower() and fuzzy_contains(text, str(kw).strip().lower())
+        if matches_any_keyword(row,[kw])
     )
     pref_score = min(12.0, matches * 6.0)
 
@@ -214,7 +150,7 @@ def _dp_knapsack_01(items, budget, max_items=20, min_items=0, objective="score",
         price, score = prices[i] // scale, float(item['score'])
         if not isfinite(score):
             raise ValueError("score ต้องเป็นจำนวนจำกัด")
-        coverage=sum(1 << bit for bit,keyword in enumerate(required_keywords) if matches_any_keyword(item,[keyword]))
+        coverage=sum(1 << bit for bit,keyword in enumerate(required_keywords) if exact_match(item,keyword))
         for (count, cost, covered), (value, path) in list(states.items()):
             if count >= max_items or cost + price > capacity:
                 continue

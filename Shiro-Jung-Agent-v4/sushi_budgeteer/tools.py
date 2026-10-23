@@ -13,6 +13,7 @@ item list as arguments.
 
 from __future__ import annotations
 from .dietary import ingredient_allergens, soft_disliked, hard_excluded
+from .menu_matching import exact_match, suggest
 from .optimization_config import FOOD_OBJECTIVE, DIVERSITY, MAX_REPEAT
 
 import json
@@ -26,7 +27,6 @@ from langchain_core.tools import tool
 from .optimizer import (
     aggregate_by_item_id,
     dp_knapsack,
-    fuzzy_contains,
     get_last_result,
     matches_any_keyword,
     menu_records,
@@ -98,6 +98,9 @@ def _item_brief(item: Dict[str, Any]) -> Dict[str, Any]:
         "item_id": item.get("item_id"),
         "name_th": item.get("name_th"),
         "name_en": item.get("name_en"),
+        "keywords": item.get("keywords", ""),
+        "dietary_tags": item.get("dietary_tags", ""),
+        "dietary_status": item.get("dietary_status", ""),
         "category": item.get("category"),
         "price_baht": item.get("price_baht"),
         "allergen_tags": item.get("allergen_tags"),
@@ -138,12 +141,13 @@ def _resolve_quantity_items(
     category_items = [row for row in menu if row.get("category") == category]
 
     def _find(kw: str) -> Dict[str, Any]:
-        hit = next((row for row in category_items if kw.lower() in {str(row['item_id']).lower(), row['name_th'].lower(), row['name_en'].lower()}), None)
-        if hit is None:
-            hit = next((row for row in category_items if matches_any_keyword(row, [kw])), None)
-        if hit is None:
-            raise ValueError(f"ไม่พบตัวเลือก {kw} ในหมวด {category}")
-        return hit
+        from .extra_order import order_aliases,normalize
+        aliases=order_aliases(category_items,category)
+        ids=aliases.get(normalize(kw),[])
+        hits=[row for row in category_items if row['item_id'] in ids or str(row['item_id']).casefold()==kw.casefold() or exact_match(row,kw)]
+        if len(hits)!=1:
+            raise ValueError(f"ไม่พบตัวเลือกที่ชัดเจน {kw} ในหมวด {category}; กรุณาเลือกชื่อเมนูเต็ม")
+        return hits[0]
 
     # Explicit per-item quantities ("ชาเขียว 2 โค้ก 2 น้ำส้ม 2") win over an even split.
     if per_item_quantities:
@@ -159,11 +163,7 @@ def _resolve_quantity_items(
     matched: List[Dict[str, Any]] = []
     seen_ids = set()
     for kw in selection_keywords:
-        hit = next((row for row in category_items if kw.lower() in {str(row['item_id']).lower(), row['name_th'].lower(), row['name_en'].lower()}), None)
-        if hit is None:
-            hit = next((row for row in category_items if matches_any_keyword(row, [kw])), None)
-        if hit is None:
-            raise ValueError(f"ไม่พบตัวเลือก {kw} ในหมวด {category}")
+        hit = _find(str(kw))
         if hit and hit["item_id"] not in seen_ids:
             matched.append(hit)
             seen_ids.add(hit["item_id"])
@@ -191,40 +191,26 @@ def search_menu_items(
     """ค้นหาเมนูซูชิ Sushiro ตามคำค้น (keyword), หมวดหมู่ (category) และ/หรือราคาสูงสุด (max_price).
 
     ใช้เมื่อผู้ใช้ถามหาเมนูเฉพาะเจาะจง เช่น "มีเมนูแซลมอนอะไรบ้าง" หรือ
-    "ของทอดมีอะไรบ้าง". จับคู่แบบ substring (ไม่สนตัวพิมพ์เล็ก/ใหญ่) กับชื่อไทย,
-    ชื่ออังกฤษ และ keywords ที่บันทึกไว้ในฐานข้อมูล โดยทนต่อการสะกดผิดเล็กน้อยได้
-    (เช่น "เซลมอน" ยังหา "แซลมอน" เจอ). คืนค่าเป็น JSON string
+    "ของทอดมีอะไรบ้าง". จับคู่ชื่อไทย ชื่ออังกฤษ หรือ keyword เต็มก่อน หากไม่พบคืนเฉพาะตัวเลือกชื่อใกล้เคียง
+    พร้อม requires_confirmation=true ให้ผู้ใช้ยืนยัน ห้ามถือว่าตัวเลือกนั้นเป็นเมนูที่สั่งแล้ว. คืนค่าเป็น JSON string
     ของรายการเมนูที่พบ (สูงสุด 15 รายการ).
     """
     menu = menu_records()
     kw = keyword.strip().lower()
     cat = category.strip().lower()
 
-    results = []
-    for row in menu:
-        if kw and not fuzzy_contains(matches_search_text(row), kw):
-            continue
-        if cat and cat not in str(row.get("category", "")).lower():
-            continue
-        if float(row.get("price_baht", 0)) > max_price:
-            continue
-        results.append(row)
+    eligible=[row for row in menu if (not cat or cat in str(row.get('category','')).lower()) and float(row.get('price_baht',0))<=max_price]
+    results=[row for row in eligible if not kw or matches_any_keyword(row,[kw])]
+    requires_confirmation=bool(kw and not results)
+    if requires_confirmation:
+        results=suggest(kw,eligible)
 
     payload = {
         "count": len(results),
+        "requires_confirmation": requires_confirmation,
         "items": [_item_brief(r) for r in results[:15]],
     }
     return json.dumps(payload, ensure_ascii=False, indent=2)
-
-
-def matches_search_text(row: Dict[str, Any]) -> str:
-    return " ".join(
-        [
-            str(row.get("name_th", "")),
-            str(row.get("name_en", "")),
-            str(row.get("keywords", "")),
-        ]
-    ).lower()
 
 
 # ----------------------------------------------------------------------
@@ -375,15 +361,24 @@ def build_optimal_set(
     safe_items = [row for row in safe_items if row["item_id"] not in (excluded_item_ids or [])]
     preference_warnings=[]
     for keyword in dict.fromkeys([*(preferred_keywords or []), *(required_keywords or [])]):
-        original=[row for row in food_menu if matches_any_keyword(row,[keyword])]
-        available=[row for row in safe_items if matches_any_keyword(row,[keyword])]
+        match=(lambda row: exact_match(row,keyword)) if keyword in (required_keywords or []) else (lambda row: matches_any_keyword(row,[keyword]))
+        original=[row for row in food_menu if match(row)]
+        available=[row for row in safe_items if match(row)]
         if not available:
             limits=', '.join(hard_exclude_keywords or [])
             reason=f'ขัดกับข้อห้าม {limits}' if limits else 'ขัดกับข้อมูลการแพ้หรือเงื่อนไขเมนูของคุณ'
             message=(f'ไม่สามารถใส่ {keyword} ได้ เพราะเมนูที่มี{reason}'
                      if original else f'ไม่มี {keyword} ในเมนูขณะนี้')
             preference_warnings.append(message)
-            if keyword in (required_keywords or []): preflight_issues.append(message)
+            if keyword in (required_keywords or []):
+                if not original:
+                    candidates=suggest(keyword,food_menu)
+                    if candidates:
+                        message+=' หมายถึง '+ ' หรือ '.join(row['name_th'] for row in candidates)+' ครับ? กรุณาระบุชื่อเต็มเพื่อยืนยัน'
+                preflight_issues.append(message)
+        elif keyword in (required_keywords or []) and min(cents(row['price_baht']) for row in available)>cents(food_budget):
+            price=min(float(row['price_baht']) for row in available)
+            preflight_issues.append(f'เมนู {keyword} ราคาเริ่มต้น {price:,.2f} บาท เกินวงเงินอาหารที่เหลือ {food_budget:,.2f} บาท ต้องการเพิ่มงบหรือเปลี่ยนเมนูครับ?')
     dislike_ids = {row["item_id"] for row in dislike_items}
 
     scored_items = []

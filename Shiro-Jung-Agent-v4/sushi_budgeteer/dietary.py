@@ -1,7 +1,7 @@
 """Exact, reviewed dietary tags for hard exclusions; never fuzzy-match short words.
 
 These tags describe the educational dataset, not verified restaurant ingredients.
-Fuzzy matching remains available only for search and soft preferences.
+Fuzzy matches are display-only suggestions, never resolved orders or preference identities.
 """
 from __future__ import annotations
 

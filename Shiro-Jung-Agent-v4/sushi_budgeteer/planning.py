@@ -194,6 +194,8 @@ class PlanningMixin:
                                 last_display='\n'.join(payload['questions'])
                             elif name=='search_menu':
                                 last_display='🍣 เมนูที่เลือกดูได้:\n'+'\n'.join(f"- {x['item_id']} {x['name_th']} — {x['price_baht']:.2f} บาท" for x in payload['items'])+'\n\n'+MENU_NOTICE
+                                if payload.get('requires_confirmation'):
+                                    last_display='ยังไม่พบชื่อนี้ตรงตัวครับ หมายถึงเมนูใดต่อไปนี้? กรุณาพิมพ์ชื่อเต็มเพื่อยืนยัน\n'+last_display
                                 if not payload['items']:
                                     last_display='ยังไม่พบเมนูนี้ครับ ลองระบุชื่อเมนูอีกครั้ง หรือบอกว่าให้ปรับชุดเดิมได้เลยครับ'
                             elif name=='get_menu_item':

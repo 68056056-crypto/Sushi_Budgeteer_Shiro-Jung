@@ -1,6 +1,9 @@
 name: Live LLM evaluation
 on:
   workflow_dispatch:
+  push:
+    tags:
+      - "live-eval-*"
 permissions:
   contents: read
 concurrency:
@@ -14,8 +17,8 @@ jobs:
       run:
         working-directory: Shiro-Jung-Agent-v4
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: '3.12'
           cache: pip
@@ -25,7 +28,7 @@ jobs:
           python -m pip install --require-hashes -r requirements.lock
           python scripts/install_opa.py
           python -m sushi_budgeteer.database import
-      - name: Evaluate five real consumer sessions
+      - name: Evaluate current consumer sessions (including exact requested menu)
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           OPENAI_MODEL: gpt-4o-mini
@@ -42,7 +45,7 @@ jobs:
           python scripts/export_live_trace.py --input artifacts/live-actions/live-sessions.json --output artifacts/live-actions/live-trace.md
       - name: Upload evidence even when checks fail
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: live-llm-evidence-${{ github.run_id }}
           path: Shiro-Jung-Agent-v4/artifacts/live-actions/

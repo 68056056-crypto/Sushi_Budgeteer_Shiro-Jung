@@ -1,4 +1,4 @@
-# Code Review — Shiro-Jung 4.0 / package 4.3.0
+# Code Review — Shiro-Jung 4.0 / package 4.4.0
 
 เอกสารนี้รวมคำอธิบาย implementation และการตอบข้อเสนอแนะรอบ 1–2 สำหรับชุดส่งตรวจปัจจุบัน ไม่ใช่การให้คะแนนใหม่แก่โครงงาน
 
@@ -42,7 +42,17 @@ LLM เลือก tool สูงสุด10รอบ/ไม่เกิน8 ca
 
 คำว่า “เงื่อนไขอื่นเหมือนเดิม” เป็นบริบทสนทนา ไม่สร้าง hard food keyword ปะปนอีกต่อไป การแก้ parser/snapshots หลัง live commit มี regression รองรับ แต่ยังไม่อ้างเป็น live rerun ใหม่
 
-## Review รอบล่าสุด — package 4.3.0
+## จุดตรวจเพิ่มเติม 4.4.0
+
+`menu_matching.py` แยก exact identity ออกจาก display-only suggestions; DP required coverage และ validator ใช้ชื่อ/keyword เต็มจาก catalog อ้าง item_id อีกครั้ง ถอน matcher edit-distance/substring เดิมที่ไม่ใช้งานออกจาก optimizer แล้ว คะแนน soft/ONLY ใช้ alias เต็มหรือกลุ่ม dietary ที่ระบุชัดเจน ไม่ fuzzy เมนูแทนผู้ใช้
+
+`extra_order.py` รวม registry ชื่อย่อไว้จุดเดียว ใช้ทั้ง parser, ตรวจ unknown และ resolver ใน tools; ชื่อที่ไม่พบไม่ถูกใส่บางส่วน งบที่ extraction ให้≤0 เข้า structured intake validation ก่อน update/planning เก็บข้อมูลส่วนที่ถูกต้องและถามใหม่ โดย contextual budget รองรับเลขมีเครื่องหมาย/ทศนิยม
+
+`tests/test_exact_intake.py` เพิ่ม11เคส รวมโอโทโร่≠เนกิโทโร่, ชื่อผิดต้องยืนยัน, ราคาสูงต้องถาม, ศูนย์/ติดลบหลายรูปแบบ, unknown เครื่องดื่มและขนมทุกชื่อ และทดสอบ runner ใหม่ด้วย scripted model โดยไม่เรียกว่า live ใหม่
+
+Workflow ใช้ manual dispatch หรือ tag-prefix `live-eval-*` โดยไม่เปิดpaidLLMให้push branchทั่วไป; ใช้ current corpus6sessions/14gold และ runner บันทึก package_version/scenario_sha256 พร้อม source_commit; gold ตรวจrequired item IDs จริง การเก็บหลักฐานร้านไม่อยู่ในขอบเขตรอบนี้ และไม่มีการเปลี่ยน unknown เป็น confirmed
+
+## Review รอบล่าสุด — package 4.4.0
 
 | ปัญหา | การแก้และจุดตรวจ |
 |---|---|
@@ -61,7 +71,7 @@ LLM เลือก tool สูงสุด10รอบ/ไม่เกิน8 ca
 
 Bounded exact DP ใช้ state `(count, cost_satang, required_coverage_mask)`, immutable backtracking, GCD ลดมิติ และ state limit250,000 กำหนดใน [optimization_config.py](sushi_budgeteer/optimization_config.py): วงเงินเริ่มต้น80%, maxfood60, repeatcap3, diversitytrue, objectivebudget; หากจำกัดจานเองใช้ objective score และ repeatcap2
 
-กรณีไม่ได้จำกัดจำนวนจาน: หากมีชุดในช่วง95–100%ของวงเงินอาหาร เลือกคะแนนลดซ้ำสูงสุดแล้วใช้ยอดเงินเป็น tie break ถ้าไม่มีชุดในช่วงนั้น เลือกยอดสูงสุดก่อนคะแนน จึง **ไม่ได้อ้างว่า DP ชนะ Greedy ทุกตัวชี้วัด** ผลเฉลี่ย DP score123.44 / ใช้งบเต็ม76.25% เทียบ Greedy density score130.77 / ใช้งบเต็ม72.11% ขอบเขตและค่าจริงอยู่ใน [EVALUATION.md](EVALUATION.md)
+กรณีไม่ได้จำกัดจำนวนจาน: หากมีชุดในช่วง95–100%ของวงเงินอาหาร เลือกคะแนนลดซ้ำสูงสุดแล้วใช้ยอดเงินเป็น tie break ถ้าไม่มีชุดในช่วงนั้น เลือกยอดสูงสุดก่อนคะแนน จึง **ไม่ได้อ้างว่า DP ชนะ Greedy ทุกตัวชี้วัด** ผลเฉลี่ย DP score117.88 / ใช้งบเต็ม76.25% เทียบ Greedy density score125.46 / ใช้งบเต็ม72.97% ขอบเขตและค่าจริงอยู่ใน [EVALUATION.md](EVALUATION.md)
 
 ## Trust boundary และข้อมูลแพ้อาหาร
 

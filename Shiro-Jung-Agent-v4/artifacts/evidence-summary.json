@@ -72,7 +72,7 @@
   "limitations": [
     "Gold success is the runner assessment, not a human preference study or restaurant certification.",
     "Original live report per-turn state lists can reflect later turns. Use matching build_set arguments. Raw live report remains byte-for-byte; original trace is archived at commit3af6b28.",
-    "Live result belongs to source426b48a, not package4.3.0. Required menu, scoring, explicit-cap diversity, valid-field salvage, intake budget guard and SQLite session persistence are offline-tested, not a new live API run."
+    "Historical live result belongs to source426b48a, not package4.4.0. Exact menu matching, generic unknown extras, structured nonpositive-budget validation, intake floor, scoring and persistence are offline-tested; a new workflow result must be checked before updating live claims."
   ],
   "submission_layout": {
     "evidence_files": 7,
@@ -94,19 +94,21 @@
     },
     "public_url": "https://shiro-jung.streamlit.app/",
     "public_url_verification": "Not verified from this execution network; outbound proxy blocks access. Local startup/AppTest and runtime file hashes were checked.",
-    "checks_created_at": "2026-10-22T17:31:48.270174+00:00",
-    "current_package": "4.3.0",
-    "live_corpus_change": "Replaced 1-baht/1-person optimizer-block expectation with 50-baht/3-person intake budget_revision before planning; original live source426b48a does not test this new guard.",
+    "checks_created_at": "2026-10-23T04:18:22.609370+00:00",
+    "current_package": "4.4.0",
+    "live_corpus_change": "Current corpus6sessions/14gold adds budget_invalid and exact required_item_ids S015; historical live source426b48a remains unchanged and does not cover these rules.",
     "updated_runtime_file_sha256": {
       "app.py": "f8c6691c2e592e6b3856406407f03c3be83fd39c05185eacf3531dca129203ad",
       "mcp_server.py": "d022a1c254033b9b64b9f8aac6f87dfbc2b811ab28af492aab96a7fc732139d4"
-    }
+    },
+    "current_live_corpus_sessions": 6,
+    "current_live_corpus_gold_turns": 14
   },
   "current_file_sha256": {
-    "benchmark.json": "a330e0f8401c2b8d322ca0c48b750c04a61c2b4b98a81fbb94a922ecf1ae2afe",
-    "offline-evaluation.json": "70d3b6efdfd9c01de37f2bbf68eccbfa18b471337da6f5d6971e69c3630715cb",
-    "checks.json": "0b097b54caf5643f9be01abb1740314504c128261d2294aad3b4d9589d41c10d",
-    "catalog-audit.json": "de7445f187b4f30eb22426c71ca92c84a5fcb34a2d1382e1d9df3be0b26aef94",
+    "benchmark.json": "f175575764486732a74fe8cfd86d4df3eafb1996952e90009ab5bb5e9715b5b6",
+    "offline-evaluation.json": "09c8527b2ebf9a8e621f626129fa1d3d45352210cf405b71d976576dedb52a7a",
+    "checks.json": "408a2b26bde46b94361fe5311a8645be41428e4cbe46e4315da5d21ca4c3d8d8",
+    "catalog-audit.json": "4ddee887cf5d0cea1ecda20c8b6e9dc44730ecdad255c5430698c9eaa047a5d3",
     "live-sessions.json": "cfb28e2a536178de17be43dc081da9f1217e5309d81ca7b2666c6aae72ae2bca",
     "live-trace.md": "133e240f555be8da67e778d92996b883a5f17ee98208a1d820338f1a17268abd"
   },
@@ -125,7 +127,7 @@
     "live_api_rerun_for_this_guard": false
   },
   "review_fixes": {
-    "release": "4.3.0",
+    "release": "4.4.0",
     "required_menu": "exact DP coverage mask, checked again from trusted catalog IDs; never relax exclusions",
     "explicit_plate_cap": "score objective first; maximum 2 repeats per food dish",
     "preference_points_per_keyword": 6,
@@ -143,6 +145,21 @@
     },
     "targeted_regression_cases": 10,
     "live_rerun": false,
-    "restaurant_confirmations_added": 0
+    "restaurant_confirmations_added": 0,
+    "exact_required_identity": true,
+    "fuzzy_assignment_allowed": false,
+    "fuzzy_mode": "display-only candidates; explicit full-name confirmation required",
+    "unknown_extras": "shared alias/quantity catalogue validation; no name-specific beer branch",
+    "nonpositive_budget": "structured extraction/contextual validation; no message-specific zero regex",
+    "additional_exact_intake_tests": 11,
+    "restaurant_verification_scope": "waived by user; no confirmation fabricated"
+  },
+  "requested_live_run": {
+    "status": "prepared_pending_trigger_and_result_verification",
+    "workflow": "live-llm-evaluation.yml",
+    "planned_tag": "live-eval-v4.4.0-20261023",
+    "current_package": "4.4.0",
+    "scenario_sha256": "c7a5e79736282760dbe5476416780ab08944c8608e32cce2cbd60b45891a0070",
+    "historical_live_evidence_replaced": false
   }
 }

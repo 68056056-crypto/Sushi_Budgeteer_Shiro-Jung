@@ -125,5 +125,32 @@
         "simulation_consent": true
       }
     ]
+  },
+  {
+    "id": "current_exact_requested_menu",
+    "mode": "strict",
+    "turns": [
+      {
+        "message": "งบศูนย์บาท สำหรับ 2 คน ไม่มีแพ้อาหาร",
+        "expected": "budget_invalid",
+        "budget": null,
+        "num_people": 2
+      },
+      {
+        "message": "งบ1000บาท 2คน ไม่แพ้อาหาร อยากกินโอโทโร่ ขอใส่ในชุดด้วย ไม่กินหมู",
+        "expected": "recommendation",
+        "budget": 1000,
+        "num_people": 2,
+        "hard_exclude_keywords": [
+          "หมู"
+        ],
+        "required_keywords": [
+          "โอโทโร่"
+        ],
+        "required_item_ids": [
+          "S015"
+        ]
+      }
+    ]
   }
 ]

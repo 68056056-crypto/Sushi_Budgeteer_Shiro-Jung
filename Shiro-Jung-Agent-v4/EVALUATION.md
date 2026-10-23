@@ -1,4 +1,4 @@
-# Evaluation — Shiro-Jung 4.0 / package 4.3.0
+# Evaluation — Shiro-Jung 4.0 / package 4.4.0
 
 เอกสารนี้แยก **offline regression / gold tools / benchmark / live LLM** ไม่รวมจำนวนหรืออ้างผลแทนกัน วันที่และ revision ดูจาก JSON ของแต่ละการรัน
 
@@ -6,7 +6,7 @@
 
 | ชั้นการประเมิน | ผล | ขอบเขต |
 |---|---|---|
-| Regression/integration | 182ผ่าน, failures0/errors0/skips0 | scripted model + real MCP subprocess, SQLite, OPA และ Streamlit AppTest |
+| Regression/integration | 193ผ่าน, failures0/errors0/skips0 | scripted model + real MCP subprocess, SQLite, OPA และ Streamlit AppTest |
 | Rego | 25/25 | กฎ allow/deny รวม raw-tag conflicts และ Python flagsfalse |
 | Smoke | strict61/61 และ simulation61/61 | ตรวจทั้งสองโหมด ไม่ลด strict เพื่อให้ผ่าน |
 | Offline gold | 40/40 | ใช้ tools โดยไม่เรียก LLM; ไม่วัดคุณภาพ extraction/provider |
@@ -60,11 +60,11 @@ python scripts/build_report.py
 
 `test_intake_budget.py` เพิ่ม7เคส: 50/3เตือนพร้อมคงข้อจำกัด, กดยืนยัน/เรียกplanningข้ามไม่ได้, ตอบเฉพาะงบใหม่, ขอบเขต299.99/300/300.01สำหรับ3คนและเปลี่ยนจำนวนคน, รับข้อมูลทีละส่วน/ลดงบหลังเคยจัดชุด, ปุ่มUIไม่เปิดจนงบผ่าน และ scripted runnerผ่านการเตือน→แก้งบ→จัดชุด โดยไม่อ้างเป็น live
 
-corpusปัจจุบัน5sessions/12goldมี `budget_revision` 1กรณี ซึ่งต้องมี intake_checkที่ถูกต้อง ไม่มีcandidate/confirmation/MCPcalls และรักษาคน/ข้อห้ามไว้ ส่วน artifact liveต้นฉบับยังคงเป็น source426b48aก่อนเพิ่มกฎนี้และไม่ถูกแก้ให้ดูเหมือนทดสอบกฎใหม่แล้ว
+corpusปัจจุบัน6sessions/14goldมี `budget_revision` 1กรณี และ `budget_invalid` 1กรณี พร้อม required-menu identity scenario ซึ่งต้องมี intake_checkที่ถูกต้อง ไม่มีcandidate/confirmation/MCPcalls และรักษาคน/ข้อห้ามไว้ ส่วน artifact liveต้นฉบับยังคงเป็น source426b48aก่อนเพิ่มกฎนี้และไม่ถูกแก้ให้ดูเหมือนทดสอบกฎใหม่แล้ว
 
 ## รัน Live LLM ใหม่
 
-[workflow](../.github/workflows/live-llm-evaluation.yml) เป็น manual dispatch ใช้ Python3.12, requirements.lock, OPA1.0.1 และ `gpt-4o-mini` ไม่มีการเรียก API แบบเสียเงินทุกครั้งที่ push
+[workflow](../.github/workflows/live-llm-evaluation.yml) รันด้วย manual dispatch หรือ push tag `live-eval-*` ที่สร้างเพื่อรันเฉพาะครั้ง ใช้ Python3.12, requirements.lock, OPA1.0.1 และ `gpt-4o-mini` ไม่มีการเรียก API แบบเสียเงินทุกครั้งที่ push
 
 1. ตั้ง GitHub Actions Secret ชื่อ `OPENAI_API_KEY` โดยใส่เฉพาะคีย์หนึ่งค่า
 2. Actions → Live LLM evaluation → Run workflow → main
@@ -94,11 +94,25 @@ python scripts/build_report.py --live-report artifacts/generated/live-sessions.j
 
 Live success เป็นผล runnerที่ใช้ validation helpersร่วมกับแอป ไม่มี raw final-menu payloadครบสำหรับ independent replay และยังไม่มี human preference study การแก้ snapshot/exporter/parserภายหลังผ่าน offline regression **ไม่ใช่ live rerun ใหม่** ผล100% จำกัดที่ corpus/commitนี้ ไม่รับรองทุกpromptหรือสูตรร้าน
 
+## Live รุ่นปัจจุบัน: สถานะหลักฐาน
+
+เตรียมรันใหม่ด้วย corpus6sessions/14gold บนpackage4.4.0; หาก Actions API ใช้ไม่ได้ ใช้ tag `live-eval-v4.4.0-20261023` เป็น triggerเฉพาะครั้ง (tagตรงprefixเท่านั้น ไม่รันเมื่อpush branchตามปกติ) GitHub Secrets เป็นผู้ให้OPENAI_API_KEY แก่job ไม่มีการคัดลอกkeyเข้าเครื่องหรือGit
+
+หลักฐาน7ไฟล์ที่แนบยังคงรายงานLiveเดิมsource426b48aจนกว่าจะดาวน์โหลดและตรวจartifactรอบใหม่ได้ การส่งtriggerไม่เท่ากับjobผ่าน และไม่เปลี่ยนlive_llm_tested/success_rateเดิมให้ดูเป็นของรุ่นใหม่ ตรวจสถานะที่ [Actions](https://github.com/68056056-crypto/Sushi_Budgeteer_Shiro-Jung/actions/workflows/live-llm-evaluation.yml)
+
+## Exact identity และ input validation — 4.4.0
+
+เพิ่ม11เคสใน `tests/test_exact_intake.py`: S015 ต้องปรากฏจริงและ R005 ใช้แทนไม่ได้แม้ตัด S015 ออก, typoแสดงตัวเลือกและรอยืนยันโดยไม่เปลี่ยน allergy, unknown required ไม่หาย, เมนูราคา120บาท/วงเงิน80บาทถามเพิ่มงบโดยไม่เพิ่มเอง, คำตอบจาก service ยังมีราคา, งบ0/ลบหลายสำนวน, contextual numeric budgetไม่เรียกLLM, unknown extrasชื่อทั่วไปและการเพิ่มแบบatomic, unknown dessertผ่านextractionคงข้อมูลอื่น, fuzzyเป็นเพียงข้อเสนอ และ scripted live-harnessตรวจbudget_invalid+required_item_ids
+
+ตัวเลข live เดิมไม่ใช่หลักฐานของ matcher/validator รุ่นนี้ corpusปัจจุบัน6sessions/14gold เพิ่ม `budget_invalid` และการยืนยัน `required_item_ids=[S015]`; runner ใช้ structured status ไม่อาศัยการพบคำเตือนในข้อความ และบันทึก hash ของ corpus/package version ไว้ในรายงานใหม่
+
+การยืนยันร้าน10–15เมนูถูกยกเว้นตามขอบเขตรอบนี้ ไม่เปลี่ยนสถานะข้อมูลหรืออ้างคะแนนส่วนนี้ว่าเสร็จแล้ว
+
 ## Regression จาก review ล่าสุด
 
-`tests/test_requested_meals.py` มี10เคส: required coverage เทียบ exhaustive optimum, ขอ/บังคับเมนูและ alternative, verify ปฏิเสธเมนูที่ขาด, ความชอบทูน่าขัดข้อห้ามของดิบ, min>max เก็บข้อมูลที่ถูกต้อง, งบ0/เบียร์/ราคาไม่ล้างชุด, explicit cap เน้นความหลากหลาย, session round-trip/แยกผู้ใช้/หมดอายุ/ไม่บันทึก key, snapshot เปลี่ยนต้องจัดใหม่, Streamlit refresh+ปุ่มราคา และ real MCP required build→verify (บางเคสตรวจหลายพฤติกรรมร่วมกัน)
+`tests/test_requested_meals.py` มี10เคส: required coverage เทียบ exhaustive optimum, ขอ/บังคับเมนูและ alternative, verify ปฏิเสธเมนูที่ขาด, ความชอบทูน่าขัดข้อห้ามของดิบ, min>max เก็บข้อมูลที่ถูกต้อง, งบ0แจ้งให้แก้ใหม่ และเบียร์/ถามราคาไม่ล้างชุด, explicit cap เน้นความหลากหลาย, session round-trip/แยกผู้ใช้/หมดอายุ/ไม่บันทึก key, snapshot เปลี่ยนต้องจัดใหม่, Streamlit refresh+ปุ่มราคา และ real MCP required build→verify (บางเคสตรวจหลายพฤติกรรมร่วมกัน)
 
-Live ที่แนบเป็นผล source426b48a ก่อนเปลี่ยน scoring/required menu/explicit-cap objective และ session persistence ชุดใหม่ จึงใช้ยืนยันได้เฉพาะความสามารถและ corpus ณ commit นั้น ไม่อ้างว่าตัวเลข live12/12 เป็นผลรัน package4.3.0
+Live ที่แนบเป็นผล source426b48a ก่อนเปลี่ยน scoring/required menu/explicit-cap objective และ session persistence ชุดใหม่ จึงใช้ยืนยันได้เฉพาะความสามารถและ corpus ณ commit นั้น ไม่อ้างว่าตัวเลข live12/12 เป็นผลรัน package4.4.0
 
 ## Objective และ benchmark
 
@@ -108,8 +122,8 @@ Configร่วม: objectivebudget, diversitytrue, spend_ratio0.8, maxfood60, r
 
 | วิธี | ใช้งบเต็มเฉลี่ย | ใช้วงเงินอาหารเฉลี่ย | คะแนนลดซ้ำเฉลี่ย |
 |---|---:|---:|---:|
-| DP | 76.25% | 95.3125% | 123.44 |
-| Greedy density | 72.11% | 90.14% | 130.77 |
+| DP | 76.25% | 95.3125% | 117.88 |
+| Greedy density | 72.97% | 91.22% | 125.46 |
 
 ไม่มี feasibility/objective-dominance failureในชุดbenchmarkนี้ แต่ Greedy densityได้คะแนนและความหลากหลายเฉลี่ยสูงกว่า จึงไม่อ้างว่า DPดีที่สุดทุกตัวชี้วัด 76.25%ของงบเต็มมีตัวหารต่างจาก95.3125%ของวงเงินอาหาร และไม่รวม extrasที่เพิ่มภายหลัง ส่วนที่สำรองเป็นนโยบายผลิตภัณฑ์ ไม่ใช่ผลวิจัยความอิ่มหรือความพึงพอใจ
 

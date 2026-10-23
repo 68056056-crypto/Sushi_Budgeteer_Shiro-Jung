@@ -20,7 +20,7 @@ LOG=logging.getLogger('shiro_jung.agent')
 
 class Extraction(BaseModel):
     model_config=ConfigDict(extra='ignore',allow_inf_nan=False)
-    budget: float | None=Field(None,gt=0,le=100000)
+    budget: float | None=Field(None,le=100000)
     budget_delta: float | None=Field(None,ge=-100000,le=100000)
     budget_change_unclear: bool=False
     allergens: list[str]=Field(default_factory=list,max_length=30)
@@ -75,17 +75,44 @@ class IntakeMixin:
             request_text=re.sub(
                 r'(?:ไม่กิน|ไม่ทาน|งด|ห้าม(?:มี|กิน|ทาน)?|ไม่ค่อยชอบ|ไม่ชอบ|แพ้)\s*.*?'
                 r'(?=ชอบ|อยาก|ขอ|ต้องมี|งบ|ไม่กิน|ไม่ทาน|ไม่ชอบ|แพ้|[,;\n]|$)', '', message)
-            candidates=list(dict.fromkeys([*(kw for kw in raw.get('preferred_keywords',[]) if kw in request_text),
-                *(row['name_th'] for row in records() if row['name_th'] in request_text)]))
-            # Full catalogue keywords cover short requests such as โอโทโร่.
-            candidates.extend(kw for row in records() for kw in str(row.get('keywords','')).split(';')
-                              if len(kw.strip())>=3 and kw.strip() in request_text)
-            requested=[kw.strip() for kw in candidates if any(matches_any_keyword(row,[kw]) for row in records())]
+            terms=[]
+            for match in re.finditer(r'(?:อยากกิน|อยากทาน|ขอใส่|ต้องมี)\s*(.*?)(?=ขอใส่|ในชุด|ด้วย|ครับ|ค่ะ|แต่|[,;\n]|$)',request_text):
+                term=match.group(1).strip()
+                if term:
+                    terms.extend(word.strip() for word in re.split(r'\s*(?:และ|กับ|,)\s*',term) if word.strip())
+            requested=terms or [kw for kw in raw.get('preferred_keywords',[]) if kw in request_text]
             raw['required_keywords']=list(dict.fromkeys([*(kw for kw in raw.get('required_keywords',[]) if kw in request_text),*requested]))[:8]
             if not re.search(r'เฉพาะ|เท่านั้น|กินแค่|เอาแค่',message):
                 raw['must_include_keywords']=[]
         raw=defer_meat_guess(raw,message)
         return Extraction.model_validate(raw).model_dump()
+
+
+    def required_menu_warning(self):
+        from .database import records,cents
+        from .menu_matching import exact_match,suggest
+        from math import ceil
+        rows=[row for row in records() if row['category'] not in {'เครื่องดื่ม','ของหวาน'}]
+        for term in self.state.required_keywords:
+            matched=[row for row in rows if exact_match(row,term)]
+            if not matched:
+                self.pending_confirmation=False
+                self.state.last_asked_field='required_menu'
+                candidates=suggest(term,rows)
+                message=f'ไม่มี {term} ในเมนูครับ'
+                if candidates:
+                    message+=' หมายถึง '+ ' หรือ '.join(f"{row['name_th']} ({row['price_baht']:,.2f} บาท)" for row in candidates)+' ครับ? พิมพ์ชื่อเต็มเพื่อยืนยัน'
+                return message+' ผมยังเก็บงบและข้อจำกัดเดิมไว้ครับ'
+            if self.state.budget is not None and self.state.budget>0:
+                price=min(float(row['price_baht']) for row in matched)
+                target=cents(self.state.budget)*INITIAL_SPEND_RATIO/100
+                if price>target:
+                    self.pending_confirmation=False
+                    self.state.last_asked_field='budget'
+                    minimum=max(ceil(price/INITIAL_SPEND_RATIO),100*(self.state.num_people or 1))
+                    return (f'เมนู {term} ราคาเริ่มต้น {price:,.2f} บาท เกินวงเงินอาหารที่มี {target:,.2f} บาทครับ '
+                            f'ต้องการเพิ่มงบรวมเป็นอย่างน้อย {minimum:,.2f} บาท หรือเปลี่ยนเมนูครับ? ผมจะไม่เพิ่มงบเอง')
+        return None
 
 
     def intake_budget_warning(self):
@@ -94,6 +121,10 @@ class IntakeMixin:
         if not self.consumer_flow or s.budget is None or s.num_people is None:
             return None
         from .database import cents
+        if s.budget<=0:
+            self.pending_confirmation=False
+            s.last_asked_field='budget'
+            return 'งบต้องมากกว่า 0 บาทครับ กรุณาระบุงบใหม่'
         minimum=cents(MIN_INTAKE_BUDGET_PER_PERSON)*s.num_people
         if cents(s.budget)>=minimum:
             return None
@@ -164,7 +195,7 @@ class IntakeMixin:
         s=self.state
         if s.budget is None or s.num_people is None:
             return 'ขอทราบงบและจำนวนคนก่อนจัดชุดครับ'
-        warning=self.intake_budget_warning()
+        warning=self.intake_budget_warning() or self.required_menu_warning()
         if warning:
             return warning
         s.allergens=[a for a in s.allergens if a not in self.pending_allergy_removals]
@@ -213,19 +244,19 @@ class IntakeMixin:
 
 
     @staticmethod
-    def _unknown_drinks(extracted):
-        """Names the user asked for that the drink catalog cannot match (e.g. water not on the menu)."""
-        names=list(dict.fromkeys([*(extracted.get('drink_selection') or []),*(extracted.get('drink_quantities') or {})]))
-        if not names: return [],[]
+    def _unknown_extras(extracted):
         from .database import records
         from .tools import _resolve_quantity_items
         menu=records()
-        available=[r['name_th'] for r in menu if r.get('category')=='เครื่องดื่ม']
+        available=[r['name_th'] for r in menu if r.get('category') in {'เครื่องดื่ม','ของหวาน'}]
         unknown=[]
-        for name in names:
-            try: _resolve_quantity_items(menu,'เครื่องดื่ม',[str(name)],1)
-            except ValueError: unknown.append(str(name))
-        return unknown,available
+        selections=[('เครื่องดื่ม',list(dict.fromkeys([*(extracted.get('drink_selection') or []),*(extracted.get('drink_quantities') or {})]))),
+                    ('ของหวาน',extracted.get('dessert_selection') or [])]
+        for category,names in selections:
+            for name in names:
+                try: _resolve_quantity_items(menu,category,[str(name)],1)
+                except ValueError: unknown.append(str(name))
+        return list(dict.fromkeys(unknown)),available
 
 
     _ALLERGEN_TH={'beef':'เนื้อวัว','chicken':'ไก่','echinoderm':'หอยเม่น/อูนิ','fish':'ปลา','crustacean':'สัตว์น้ำมีเปลือก (กุ้ง/ปู)','molluscs':'หอย/ปลาหมึก','egg':'ไข่',
@@ -245,7 +276,7 @@ class IntakeMixin:
             else:
                 message+=' กรุณาให้พนักงานร้านช่วยเลือกเมนูและตรวจส่วนผสมก่อนครับ'
             return message+'\n\n'+ALLERGY_WARNING
-        requested=[i for i in issues if any(word in i for word in ('ไม่สามารถใส่','ไม่มีเมนูที่ขอ','ในเมนูขณะนี้'))]
+        requested=[i for i in issues if any(word in i for word in ('ไม่สามารถใส่','ไม่มีเมนูที่ขอ','ในเมนูขณะนี้','เกินวงเงินอาหาร'))]
         if requested:
             return '\n\n'.join(dict.fromkeys(requested))+' คงข้อห้ามและการแพ้เดิมไว้ครับ กรุณาเปลี่ยนเมนูที่ขอหรือปรับงบ'
         if any('opa_unavailable' in i for i in issues):
@@ -277,7 +308,7 @@ class IntakeMixin:
         if self.state.budget is None or self.state.num_people is None:
             missing=[label for label,value in [('งบรวม',self.state.budget),('จำนวนคน',self.state.num_people)] if value is None]
             return 'รับทราบครับ ขอทราบ'+'และ'.join(missing)+'เพื่อสรุปมื้อให้ครับ'
-        warning=self.intake_budget_warning()
+        warning=self.intake_budget_warning() or self.required_menu_warning()
         if warning:
             return warning
         self.pending_confirmation=True

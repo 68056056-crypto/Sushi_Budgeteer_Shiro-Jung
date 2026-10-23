@@ -20,9 +20,10 @@ def validate_result(result, menu, constraints=None, mode=None):
     from .optimizer import matches_any_keyword, parse_allergen_tags
     issues=list(result.get('preflight_issues',[]))
     constraints=constraints or result.get('constraints',{})
+    from .menu_matching import exact_match
     catalog_required={row['item_id']:row for row in menu}
     for keyword in constraints.get('required_keywords',[]):
-        if not any(matches_any_keyword(catalog_required.get(row.get('item_id'),{}),[keyword]) and row.get('quantity',0)>0 for row in result.get('selected',[])):
+        if not any(exact_match(catalog_required.get(row.get('item_id'),{}),keyword) and row.get('quantity',0)>0 for row in result.get('selected',[])):
             issues.append(f'ยังไม่มีเมนูที่ขอ {keyword} ในชุด กรุณาปรับงบหรือเลือกเมนูอื่น')
     constraints=constraints or result.get('constraints',{})
     if not constraints:

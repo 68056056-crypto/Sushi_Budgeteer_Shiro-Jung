@@ -196,6 +196,8 @@ def contextual_answer(last_asked_field, message):
             return {'drinks_budget_mode':'within'}
         if text in {'แยก','คิดแยก','นอกงบ','คิดแยกนอกงบ'}:
             return {'drinks_budget_mode':'separate'}
+    if last_asked_field=='budget' and re.fullmatch(r'[+-]?\d+(?:\.\d+)?',text):
+        return {'budget':float(text)}
     if text.isdecimal() and last_asked_field in {'budget','num_people','drink_quantity','dessert_quantity'}:
         return {last_asked_field:int(text)}
     return None

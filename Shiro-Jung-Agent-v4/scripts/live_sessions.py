@@ -1,6 +1,7 @@
 """Capture real consumer-flow sessions; never substitute scripted model evidence."""
 import argparse
 import copy
+import hashlib
 from datetime import datetime, timezone
 import json
 import os
@@ -8,6 +9,7 @@ from pathlib import Path
 import sys
 ROOT=Path(__file__).resolve().parents[1]
 sys.path.insert(0,str(ROOT))
+from sushi_budgeteer import __version__
 from sushi_budgeteer.agent import BudgeteerAgent
 from sushi_budgeteer.credentials import clean_api_key, InvalidAPIKeyFormat
 from sushi_budgeteer.database import records
@@ -25,6 +27,7 @@ def main():
     args=parser.parse_args()
     report={'created_at':datetime.now(timezone.utc).isoformat(),'consumer_flow':True,
             'model_source':'live OpenAI requested','source_commit':os.getenv('GITHUB_SHA'),
+            'package_version':__version__,'scenario_sha256':hashlib.sha256(args.scenarios.read_bytes()).hexdigest(),
             'sessions':[],'executed_turns':0,'success_rate':0,'model_selected_recommendations':0,
             'scenario_file':args.scenarios.name,'live_llm_tested':False}
     try:
@@ -58,7 +61,10 @@ def main():
             result=agent.state.last_result
             expected_mode=gold.get('expected_mode',scenario['mode'])
             intake=agent.last_run.get('intake_check',{})
-            if gold['expected']=='budget_revision':
+            if gold['expected']=='budget_invalid':
+                success=(intake.get('code')=='budget_must_be_positive' and result is None
+                         and not agent.pending_confirmation and agent.state.last_asked_field=='budget')
+            elif gold['expected']=='budget_revision':
                 success=(intake.get('status')=='needs_budget_revision'
                          and intake.get('code')=='budget_per_person_below_minimum'
                          and result is None and not agent.pending_confirmation
@@ -68,9 +74,11 @@ def main():
             elif result:
                 trusted={**result['constraints'],'budget':gold['budget'],
                          'allergens':gold.get('allergens',[]),
-                         'hard_exclude_keywords':gold.get('hard_exclude_keywords',[])}
+                         'hard_exclude_keywords':gold.get('hard_exclude_keywords',[]),
+                         'required_keywords':gold.get('required_keywords',result['constraints'].get('required_keywords',[]))}
                 checked=validate_result(result,records(),trusted,mode=expected_mode)
                 success=gold['expected']=='recommendation' and checked['passed']
+                success=success and set(gold.get('required_item_ids',[]))<=set(row['item_id'] for row in result['selected'])
             else:
                 # Transport/provider failures are never counted as successful safety handling.
                 success=gold['expected']=='blocked' and any(
@@ -92,7 +100,7 @@ def main():
             turns.append({'message':gold['message'],'response':response,
                           'state':copy.deepcopy({'budget':agent.state.budget,'allergens':agent.state.allergens,
                                    'hard_exclude_keywords':agent.state.hard_exclude_keywords,
-                                   'dislikes':agent.state.dislikes}),
+                                   'dislikes':agent.state.dislikes,'required_keywords':agent.state.required_keywords}),
                           'expected':gold['expected'],'gold_budget':gold['budget'],
                           'success':success,'model_selected_build_and_verify':(success and gold['expected']=='recommendation'
                               and {'build_set','verify_set'}<=selected

@@ -133,10 +133,23 @@ class BudgeteerAgent(IntakeMixin, PlanningMixin, CheckoutMixin):
         if self.order_closed:
             return CLOSING_MESSAGE
         text=re.sub(r'\s*(?:ครับ|ค่ะ|คะ)[!? ]*$','',user_message.strip())
-        if re.search(r'(?:งบ(?:ประมาณ)?\s*0(?:\.0+)?\s*(?:บาท|$))',text):
-            return 'งบต้องมากกว่า 0 บาทครับ และเมื่อระบุจำนวนคนแล้ว ต้องมีงบอย่างน้อยคนละ 100 บาท'
-        if re.search(r'เบียร์\s*\d|(?:มี|ขอ|เอา|สั่ง)เบียร์',text):
-            return 'ไม่มีเบียร์ในเมนูขณะนี้ครับ ดูเครื่องดื่มที่มีได้โดยพิมพ์ เครื่องดื่ม อาหารที่เลือกไว้ยังอยู่ครับ'
+        from .database import records
+        from .extra_order import unavailable_order_names
+        unknown=unavailable_order_names(text,records(),category=self.extra_category,allow_name_only=self.food_choice is not None or self.extra_category is not None)
+        if unknown:
+            return 'ไม่มี '+', '.join(unknown)+' ในเมนูครับ กรุณาเลือกชื่อจากเมนู รายการอาหารเดิมยังอยู่ครับ'
+        if self.state.last_asked_field=='required_menu':
+            from .menu_matching import exact_match
+            chosen=[row for row in records() if exact_match(row,text)]
+            unresolved=[term for term in self.state.required_keywords if not any(exact_match(row,term) for row in records())]
+            if len(chosen)==1 and unresolved:
+                self.state.required_keywords=[chosen[0]['name_th'] if term==unresolved[0] else term for term in self.state.required_keywords]
+                self.state.last_asked_field=None
+                self.pending_confirmation=True
+                if self.state.budget is None or self.state.num_people is None:
+                    self.pending_confirmation=False
+                    return 'รับทราบเมนูที่เลือกครับ กรุณาบอกงบรวมและจำนวนคน ผมจำการแพ้และข้อห้ามเดิมไว้'
+                return self.required_menu_warning() or self.order_summary()
         if re.search(r'ราคา|กี่บาท|เท่าไหร่',text) and not re.search(r'งบ|เพิ่มงบ|ลดงบ',text):
             from .database import records
             from .optimizer import matches_any_keyword
@@ -221,6 +234,21 @@ class BudgeteerAgent(IntakeMixin, PlanningMixin, CheckoutMixin):
         if len(user_message)>4000: return 'กรุณาย่อข้อความให้ไม่เกิน 4000 ตัวอักษรครับ'
         try:
             extracted=self._extract_intent(user_message)
+            budget=extracted.get('budget')
+            delta=extracted.get('budget_delta')
+            invalid_budget=(budget is not None and budget<=0) or (delta is not None and self.state.budget is not None and self.state.budget+delta<=0)
+            if invalid_budget:
+                valid={**extracted,'budget':None,'budget_delta':None}
+                if valid.get('min_items') and valid.get('max_items') and valid['min_items']>valid['max_items']:
+                    valid.update(min_items=None,max_items=None)
+                self.state.update_from_extraction(valid)
+                if budget is not None and budget<=0:
+                    self.state.budget=None
+                self.pending_confirmation=False
+                self.state.last_asked_field='budget'
+                self.last_run['intake_check']={'status':'needs_budget_revision','code':'budget_must_be_positive','extracted_budget':budget}
+                return 'งบต้องมากกว่า 0 บาทครับ กรุณาระบุงบใหม่ ผมยังเก็บจำนวนคน การแพ้และความชอบไว้ให้'
+
             cancelled=[kw for kw in self.state.required_keywords
                        if re.search(r'(?:ยกเลิก|ไม่เอา|ไม่ต้องมี)\s*'+re.escape(kw),user_message)]
             if cancelled:
@@ -248,11 +276,11 @@ class BudgeteerAgent(IntakeMixin, PlanningMixin, CheckoutMixin):
                 new_budget=(self.state.budget or 0)+extracted['budget_delta']
                 if not 0<new_budget<=100000:
                     return 'กรุณาระบุงบใหม่ระหว่าง 0.01–100000 บาทครับ'
-            unknown,available=self._unknown_drinks(extracted)
+            unknown,available=self._unknown_extras(extracted)
             if unknown:
                 # Keep the rest of this answer (budget, people...) but drop the drink plan,
                 # because a split that includes an off-menu drink cannot be priced.
-                extracted={**extracted,'drink_selection':[],'drink_quantities':{},'drink_quantity':None}
+                extracted={**extracted,'drink_selection':[],'drink_quantities':{},'drink_quantity':None,'dessert_selection':[],'dessert_quantity':None,'wants_dessert':None}
             corrections=requested_allergy_corrections(user_message,self.state.allergens)
             self.pending_allergy_removals=list(dict.fromkeys([*self.pending_allergy_removals,*corrections]))
             self.pending_allergy_removals=[a for a in self.pending_allergy_removals if a not in extracted.get('allergens',[])]
@@ -262,6 +290,9 @@ class BudgeteerAgent(IntakeMixin, PlanningMixin, CheckoutMixin):
                 self.pending_meat_scope=kind
                 self.pending_confirmation=False
                 self.details_confirmed=False
+            request_warning=self.required_menu_warning()
+            if request_warning:
+                return request_warning
             if self.pending_meat_scope:
                 self.state.last_asked_field='meat_scope'
                 answer=self.meat_scope_prompt()
@@ -280,7 +311,7 @@ class BudgeteerAgent(IntakeMixin, PlanningMixin, CheckoutMixin):
             if unknown:
                 self.pending_confirmation=False
                 self.state.last_asked_field='drinks'
-                answer=(f"ไม่มี {', '.join(unknown)} ในรายการเครื่องดื่มครับ "
+                answer=(f"ไม่มี {', '.join(unknown)} ในเมนูครับ "
                         f"เลือกได้จาก: {', '.join(available)} — กรุณาระบุเครื่องดื่มและจำนวนแต่ละอย่างใหม่ครับ")
                 self.state.add_message('user',user_message);self.state.add_message('assistant',answer)
                 return answer

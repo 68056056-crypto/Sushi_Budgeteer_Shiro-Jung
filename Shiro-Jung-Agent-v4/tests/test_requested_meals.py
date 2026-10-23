@@ -82,8 +82,12 @@ class RequestedMealTest(unittest.TestCase):
         agent=self.agent();agent.last_options=[{'total_price':500}]
         agent.pending_allergy_removals=['milk'];agent.state.budget=1000;agent.state.num_people=2
         agent.state.drinks_budget_mode='within'
+        agent.llm.extraction={'budget':0}
         self.assertIn('มากกว่า 0',agent.chat('งบ 0 บาท'))
-        self.assertIn('ไม่มีเบียร์',agent.chat('เบียร์ 1'))
+        agent.llm.extraction={}
+        agent.state.budget=1000
+        agent.last_options=[{'total_price':500}]
+        self.assertIn('ไม่มี เบียร์ ในเมนู',agent.chat('เบียร์ 1'))
         self.assertIn('บาท',agent.chat('โอโทโร่ราคาเท่าไหร่'))
         self.assertIn('ยังไม่พบเมนู',agent.chat('เมนูที่ไม่มีในร้านราคาเท่าไหร่'))
         self.assertEqual(agent.last_options,[{'total_price':500}])
